@@ -149,6 +149,56 @@ function render(s: OverlayState) {
   if (s.phase === "listening") requestAnimationFrame(meter);
 }
 
+// ---------- drag the ghost anywhere; click it to dictate ----------
+
+const bar = $("bar");
+let hovering = false;
+let drag: { x: number; y: number; moved: boolean } | null = null;
+
+// The window ignores the mouse except while the pointer is over the ghost.
+bar.addEventListener("mouseenter", () => {
+  hovering = true;
+  window.overlay.setInteractive(true);
+});
+bar.addEventListener("mouseleave", () => {
+  hovering = false;
+  if (!drag) window.overlay.setInteractive(false);
+});
+
+bar.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  drag = { x: e.screenX, y: e.screenY, moved: false };
+  bar.setPointerCapture(e.pointerId);
+  window.overlay.dragStart();
+});
+
+bar.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const dx = e.screenX - drag.x;
+  const dy = e.screenY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return; // still a click
+  drag.moved = true;
+  root.classList.add("dragging");
+  window.overlay.drag(dx, dy);
+});
+
+const endDrag = (e: PointerEvent) => {
+  if (!drag) return;
+  const wasClick = !drag.moved && e.type === "pointerup";
+  drag = null;
+  root.classList.remove("dragging");
+  window.overlay.dragEnd();
+  if (wasClick) window.overlay.click();
+  if (!hovering) window.overlay.setInteractive(false);
+};
+bar.addEventListener("pointerup", endDrag);
+bar.addEventListener("pointercancel", endDrag);
+
+window.overlay.onLayout(({ flip, offsetX }) => {
+  root.dataset.flip = String(flip);
+  root.style.setProperty("--offset-x", `${offsetX}px`);
+});
+
 animateEyes("idle");
 window.overlay.onState(render);
 

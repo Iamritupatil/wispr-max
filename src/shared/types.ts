@@ -81,6 +81,8 @@ export interface Settings {
   dictionary: DictionaryEntry[];
   snippets: Snippet[];
   profile: Profile;
+  /** Where the user dragged the ghost (centre of its bar, screen coordinates). */
+  ghostAnchor?: { x: number; y: number };
 }
 
 export interface Stats {

@@ -15,6 +15,21 @@ export interface OverlayApi {
   onState(cb: (state: OverlayState) => void): void;
   sendAudio(payload: AudioPayload): void;
   sendError(message: string): void;
+  onLayout(cb: (layout: OverlayLayout) => void): void;
+  /** Turn mouse events on while the pointer is over the ghost. */
+  setInteractive(on: boolean): void;
+  dragStart(): void;
+  /** Pointer movement since the drag started, in screen pixels. */
+  drag(dx: number, dy: number): void;
+  dragEnd(): void;
+  click(): void;
+}
+
+export interface OverlayLayout {
+  /** The card opens below the ghost because it's near the top of the screen. */
+  flip: boolean;
+  /** Horizontal offset of the ghost from the window's centre. */
+  offsetX: number;
 }
 
 export interface AppSnapshot {

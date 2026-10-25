@@ -46,6 +46,11 @@ import { activeApp, insertText, isTerminal, readSelection } from "./system";
 
 const isMac = process.platform === "darwin";
 const OVERLAY_SIZE = { width: 560, height: 320 };
+// Where the ghost's bar sits inside the overlay window (see overlay.css): its centre is
+// this far from the window's bottom edge, or from the top edge when the card opens below.
+const BAR_FROM_BOTTOM = 38;
+const BAR_FROM_TOP = 30;
+const EDGE_MARGIN = 24;
 const MAX_RECORDING_MS = 3 * 60_000;
 const MIN_RECORDING_MS = 350;
 const ASSETS = path.join(__dirname, "..", "assets");
@@ -370,7 +375,7 @@ function createOverlay() {
     frame: false,
     transparent: true,
     resizable: false,
-    movable: false,
+    movable: true,
     focusable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
@@ -385,7 +390,9 @@ function createOverlay() {
   });
   overlay.setAlwaysOnTop(true, "screen-saver");
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  overlay.setIgnoreMouseEvents(true);
+  // Click-through everywhere except the ghost: the renderer turns mouse events on
+  // while the pointer is over it (forwarded moves tell it when that happens).
+  overlay.setIgnoreMouseEvents(true, { forward: true });
   overlay.loadFile(path.join(__dirname, "renderer", "overlay.html"));
   overlay.webContents.once("did-finish-load", syncIdleGhost);
   screen.on("display-metrics-changed", () => !current && syncIdleGhost());
@@ -399,14 +406,56 @@ function syncIdleGhost() {
   else overlay.hide();
 }
 
+// ---------- where the ghost lives ----------
+//
+// The ghost's position is its "anchor": the centre of its bar, in screen
+// coordinates. The overlay window is laid out around it so Max's card always
+// fits on screen: above the ghost normally, below it near the top of a
+// screen, and shifted sideways near the left or right edge.
+
+type Point = { x: number; y: number };
+
+function defaultAnchor(): Point {
+  const { workArea: wa } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  return { x: wa.x + wa.width / 2, y: wa.y + wa.height - 16 - BAR_FROM_BOTTOM };
+}
+
+/** Keeps the ghost fully on whichever screen it's on. */
+function clampAnchor(p: Point): Point {
+  const { workArea: wa } = screen.getDisplayNearestPoint({ x: Math.round(p.x), y: Math.round(p.y) });
+  return {
+    x: Math.min(Math.max(p.x, wa.x + EDGE_MARGIN), wa.x + wa.width - EDGE_MARGIN),
+    y: Math.min(Math.max(p.y, wa.y + EDGE_MARGIN), wa.y + wa.height - EDGE_MARGIN),
+  };
+}
+
+function currentAnchor(): Point {
+  const saved = settings.ghostAnchor;
+  const onScreen =
+    saved &&
+    screen.getAllDisplays().some(({ workArea: wa }) =>
+      saved.x >= wa.x && saved.x <= wa.x + wa.width && saved.y >= wa.y && saved.y <= wa.y + wa.height,
+    );
+  return onScreen ? saved : defaultAnchor();
+}
+
+function placeOverlay(anchor: Point) {
+  const { workArea: wa } = screen.getDisplayNearestPoint({ x: Math.round(anchor.x), y: Math.round(anchor.y) });
+  const { width, height } = OVERLAY_SIZE;
+  const flip = anchor.y - wa.y < height - BAR_FROM_BOTTOM; // no room for the card above
+  const x = Math.round(Math.min(Math.max(anchor.x - width / 2, wa.x), wa.x + wa.width - width));
+  const y = Math.round(flip ? anchor.y - BAR_FROM_TOP : anchor.y - (height - BAR_FROM_BOTTOM));
+  overlay.setBounds({ x, y, width, height });
+  overlay.webContents.send("overlay:layout", {
+    flip,
+    // How far the ghost sits from the window's centre when the window is pushed in from an edge.
+    offsetX: Math.round(anchor.x - (x + width / 2)),
+  });
+}
+
 function showOverlay() {
   clearTimeout(hideTimer);
-  const { workArea } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  overlay.setBounds({
-    x: Math.round(workArea.x + (workArea.width - OVERLAY_SIZE.width) / 2),
-    y: Math.round(workArea.y + workArea.height - OVERLAY_SIZE.height - 16),
-    ...OVERLAY_SIZE,
-  });
+  placeOverlay(currentAnchor());
   overlay.showInactive(); // Never steal focus from the app being typed into.
 }
 
@@ -472,6 +521,14 @@ function refreshTrayMenu() {
       { label: "Open Wispr Max", click: () => openMainWindow() },
       { label: "Contacts", click: () => openMainWindow("contacts") },
       { label: "Settings", click: () => openMainWindow("settings") },
+      {
+        label: "Reset ghost position",
+        click: () => {
+          settings.ghostAnchor = undefined;
+          store.saveSettings(settings);
+          if (overlay.isVisible()) placeOverlay(currentAnchor());
+        },
+      },
       { type: "separator" },
       { label: "Quit", click: () => app.quit() },
     ]),
@@ -517,6 +574,26 @@ function registerIpc() {
   ipcMain.on("overlay:audio", (_e, audio: AudioPayload) => {
     if (current?.phase === "processing") void handleAudio(current, audio);
   });
+  // Dragging and clicking the ghost.
+  let dragFrom: Point | null = null;
+  ipcMain.on("overlay:interactive", (_e, on: boolean) => {
+    overlay.setIgnoreMouseEvents(!on, { forward: true });
+  });
+  ipcMain.on("overlay:drag-start", () => {
+    dragFrom = currentAnchor();
+  });
+  ipcMain.on("overlay:drag", (_e, dx: number, dy: number) => {
+    if (!dragFrom) return;
+    settings.ghostAnchor = clampAnchor({ x: dragFrom.x + dx, y: dragFrom.y + dy });
+    placeOverlay(settings.ghostAnchor);
+  });
+  ipcMain.on("overlay:drag-end", () => {
+    if (dragFrom && settings.ghostAnchor) store.saveSettings(settings);
+    dragFrom = null;
+  });
+  // A click on the ghost starts or stops dictation, like pressing the hotkey.
+  ipcMain.on("overlay:click", () => onHotkey("dictate"));
+
   ipcMain.on("overlay:error", (_e, message: string) => {
     if (current) failSession(current, message);
   });

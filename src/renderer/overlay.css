@@ -39,6 +39,9 @@ body {
 /* ---------- the bar (Flow-style pill that grows out of the ghost) ---------- */
 
 .bar {
+  position: relative;
+  transform: translateX(var(--offset-x, 0px));
+  cursor: grab;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -155,6 +158,55 @@ body {
   display: none;
 }
 
+/* ---------- dragging, and the hover tip ---------- */
+
+.root.dragging .bar {
+  cursor: grabbing;
+}
+
+.root.dragging .ghost-wrap svg {
+  transform: scale(1.12) rotate(-6deg);
+}
+
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--glass);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+}
+
+.root[data-phase="idle"]:not(.dragging) .bar:hover .tip {
+  opacity: 1;
+}
+
+.root[data-flip="true"] .tip {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
+/* Near the top of a screen the card opens below the ghost instead of above. */
+.root[data-flip="true"] {
+  justify-content: flex-start;
+}
+
+.root[data-flip="true"] .bar {
+  order: -2;
+}
+
+.root[data-flip="true"] .shadow {
+  order: -1;
+}
+
 /* ---------- idle: just the ghost, floating ---------- */
 
 .root[data-phase="idle"] .bar {
@@ -183,6 +235,7 @@ body {
 }
 
 .shadow {
+  transform: translateX(var(--offset-x, 0px));
   display: flex;
   gap: 2px;
   height: 2px;
@@ -215,7 +268,7 @@ body {
 
 @keyframes shadow {
   50% {
-    transform: scaleX(0.8);
+    transform: translateX(var(--offset-x, 0px)) scaleX(0.8);
     opacity: 0.5;
   }
 }
