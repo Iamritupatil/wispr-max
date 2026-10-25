@@ -171,4 +171,4 @@ test/              node:test suites
 
 ## License
 
-MIT
+APCH 2.0
