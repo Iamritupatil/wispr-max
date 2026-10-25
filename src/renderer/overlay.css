@@ -200,11 +200,59 @@ body {
 }
 
 .root[data-flip="true"] .bar {
-  order: -2;
+  order: -3;
 }
 
 .root[data-flip="true"] .shadow {
+  order: -2;
+}
+
+/* ---------- Max asks a question (speech bubble from the ghost) ---------- */
+
+.ask {
+  display: none;
+  position: relative;
+  max-width: 400px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #f6faf9;
+  color: #14201e;
+  border: 2px solid var(--teal);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transform: translateX(var(--offset-x, 0px));
+  animation: rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* A pixel tail pointing at the ghost. */
+.ask::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 10px;
+  height: 10px;
+  background: #f6faf9;
+  border-right: 2px solid var(--teal);
+  border-bottom: 2px solid var(--teal);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.root[data-asking="true"] .ask {
+  display: block;
+}
+
+.root[data-flip="true"] .ask {
   order: -1;
+}
+
+.root[data-flip="true"] .ask::after {
+  bottom: auto;
+  top: -8px;
+  transform: translateX(-50%) rotate(225deg);
 }
 
 /* ---------- idle: just the ghost, floating ---------- */

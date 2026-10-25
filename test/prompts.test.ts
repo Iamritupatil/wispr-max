@@ -61,3 +61,22 @@ test("cleanOutput strips fences and wrapping quotes only", () => {
   assert.equal(cleanOutput('"Running late!"'), "Running late!");
   assert.equal(cleanOutput('She said "hi" and "bye"'), 'She said "hi" and "bye"');
 });
+
+test("Max's questions are recognised, and answers go back in the prompt", async () => {
+  const { parseAsk, MAX_QUESTIONS } = await import("../src/core/prompts");
+  assert.equal(parseAsk("ASK: Which role was this for?"), "Which role was this for?");
+  assert.equal(parseAsk("  ask:  Who's it going to?  "), "Who's it going to?");
+  assert.equal(parseAsk("Hi Priya,\n\nASK: nothing"), null);
+  assert.equal(parseAsk("Asking for a friend"), null);
+
+  const once = buildComposeUser("email the hiring manager", {}, {
+    clarifications: [{ question: "Which role?", answer: "Data analyst at Acme" }],
+  });
+  assert.match(once, /<answers>\nYou asked: Which role\?\nThey said: Data analyst at Acme\n<\/answers>/);
+  assert.doesNotMatch(once, /write it now/);
+
+  const enough = buildComposeUser("x", {}, {
+    clarifications: Array.from({ length: MAX_QUESTIONS }, () => ({ question: "q", answer: "a" })),
+  });
+  assert.match(enough, /You've asked enough: write it now/);
+});

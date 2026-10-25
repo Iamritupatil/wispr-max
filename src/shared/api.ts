@@ -47,6 +47,14 @@ export interface ComposeRequest {
   selection?: string;
   /** Ask for a subject line too, to open the result as an email draft. */
   emailDraft?: boolean;
+  /** Max's earlier questions and the user's answers. */
+  clarifications?: { question: string; answer: string }[];
+}
+
+/** What Max wrote, or the one question it needs answered first. */
+export interface Written {
+  text: string;
+  question?: string;
 }
 
 export interface SmartResult {
@@ -55,6 +63,8 @@ export interface SmartResult {
   decidedBy: "rules" | "claude";
   reason: string;
   text: string;
+  /** Max needs one detail before writing; `text` is empty. */
+  question?: string;
 }
 
 /** Exposed to the main window as `window.wispr`. */
@@ -68,7 +78,7 @@ export interface AppApi {
   /** One-paste contacts: links, numbers, emails or a sentence, one contact per line. */
   quickAddContacts(text: string): Promise<{ contacts: Contact[]; added: Contact[] }>;
   clearHistory(): Promise<HistoryEntry[]>;
-  compose(req: ComposeRequest): Promise<string>;
+  compose(req: ComposeRequest): Promise<Written>;
   /** Dictation or request? Decides like the Dictate hotkey, then writes. */
   smart(req: ComposeRequest): Promise<SmartResult>;
   /** Streams Max output; `null` means discard what was shown and start over. */

@@ -10,6 +10,7 @@ import {
   buildPolishUser,
   buildProfileAndContacts,
   cleanOutput,
+  parseAsk,
   type ComposeOptions,
 } from "./prompts";
 
@@ -41,6 +42,12 @@ export interface AutoHandlers extends StreamHandlers {
 
 export class AiError extends Error {}
 
+/** What Max wrote, or the one question it needs answered first. */
+export interface Written {
+  text: string;
+  question?: string;
+}
+
 const CONTACT_FIELDS = ["name", "email", "phone", "company", "title", "relationship", "notes"] as const;
 
 const CONTACT_SCHEMA = {
@@ -67,8 +74,16 @@ export class Writer {
   }
 
   /** Max mode: turn a spoken instruction into finished text. */
-  async compose(input: ComposeInput, handlers: StreamHandlers = {}, signal?: AbortSignal) {
-    return this.run(
+  /**
+   * Max: turn an instruction into finished text. When something essential is
+   * missing, Claude asks instead: the result has a `question` and no text.
+   */
+  async compose(input: ComposeInput, handlers: StreamHandlers = {}, signal?: AbortSignal): Promise<Written> {
+    // Hold the first few characters back: "ASK: …" is a question for the ghost,
+    // never text to stream into the user's document.
+    let held = "";
+    let streaming = false;
+    const raw = await this.run(
       [
         { type: "text", text: COMPOSE_SYSTEM },
         {
@@ -78,9 +93,25 @@ export class Writer {
         },
       ],
       buildComposeUser(input.instruction, input.context, input.options),
-      handlers,
+      {
+        onText: (delta) => {
+          if (streaming) return handlers.onText?.(delta);
+          held += delta;
+          if (held.trimStart().length < 4) return;
+          if (/^\s*ASK:/i.test(held)) return; // a question: keep it out of the stream
+          streaming = true;
+          handlers.onText?.(held);
+        },
+        onRestart: () => {
+          held = "";
+          streaming = false;
+          handlers.onRestart?.();
+        },
+      },
       signal,
     );
+    const question = parseAsk(raw);
+    return question ? { text: "", question } : { text: raw };
   }
 
   /**
@@ -91,10 +122,11 @@ export class Writer {
     input: ComposeInput & { vocabulary?: string[] },
     handlers: AutoHandlers = {},
     signal?: AbortSignal,
-  ): Promise<{ intent: Intent; text: string }> {
+  ): Promise<{ intent: Intent; text: string; question?: string }> {
     // Hold text back until the "MODE: …" header line has been read.
     let buffer = "";
     let decided = false;
+    let asking = false;
     const raw = await this.run(
       [
         { type: "text", text: AUTO_SYSTEM },
@@ -107,13 +139,15 @@ export class Writer {
       buildAutoUser(input.instruction, input.context, { ...input.options, vocabulary: input.vocabulary }),
       {
         onText: (delta) => {
+          if (asking) return;
           if (decided) return handlers.onText?.(delta);
           buffer += delta;
           const parsed = parseAutoOutput(buffer);
           if (parsed) {
             decided = true;
+            asking = parsed.question !== undefined;
             handlers.onDecision?.(parsed.intent);
-            if (parsed.text) handlers.onText?.(parsed.text);
+            if (parsed.text && !asking) handlers.onText?.(parsed.text);
           } else if (buffer.length > 40 && !/^\s*MODE:?/i.test(buffer)) {
             // No header after all: treat it as dictation and show what we have.
             decided = true;
@@ -124,12 +158,14 @@ export class Writer {
         onRestart: () => {
           buffer = "";
           decided = false;
+          asking = false;
           handlers.onRestart?.();
         },
       },
       signal,
     );
     const parsed = parseAutoOutput(raw);
+    if (parsed?.question) return { intent: "command", text: "", question: parsed.question };
     return parsed ? { intent: parsed.intent, text: cleanOutput(parsed.text) } : { intent: "dictation", text: raw };
   }
 

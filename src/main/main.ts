@@ -28,7 +28,7 @@ import {
 import { hasDescription, parseContactInput, parseProfileMeta } from "../core/contact-input";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
 import { guessIntent } from "../core/intent";
-import { buildVocabulary } from "../core/prompts";
+import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
 import { applyDictionary, countWords, expandSnippets } from "../core/text";
@@ -73,6 +73,10 @@ interface Session {
   mode: Mode;
   phase: "recording" | "processing";
   abort: AbortController;
+  /** Set while Max waits for the answer to a question it asked. */
+  asking?: { mode: Mode; instruction: string; question: string; clarifications: Clarification[] };
+  /** Speaking time across the request and any answers, for stats. */
+  spokenMs: number;
   context: Promise<FocusContext>;
   timer?: NodeJS.Timeout;
 }
@@ -91,6 +95,7 @@ function startSession(mode: Mode) {
     phase: "recording",
     abort: new AbortController(),
     context: gatherContext(mode),
+    spokenMs: 0,
   };
   current = s;
   s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
@@ -157,6 +162,21 @@ interface Result {
   output: string;
   /** Recipient when Max opened an email draft instead of typing. */
   draftTo?: string;
+  /** Max needs one detail before it can write. */
+  question?: string;
+}
+
+/** The ghost asks its question and listens for the answer; the next stop writes. */
+function askUser(s: Session, mode: Mode, instruction: string, question: string, clarifications: Clarification[]) {
+  if (clarifications.length >= MAX_QUESTIONS) {
+    return failSession(s, `Max still needs to know: ${question}`);
+  }
+  s.asking = { mode, instruction, question, clarifications };
+  s.phase = "recording";
+  clearTimeout(s.timer);
+  s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
+  setOverlay({ phase: "listening", mode: "max", question, transcript: instruction });
+  sendOverlay({ type: "start", mode: "max", sounds: settings.sounds });
 }
 
 async function handleAudio(s: Session, audio: AudioPayload) {
@@ -165,6 +185,7 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       endSession(s, 0); // A double tap, not a recording.
       return;
     }
+    s.spokenMs += audio.durationMs;
     const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
     const raw = await transcribe(
       audio.data,
@@ -189,8 +210,15 @@ async function handleAudio(s: Session, audio: AudioPayload) {
     // ones go to Claude, which decides and writes in a single call.
     let mode = s.mode;
     let instruction = transcript;
+    let clarifications: Clarification[] = [];
     let result: Result;
-    if (mode === "max") {
+    if (s.asking) {
+      // This recording was the answer to Max's question.
+      ({ mode, instruction } = s.asking);
+      clarifications = [...s.asking.clarifications, { question: s.asking.question, answer: transcript }];
+      s.asking = undefined;
+      result = await writeWithMax(s, instruction, context, clarifications);
+    } else if (mode === "max") {
       result = await writeWithMax(s, instruction, context);
     } else {
       const guess = settings.smartIntent ? guessIntent(transcript, contacts) : null;
@@ -205,6 +233,7 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       }
     }
     if (current !== s) return;
+    if (result.question) return askUser(s, mode, instruction, result.question, clarifications);
     if (!result.output) return failSession(s, "Nothing to insert.");
 
     let message: string | undefined;
@@ -229,7 +258,7 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       draftTo: result.draftTo,
       autoDetected: s.mode === "dictate" && mode === "max",
     });
-    const stats = store.recordStats(countWords(result.output), audio.durationMs);
+    const stats = store.recordStats(countWords(result.output), s.spokenMs);
     mainWindow?.webContents.send("app:history", { history, stats });
     setOverlay({ phase: "done", mode, text: result.output, transcript: instruction, app: context.app, message });
     endSession(s, settleMs);
@@ -274,7 +303,12 @@ async function openDraftIfAny(s: Session, output: string, draftTo: string | null
   return { output, draftTo };
 }
 
-async function writeWithMax(s: Session, instruction: string, context: FocusContext): Promise<Result> {
+async function writeWithMax(
+  s: Session,
+  instruction: string,
+  context: FocusContext,
+  clarifications: Clarification[] = [],
+): Promise<Result> {
   const mentioned = findMentionedContacts(instruction, contacts);
   const draftTo = draftRecipient(instruction, mentioned, context);
   const base: OverlayState = {
@@ -286,14 +320,14 @@ async function writeWithMax(s: Session, instruction: string, context: FocusConte
   };
   setOverlay(base);
   let text = "";
-  const output = await writer().compose(
+  const written = await writer().compose(
     {
       instruction,
       context,
       profile: settings.profile,
       contacts,
       snippets: settings.snippets,
-      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo) },
+      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo), clarifications },
     },
     {
       onText: (delta) => {
@@ -306,7 +340,8 @@ async function writeWithMax(s: Session, instruction: string, context: FocusConte
     },
     s.abort.signal,
   );
-  return openDraftIfAny(s, output, draftTo);
+  if (written.question) return { output: "", question: written.question };
+  return openDraftIfAny(s, written.text, draftTo);
 }
 
 /** Ambiguous speech on the Dictate hotkey: Claude decides and writes in one pass. */
@@ -355,6 +390,7 @@ async function smartDictation(
     },
     s.abort.signal,
   );
+  if (res.question) return { mode: "max", result: { output: "", question: res.question } };
   if (res.intent === "dictation") {
     return { mode: "dictate", result: { output: expandSnippets(res.text, settings.snippets) } };
   }
@@ -682,7 +718,11 @@ function registerIpc() {
         profile: settings.profile,
         contacts,
         snippets: settings.snippets,
-        options: { tone: toneFor(settings.styles, context).guide, emailDraft: req.emailDraft },
+        options: {
+          tone: toneFor(settings.styles, context).guide,
+          emailDraft: req.emailDraft,
+          clarifications: req.clarifications,
+        },
       },
       {
         onText: (delta) => e.sender.send("app:compose-text", delta),
@@ -712,8 +752,8 @@ function registerIpc() {
       return { intent: "dictation", decidedBy: "rules", reason: guess.reason, text: expandSnippets(text, settings.snippets) };
     }
     if (guess.intent === "command") {
-      const text = await writer().compose({ ...input, instruction: guess.instruction }, stream);
-      return { intent: "command", decidedBy: "rules", reason: guess.reason, text };
+      const written = await writer().compose({ ...input, instruction: guess.instruction }, stream);
+      return { intent: "command", decidedBy: "rules", reason: guess.reason, ...written };
     }
     const res = await writer().auto({ ...input, instruction: req.instruction, vocabulary }, stream);
     return {
@@ -721,6 +761,7 @@ function registerIpc() {
       decidedBy: "claude",
       reason: res.intent === "command" ? "Claude heard a request to write" : "Claude heard dictation",
       text: res.intent === "dictation" ? expandSnippets(res.text, settings.snippets) : res.text,
+      question: res.question,
     };
   });
 

@@ -133,6 +133,8 @@ export interface OverlayState {
   transcript?: string;
   /** Contacts Max matched in the instruction, for the "To:" chip. */
   contacts?: string[];
+  /** Max's question while it waits for an answer. */
+  question?: string;
   app?: string;
   message?: string;
 }

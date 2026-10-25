@@ -242,21 +242,31 @@ api.onHistory(({ history, stats }) => {
 //
 // Voice first, like the floating ghost: click the big ghost and talk, or type.
 // It decides whether you're dictating or asking Max to write, exactly like the
-// Dictate hotkey, and shows the result here instead of pasting it.
+// Dictate hotkey, and shows the result here instead of pasting it. When Max
+// needs one detail first, the ghost asks and your next answer finishes it.
+
+type Ask = { instruction: string; question: string; clarifications: { question: string; answer: string }[] };
 
 const talkGhost = $("talk-ghost");
 const talkArt = $("talk-ghost-art");
 const talkOutput = $("talk-output");
+const talkInput = $<HTMLInputElement>("talk-input");
 const talkRecorder = new Recorder();
+const TALK_HINT = $("talk-hint").textContent ?? "";
 let talkBusy = false;
 let talkDraft: { to: string; subject: string; body: string } | null = null;
+let pendingAsk: Ask | null = null;
 let lookAround: number | undefined;
 
-function setTalk(state: "idle" | "listening" | "thinking" | "done", title: string) {
+function setTalk(state: "idle" | "listening" | "thinking" | "asking" | "done", title: string) {
   talkGhost.dataset.state = state;
   $("talk-title").textContent = title;
+  $("talk-title").classList.toggle("bubble-q", state === "asking");
+  $("talk-hint").textContent =
+    state === "asking" ? "Max needs one thing first. Click the ghost and answer, or type it below." : TALK_HINT;
+  talkInput.placeholder = state === "asking" ? "Type your answer and press Enter" : "…or type to Max and press Enter";
   clearInterval(lookAround);
-  talkArt.dataset.eyes = state === "done" ? "happy" : "center";
+  talkArt.dataset.eyes = state === "done" ? "happy" : state === "asking" ? "right" : "center";
   if (state === "thinking") {
     let left = false;
     lookAround = window.setInterval(() => (talkArt.dataset.eyes = (left = !left) ? "left" : "right"), 420);
@@ -273,21 +283,44 @@ async function runTalk(text: string) {
   if (!text || talkBusy) return;
   talkBusy = true;
   talkDraft = null;
+  const answering = pendingAsk;
+  pendingAsk = null;
+  const instruction = answering?.instruction ?? text;
   setTalk("thinking", "Max is on it…");
   $("talk-result").classList.remove("hidden");
   $("talk-email").classList.add("hidden");
   $("talk-draft").classList.add("hidden");
-  $("talk-meta").textContent = `“${text}”`;
+  $("talk-meta").textContent = answering ? `“${instruction}” · you said: “${text}”` : `“${text}”`;
   talkOutput.textContent = "";
   talkOutput.classList.add("streaming");
   // "Email Priya…" becomes a ready-to-send draft: recipient, subject and body.
-  const to = emailRecipient(text, findMentionedContacts(text, state.contacts));
+  const about = answering ? `${instruction} ${text}` : text;
+  const to = emailRecipient(about, findMentionedContacts(about, state.contacts));
   try {
-    const res = await api.smart({ instruction: text, app: "Wispr Max", emailDraft: Boolean(to) });
+    let res: { intent: "dictation" | "command"; text: string; question?: string; reason?: string; decidedBy?: string };
+    let clarifications = answering?.clarifications ?? [];
+    if (answering) {
+      clarifications = [...clarifications, { question: answering.question, answer: text }];
+      res = { intent: "command", ...(await api.compose({ instruction, app: "Wispr Max", emailDraft: Boolean(to), clarifications })) };
+    } else {
+      res = await api.smart({ instruction: text, app: "Wispr Max", emailDraft: Boolean(to) });
+    }
+
+    if (res.question) {
+      // Max asks before guessing; the next thing you say or type is the answer.
+      pendingAsk = { instruction, question: res.question, clarifications };
+      $("talk-result").classList.add("hidden");
+      setTalk("asking", res.question);
+      talkInput.focus();
+      return;
+    }
+
     const asked = res.intent === "command";
-    $("talk-meta").innerHTML =
-      `“${esc(text)}” · heard as <b>${asked ? "a request to Max" : "dictation"}</b>` +
-      `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
+    if (!answering) {
+      $("talk-meta").innerHTML =
+        `“${esc(text)}” · heard as <b>${asked ? "a request to Max" : "dictation"}</b>` +
+        `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
+    }
     if (asked && to) {
       talkDraft = { to, ...parseEmailDraft(res.text) };
       $("talk-to").textContent = to;
@@ -314,29 +347,30 @@ talkGhost.addEventListener("click", async () => {
     if (!talkRecorder.active) {
       if (talkBusy) return;
       await talkRecorder.start();
-      setTalk("listening", "Listening… click the ghost when you're done.");
+      setTalk("listening", pendingAsk ? "Listening for your answer… click the ghost when you're done." : "Listening… click the ghost when you're done.");
       return;
     }
     setTalk("thinking", "Transcribing…");
     const text = await api.transcribe(await talkRecorder.stop());
     if (!text) {
-      setTalk("idle", "Didn't catch that. Click the ghost and try again.");
+      if (pendingAsk) setTalk("asking", pendingAsk.question);
+      else setTalk("idle", "Didn't catch that. Click the ghost and try again.");
       return;
     }
     await runTalk(text);
   } catch (err) {
     await talkRecorder.cancel();
-    setTalk("idle", "Click the ghost and talk.");
+    if (pendingAsk) setTalk("asking", pendingAsk.question);
+    else setTalk("idle", "Click the ghost and talk.");
     toast(errorText(err), true);
   }
 });
 
-$("talk-input").addEventListener("keydown", (e) => {
+talkInput.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
   e.preventDefault();
-  const input = e.target as HTMLInputElement;
-  void runTalk(input.value);
-  input.value = "";
+  void runTalk(talkInput.value);
+  talkInput.value = "";
 });
 $("talk-copy").addEventListener("click", async () => {
   await api.copy(talkOutput.textContent ?? "");

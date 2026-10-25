@@ -876,6 +876,34 @@ input.hotkey.recording {
   font-size: 24px;
 }
 
+/* The ghost's question, as a speech bubble pointing back at it. */
+.talk-title.bubble-q {
+  position: relative;
+  align-self: flex-start;
+  font-size: 20px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 2px solid var(--accent);
+  background: var(--field);
+}
+
+.talk-title.bubble-q::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--field);
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.talk-ghost[data-state="asking"] .ghost-slot {
+  animation: hop 1.2s steps(2) infinite;
+}
+
 .talk-input {
   margin-top: 4px;
   border-radius: 999px;

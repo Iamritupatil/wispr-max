@@ -48,3 +48,11 @@ test("parses Claude's auto-mode header", () => {
   assert.deepEqual(parseAutoOutput("MODE: dictation\nRunning late."), { intent: "dictation", text: "Running late." });
   assert.equal(parseAutoOutput("Hi Priya"), null);
 });
+
+test("auto mode can ask instead of writing", () => {
+  assert.deepEqual(parseAutoOutput("MODE: ask\n\nWhich role was this for?"), {
+    intent: "command",
+    text: "",
+    question: "Which role was this for?",
+  });
+});

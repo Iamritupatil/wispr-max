@@ -118,11 +118,17 @@ export function guessIntent(transcript: string, contacts: Contact[] = []): Inten
 }
 
 /** Claude's answer starts with this header line in auto mode. */
-export const AUTO_HEADER = /^\s*MODE:\s*(dictation|write)\s*\n+/i;
+export const AUTO_HEADER = /^\s*MODE:\s*(dictation|write|ask)\s*\n+/i;
 
-/** Splits "MODE: write\n\n…text" into the decision and the text. */
-export function parseAutoOutput(raw: string): { intent: Intent; text: string } | null {
+/**
+ * Splits "MODE: write\n\n…text" into the decision and the text. "MODE: ask"
+ * is a request to write where Max needs one detail first: `question` is set.
+ */
+export function parseAutoOutput(raw: string): { intent: Intent; text: string; question?: string } | null {
   const m = raw.match(AUTO_HEADER);
   if (!m) return null;
-  return { intent: m[1].toLowerCase() === "write" ? "command" : "dictation", text: raw.slice(m[0].length) };
+  const mode = m[1].toLowerCase();
+  const text = raw.slice(m[0].length);
+  if (mode === "ask") return { intent: "command", text: "", question: text.replace(/^ASK:\s*/i, "").trim() };
+  return { intent: mode === "write" ? "command" : "dictation", text };
 }

@@ -78,11 +78,17 @@ const common = (out: string) => [
   [!MARKDOWN.test(out), "no markdown"],
 ] as const;
 
+/** Questions show up as "ASK: …" so the checks can see them. */
+const asText = async (w: Promise<{ text: string; question?: string }>) => {
+  const r = await w;
+  return r.question ? `ASK: ${r.question}` : r.text;
+};
+
 type Check = { label: string; run: () => Promise<string>; checks: (out: string) => ReadonlyArray<readonly [boolean, string]> };
 const checks: Check[] = [
   {
     label: "Email draft from Slack: 'Email Priya asking whether my job is confirmed'",
-    run: () => writer.compose(input("Email Priya asking whether my job is confirmed", { app: "Slack" }, true)),
+    run: () => asText(writer.compose(input("Email Priya asking whether my job is confirmed", { app: "Slack" }, true))),
     checks: (out) => {
       const d = parseEmailDraft(out);
       return [
@@ -96,12 +102,12 @@ const checks: Check[] = [
   },
   {
     label: "In Gmail: same request types the body only",
-    run: () => writer.compose(input("Email Priya asking whether my job is confirmed", { app: "Google Chrome", windowTitle: "Compose - Gmail" })),
+    run: () => asText(writer.compose(input("Email Priya asking whether my job is confirmed", { app: "Google Chrome", windowTitle: "Compose - Gmail" }))),
     checks: (out) => [...common(out), [!/^subject:/i.test(out), "no subject line in the body"], [/priya/i.test(out.split("\n")[0]), "greets Priya"]],
   },
   {
     label: "Slack: 'Tell Daniel I'll be ten minutes late to standup'",
-    run: () => writer.compose(input("Tell Daniel I'll be ten minutes late to standup", { app: "Slack" })),
+    run: () => asText(writer.compose(input("Tell Daniel I'll be ten minutes late to standup", { app: "Slack" }))),
     checks: (out) => [
       ...common(out),
       [words(out) <= 40, `short (${words(out)} words)`],
@@ -111,23 +117,56 @@ const checks: Check[] = [
   },
   {
     label: "WhatsApp with 'very casual' style",
-    run: () => writer.compose(input("Tell Daniel I'll be ten minutes late", { app: "WhatsApp" })),
+    run: () => asText(writer.compose(input("Tell Daniel I'll be ten minutes late", { app: "WhatsApp" }))),
     checks: (out) => [...common(out), [out === out.toLowerCase(), "all lowercase"]],
   },
   {
     label: "Rewrite selected text: 'Make this more formal'",
-    run: () => writer.compose(input("Make this more formal", { app: "Gmail", selection: "hey can u send the thing by fri thx" })),
+    run: () => asText(writer.compose(input("Make this more formal", { app: "Gmail", selection: "hey can u send the thing by fri thx" }))),
     checks: (out) => [...common(out), [!/\bu\b|\bthx\b/i.test(out), "no texting shorthand"], [/friday/i.test(out), "keeps the deadline"]],
   },
   {
     label: "Snippet use: 'Email Marcus my calendar link'",
-    run: () => writer.compose(input("Email Marcus my calendar link so we can book the pilot call", { app: "Gmail" })),
+    run: () => asText(writer.compose(input("Email Marcus my calendar link so we can book the pilot call", { app: "Gmail" }))),
     checks: (out) => [...common(out), [out.includes("https://cal.com/alexchen/30min"), "includes the snippet exactly"]],
   },
   {
     label: "Follows contact notes: 'Email Elena asking to move our meeting'",
-    run: () => writer.compose(input("Email Elena asking to move our meeting to another day", { app: "Gmail" })),
+    run: () => asText(writer.compose(input("Email Elena asking to move our meeting to another day", { app: "Gmail" }))),
     checks: (out) => [...common(out), [/professor rossi/i.test(out), "follows the contact note (Professor Rossi)"]],
+  },
+  {
+    label: "Asks when it can't know: 'email the person I'm getting a job from about next steps'",
+    run: () =>
+      asText(writer.compose(input("Write an email to the person I'm getting a job from, it's been a week and I haven't heard back", { app: "Gmail" }))),
+    checks: (out) => [
+      [/^ASK:/.test(out), "asks a question instead of guessing"],
+      [out.split(/\s+/).length <= 20, "keeps the question short"],
+    ],
+  },
+  {
+    label: "Doesn't ask when it has what it needs",
+    run: () => asText(writer.compose(input("Tell Daniel I'll be ten minutes late", { app: "Slack" }))),
+    checks: (out) => [[!/^ASK:/.test(out), "writes straight away"]],
+  },
+  {
+    label: "Uses the answer after asking",
+    run: () =>
+      asText(
+        writer.compose({
+          ...input("Write an email to the person I'm getting a job from, it's been a week and I haven't heard back", { app: "Gmail" }),
+          options: {
+            tone: toneFor(styles, { app: "Gmail" }).guide,
+            clarifications: [{ question: "Which role, and who's it going to?", answer: "Data analyst role at Acme, to Sam the hiring manager" }],
+          },
+        }),
+      ),
+    checks: (out) => [
+      ...common(out),
+      [!/^ASK:/.test(out), "writes after the answer"],
+      [/data analyst/i.test(out) && /\bsam\b/i.test(out), "uses the answer (data analyst, Sam)"],
+      [!/product manager|northwind|priya/i.test(out), "doesn't borrow another contact's details"],
+    ],
   },
   {
     label: "Dictation polish: self-corrections and fillers",

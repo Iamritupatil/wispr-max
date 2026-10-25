@@ -119,7 +119,8 @@ function chime(notes: number[]) {
 
 const LABELS: Record<Phase, (s: OverlayState) => string> = {
   idle: () => "",
-  listening: (s) => (s.mode === "max" ? "Max is listening" : "Listening"),
+  listening: (s) =>
+    s.question ? "Answer out loud, then press again" : s.mode === "max" ? "Max is listening" : "Listening",
   transcribing: () => "Transcribing",
   thinking: (s) => (s.mode === "max" ? "Max is thinking" : "Polishing"),
   writing: () => "Writing",
@@ -135,6 +136,8 @@ function render(s: OverlayState) {
   if (root.dataset.phase !== s.phase) animateEyes(s.phase);
   root.dataset.phase = s.phase;
   root.dataset.mode = s.mode;
+  root.dataset.asking = String(Boolean(s.question) && s.phase === "listening");
+  $("ask-q").textContent = s.question ?? "";
   $("label").textContent = LABELS[s.phase](s);
   $("to").textContent = s.contacts?.length ? `To: ${s.contacts.join(", ")}` : "";
   $("app").textContent = s.app ?? "";

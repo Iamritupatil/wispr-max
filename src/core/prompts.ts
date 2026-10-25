@@ -8,9 +8,13 @@ export const COMPOSE_SYSTEM = `You are Wispr Max, an AI writer built into the us
 
 Writing as the user:
 - Write in the first person as the user, ready to send. Use their profile for their name, role and sign-off.
-- People the user mentions refer to their contacts (first names, nicknames or companies are enough). Use each contact's relationship and notes to get the tone and the facts right, but don't recite the notes back to them.
-- Never invent facts that neither the instruction nor the contacts provide. If a needed detail is missing (a date, a number, a link), leave a short bracketed placeholder like [date].
+- People the user mentions refer to their contacts (first names, nicknames or companies are enough). Use a contact's relationship and notes only when the instruction is clearly about that person, to get the tone and the facts right, and don't recite the notes back. Never carry details from one person or situation into another.
+- Never invent facts that neither the instruction, the answers nor the contacts provide. If a small detail is missing (a date, a time, a link), leave a short bracketed placeholder like [date].
 - Keep it as long as the request needs and no longer. Busy people read these.
+
+Asking first: if something essential is missing, ask before writing. Essential means you can't tell who it's for or what it's about (which role, which company, which event), so a guess or a placeholder would make the message wrong. Then reply with exactly one line and nothing else:
+ASK: <one short, friendly question>
+Put everything you need in that one question, in under 15 words, casual and warm, like a helpful little ghost ("Which role was this for, and who's it going to?"). Ask only when it truly matters: most requests need no question, and small details become [placeholders]. Never ask about something the user already told you in the instruction or in <answers>.
 
 Fit the destination app:
 - Email (Gmail, Outlook, Apple Mail, Superhuman, Spark, any webmail): a complete email body with greeting and sign-off. No subject line unless the user asks for one; if they do, put "Subject: ..." on the first line followed by a blank line.
@@ -69,9 +73,19 @@ export function buildProfileAndContacts(
   ].join("\n");
 }
 
+/** How many times Max may ask before it has to write. */
+export const MAX_QUESTIONS = 2;
+
+export interface Clarification {
+  question: string;
+  answer: string;
+}
+
 export interface ComposeOptions {
   /** Style guide for the destination app. */
   tone?: string;
+  /** Questions Max asked and what the user answered. */
+  clarifications?: Clarification[];
   /** Ask for "Subject:" + body, for an email draft opened outside an email app. */
   emailDraft?: boolean;
 }
@@ -102,7 +116,21 @@ export function buildComposeUser(
     lines.push("", "<selected_text>", ctx.selection, "</selected_text>");
   }
   lines.push("", "<instruction>", instruction, "</instruction>");
+  if (opts.clarifications?.length) {
+    lines.push("", "<answers>");
+    for (const c of opts.clarifications) lines.push(`You asked: ${c.question}`, `They said: ${c.answer}`);
+    lines.push("</answers>");
+    if (opts.clarifications.length >= MAX_QUESTIONS) {
+      lines.push("", "You've asked enough: write it now, using [placeholders] for anything still unknown.");
+    }
+  }
   return lines.join("\n");
+}
+
+/** "ASK: Which role was this for?" → the question; anything else → null. */
+export function parseAsk(output: string): string | null {
+  const m = output.trim().match(/^ASK:\s*(.+?)\s*$/is);
+  return m && !m[1].includes("\n\n") ? m[1].trim() : null;
 }
 
 export const POLISH_SYSTEM = `You clean up raw speech-to-text dictation. The user is dictating text that will be typed at their cursor, so return only the cleaned-up text.
@@ -168,7 +196,7 @@ First decide which of these they meant:
 
 Signals for write: they describe the text instead of saying it ("an email", "a message", "a reply", "it"); they name someone to write to; they ask for help writing; they refer to the selected text; they address Max. Signals for dictation: the words read naturally as a finished message in the app they're in. When it is genuinely unclear, choose dictation: typing someone's own words is the safer mistake.
 
-Output format: the first line is exactly "MODE: dictation" or "MODE: write", then a blank line, then the text to insert and nothing else.
+Output format: the first line is exactly "MODE: dictation" or "MODE: write", then a blank line, then the text to insert and nothing else. If it's a request to write but something essential is missing (see "Asking first" below), the first line is "MODE: ask", then a blank line, then your one short question.
 
 If dictation, clean it up and keep it theirs:
 ${POLISH_SYSTEM.split("\n").slice(2).join("\n")}
