@@ -15,6 +15,8 @@
   --warn: #c0812f;
   --danger: #c2453d;
   --shadow: 0 1px 2px rgba(30, 30, 20, 0.04), 0 6px 20px rgba(30, 30, 20, 0.04);
+  --btn-strong-bg: #1b2120;
+  --btn-strong-ink: #faf9f6;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   color-scheme: light;
 }
@@ -29,13 +31,15 @@
     --faint: #66706d;
     --line: #29302e;
     --field: #202625;
-    --accent: #9cc3be;
+    --accent: #7fa6a1;
     --accent-ink: #10201e;
-    --accent-soft: rgba(156, 195, 190, 0.12);
+    --accent-soft: rgba(127, 166, 161, 0.12);
     --ok: #7fd1a8;
     --warn: #e5b16a;
     --danger: #f08a82;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
+    --btn-strong-bg: #2a3231;
+    --btn-strong-ink: #e6ecea;
     color-scheme: dark;
   }
 }
@@ -347,25 +351,6 @@ kbd {
 .stat b {
   color: var(--ink);
   font-size: 14px;
-}
-
-.hint-banner {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 18px 22px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(127, 155, 165, 0.16), rgba(75, 111, 108, 0.1));
-  border: 1px solid var(--line);
-}
-
-.hint-banner .serif {
-  font-size: 22px;
-  margin-bottom: 4px;
-}
-
-.hint-banner em {
-  font-style: italic;
 }
 
 .keys {
@@ -681,13 +666,31 @@ input.hotkey.recording {
 }
 
 .btn.primary {
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  background: var(--accent);
+  border-color: var(--btn-strong-bg);
+  color: var(--btn-strong-ink);
+  background: var(--btn-strong-bg);
 }
 
 .btn.primary:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.15);
+}
+
+/* Quiet text actions, the way Wispr Flow does it. */
+.link-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: 0;
+  padding: 2px 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .btn.primary kbd {
@@ -769,49 +772,160 @@ input.hotkey.recording {
   box-shadow: var(--shadow);
 }
 
-.instruction {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
+/* ---------- talk to Max ---------- */
 
-.examples {
+.talk {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: -6px;
-}
-
-.examples button {
-  font: inherit;
-  font-size: 12px;
+  align-items: center;
+  gap: 28px;
+  padding: 26px 28px;
+  border-radius: 16px;
+  background: var(--panel);
   border: 1px solid var(--line);
+}
+
+.talk-ghost {
+  border: 0;
   background: transparent;
-  color: var(--muted);
-  border-radius: 999px;
-  padding: 3px 10px;
+  padding: 6px 4px 0;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: none;
 }
 
-.examples button:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+.ghost-slot.huge {
+  width: 72px;
 }
 
-.result {
+.talk-ghost .ghost-slot {
+  animation: float 3.2s ease-in-out infinite;
+  transition: transform 160ms ease;
+}
+
+.talk-ghost:hover .ghost-slot {
+  transform: scale(1.06);
+}
+
+.talk-ghost[data-state="listening"] .ghost-slot {
+  animation: hop 0.5s steps(2) infinite;
+}
+
+.talk-ghost[data-state="thinking"] .ghost-slot {
+  animation: none;
+}
+
+@keyframes float {
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes hop {
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+.talk-shadow {
+  display: flex;
+  gap: 3px;
+  height: 3px;
+  opacity: 0.7;
+}
+
+.talk-shadow i {
+  height: 3px;
+  background: var(--accent);
+}
+
+.talk-shadow i:nth-child(1),
+.talk-shadow i:nth-child(4) {
+  width: 3px;
+}
+
+.talk-shadow i:nth-child(2) {
+  width: 9px;
+}
+
+.talk-shadow i:nth-child(3) {
+  width: 18px;
+}
+
+.talk-ghost[data-state="listening"] .talk-shadow i {
+  animation: dots 0.9s steps(3) infinite;
+}
+
+@keyframes dots {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.talk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.talk-title {
+  font-size: 24px;
+}
+
+.talk-input {
+  margin-top: 4px;
+  border-radius: 999px;
+  padding: 9px 16px;
+}
+
+.talk-result {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
+  background: var(--panel);
   overflow: hidden;
 }
 
+.talk-meta {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 12px 16px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.talk-meta b {
+  color: var(--ink);
+}
+
+.talk-meta .by {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.talk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  padding: 0 16px 12px;
+}
+
 .email-head {
+  margin: 12px 16px 0;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
+  border: 1px solid var(--line);
   background: var(--field);
   font-size: 13px;
 }
@@ -839,35 +953,6 @@ input.hotkey.recording {
   to {
     opacity: 0;
   }
-}
-
-.mode-switch {
-  margin-bottom: -6px;
-}
-
-.intent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.intent b {
-  color: var(--ink);
-}
-
-.intent .by {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--faint);
-}
-
-.result .row {
-  padding: 10px 12px 10px 16px;
-  border-top: 1px solid var(--line);
 }
 
 /* ---------- dictionary, snippets ---------- */
@@ -1018,8 +1103,71 @@ input.hotkey.recording {
 
 /* ---------- contacts ---------- */
 
+.quick-add {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.quick-add:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.quick-add textarea {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 9px 0;
+  resize: none;
+  field-sizing: content;
+  min-height: 40px;
+  max-height: 160px;
+}
+
+.quick-add textarea:focus {
+  box-shadow: none;
+}
+
+.icon-btn.quiet {
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-btn.quiet:hover {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.qa-status {
+  min-height: 18px;
+  margin-top: -8px;
+}
+
+.qa-status b {
+  color: var(--ink);
+}
+
+.contacts-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.contact .platforms {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 3px;
+}
+
 .search {
-  max-width: 300px;
+  max-width: 260px;
 }
 
 .contact-grid {

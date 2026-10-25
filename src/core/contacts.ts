@@ -46,7 +46,7 @@ export function parseCsvRows(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
-const HEADER_ALIASES: Record<keyof Omit<Contact, "id">, RegExp> = {
+const HEADER_ALIASES: Record<keyof Omit<Contact, "id" | "links">, RegExp> = {
   name: /^(name|full ?name|display ?name)$/i,
   email: /^(e-?mail|e-?mail ?address|e-?mail 1 - value|primary e-?mail)$/i,
   phone: /^(phone|mobile|phone ?number|phone 1 - value|mobile phone)$/i,
@@ -153,8 +153,11 @@ export function mergeContacts(existing: Contact[], incoming: Contact[]): Contact
         e.name.toLowerCase() === c.name.toLowerCase(),
     );
     if (match) {
+      const links = [...(match.links ?? [])];
+      for (const l of c.links ?? []) if (!links.some((x) => x.url === l.url)) links.push(l);
+      if (links.length) match.links = links;
       for (const [k, v] of Object.entries(c)) {
-        if (k !== "id" && v && !(match as unknown as Record<string, string>)[k]) {
+        if (k !== "id" && k !== "links" && v && !(match as unknown as Record<string, string>)[k]) {
           (match as unknown as Record<string, string>)[k] = v;
         }
       }
@@ -214,6 +217,7 @@ export function formatContact(c: Contact): string {
   const job = [c.title, c.company].filter(Boolean).join(" at ");
   if (job) bits.push(job);
   if (c.relationship) bits.push(`relationship: ${c.relationship}`);
+  if (c.links?.length) bits.push(c.links.map((l) => `${l.platform}: ${l.url}`).join(", "));
   if (c.notes) bits.push(`notes: ${c.notes.replace(/\s+/g, " ")}`);
   return `- ${bits.join(" | ")}`;
 }

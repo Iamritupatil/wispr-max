@@ -41,6 +41,23 @@ export interface AutoHandlers extends StreamHandlers {
 
 export class AiError extends Error {}
 
+const CONTACT_FIELDS = ["name", "email", "phone", "company", "title", "relationship", "notes"] as const;
+
+const CONTACT_SCHEMA = {
+  type: "object",
+  properties: Object.fromEntries(CONTACT_FIELDS.map((f) => [f, { type: "string" }])),
+  required: [...CONTACT_FIELDS],
+  additionalProperties: false,
+};
+
+const CONTACT_SYSTEM = `The user is adding someone to their contacts by pasting or saying whatever they have: links, an email, a number, a few words about the person. Fill in the fields from what they gave you.
+
+- name: the person's full name as stated. If only a profile link is given, a name readable from it is fine.
+- title and company: their job, if mentioned.
+- relationship: how the user knows them, from the user's point of view ("recruiter for my PM application", "college friend").
+- notes: anything else that would help write to them (what's going on, preferences, dates), in the user's words.
+- Leave a field as an empty string when it isn't given. Never invent details.`;
+
 export class Writer {
   private client: Anthropic;
 
@@ -114,6 +131,30 @@ export class Writer {
     );
     const parsed = parseAutoOutput(raw);
     return parsed ? { intent: parsed.intent, text: cleanOutput(parsed.text) } : { intent: "dictation", text: raw };
+  }
+
+  /** Turns whatever the user pasted or said about someone into contact fields. */
+  async extractContact(text: string, signal?: AbortSignal): Promise<Partial<Contact>> {
+    try {
+      const res = await this.client.beta.messages.create(
+        {
+          model: this.opts.model,
+          max_tokens: 8000,
+          output_config: { effort: "low", format: { type: "json_schema", schema: CONTACT_SCHEMA } },
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+          system: CONTACT_SYSTEM,
+          messages: [{ role: "user", content: text }],
+        },
+        { signal },
+      );
+      if (res.stop_reason === "refusal") return {};
+      const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+      const fields = JSON.parse(json) as Record<string, string>;
+      return Object.fromEntries(Object.entries(fields).filter(([, v]) => v?.trim())) as Partial<Contact>;
+    } catch (err) {
+      throw toAiError(err);
+    }
   }
 
   /** Dictation mode: clean up a raw transcript without changing its meaning. */

@@ -65,6 +65,8 @@ export interface AppApi {
   deleteContact(id: string): Promise<Contact[]>;
   importContacts(): Promise<{ contacts: Contact[]; imported: number } | null>;
   addSampleContacts(): Promise<Contact[]>;
+  /** One-paste contacts: links, numbers, emails or a sentence, one contact per line. */
+  quickAddContacts(text: string): Promise<{ contacts: Contact[]; added: Contact[] }>;
   clearHistory(): Promise<HistoryEntry[]>;
   compose(req: ComposeRequest): Promise<string>;
   /** Dictation or request? Decides like the Dictate hotkey, then writes. */

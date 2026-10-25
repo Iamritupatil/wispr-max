@@ -1,3 +1,4 @@
+import { hasDescription, parseContactInput } from "../core/contact-input";
 import { findMentionedContacts } from "../core/contacts";
 import { emailRecipient, parseEmailDraft } from "../core/email";
 import { localDay, streak, wpm } from "../core/stats";
@@ -172,26 +173,6 @@ function renderHome() {
     renderHome();
   });
 
-  const names = contacts.map((c) => c.name.replace(/^(dr|prof)\.?\s+/i, "").split(" ")[0]);
-  const who = (i: number, fallback: string) => names[i] ?? fallback;
-  const examples =
-    pgMode === "auto"
-      ? [
-          `Okay, I want to email ${who(0, "Priya")} about whether my job is confirmed. Can you write it?`,
-          "Can you send me the deck by Friday?",
-          "so um the meeting is at 4, no actually 5, and bring the slides",
-        ]
-      : [
-          `Email ${who(0, "Priya")} asking whether my job is confirmed`,
-          `Tell ${who(1, "Daniel")} I'll be ten minutes late`,
-          `Thank ${who(2, "Elena")} for the feedback on my draft`,
-        ];
-  $("pg-examples").innerHTML = examples.map((x) => `<button>${esc(x)}</button>`).join("");
-  $("pg-mode-hint").textContent =
-    pgMode === "auto"
-      ? "Type or speak anything, as you would on the Dictate hotkey. Wispr Max works out whether you're dictating or asking it to write."
-      : "Tell Max what to write, as you would on the Max hotkey.";
-
   const line = (ok: boolean, text: string) =>
     `<div class="s"><span class="dot" style="background:var(--${ok ? "ok" : "warn"})"></span>${esc(text)}</div>`;
   $("sidebar-status").innerHTML =
@@ -215,7 +196,7 @@ function renderFeed() {
   $("h-clear").classList.toggle("hidden", !history.length);
   if (!history.length) {
     $("feed").innerHTML = `<div class="empty"><span class="ghost-slot" data-eyes="happy" data-ghost></span>
-      <div>Nothing here yet. Press ${keyCaps(state.settings.dictateHotkey)} in any app and start talking.</div></div>`;
+      <div>Nothing here yet. Press <span class="keys">${keyCaps(state.settings.dictateHotkey)}</span> in any app and start talking.</div></div>`;
     paintGhosts($("feed"));
     return;
   }
@@ -257,136 +238,112 @@ api.onHistory(({ history, stats }) => {
   renderFeed();
 });
 
-// ---------- Try Max ----------
+// ---------- talk to Max (Home) ----------
+//
+// Voice first, like the floating ghost: click the big ghost and talk, or type.
+// It decides whether you're dictating or asking Max to write, exactly like the
+// Dictate hotkey, and shows the result here instead of pasting it.
 
-let pgApp = { app: "Gmail", title: "Compose - Gmail" };
-let pgMode: "max" | "auto" = "max";
-$("pg-mode").addEventListener("click", (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
-  if (!b) return;
-  pgMode = b.dataset.mode as "max" | "auto";
-  $("pg-mode").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
-  renderHome();
-});
-$("pg-apps").addEventListener("click", (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
-  if (!b) return;
-  pgApp = { app: b.dataset.app!, title: b.dataset.title! };
-  $("pg-apps").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
-});
+const talkGhost = $("talk-ghost");
+const talkArt = $("talk-ghost-art");
+const talkOutput = $("talk-output");
+const talkRecorder = new Recorder();
+let talkBusy = false;
+let talkDraft: { to: string; subject: string; body: string } | null = null;
+let lookAround: number | undefined;
 
-$("pg-examples").addEventListener("click", (e) => {
-  const b = (e.target as HTMLElement).closest("button");
-  if (b) {
-    $<HTMLTextAreaElement>("pg-instruction").value = b.textContent ?? "";
-    void runPlayground();
-  }
-});
-
-const output = $("pg-output");
-api.onComposeText((delta) => {
-  output.textContent = delta === null ? "" : output.textContent + delta;
-});
-
-let running = false;
-let draft: { to: string; subject: string; body: string } | null = null;
-
-async function runPlayground() {
-  const instruction = $<HTMLTextAreaElement>("pg-instruction").value.trim();
-  if (!instruction || running) return;
-  running = true;
-  const btn = $<HTMLButtonElement>("pg-run");
-  btn.disabled = true;
-
-  // "Email Priya…" in Gmail becomes a full draft: recipient, subject and body.
-  const to =
-    pgApp.app === "Gmail" ? emailRecipient(instruction, findMentionedContacts(instruction, state.contacts)) : null;
-  draft = null;
-  $("pg-result").classList.remove("hidden");
-  $("pg-email").classList.add("hidden");
-  $("pg-draft").classList.add("hidden");
-  $("pg-intent").classList.add("hidden");
-  output.textContent = "";
-  output.classList.add("streaming");
-  $("pg-status").textContent = "Max is writing…";
-  const started = performance.now();
-  try {
-    const req = {
-      instruction,
-      app: pgApp.app,
-      windowTitle: pgApp.title,
-      selection: $<HTMLTextAreaElement>("pg-selection").value.trim() || undefined,
-      emailDraft: Boolean(to),
-    };
-    let text: string;
-    let isRequest = true;
-    if (pgMode === "auto") {
-      const res = await api.smart(req);
-      text = res.text;
-      isRequest = res.intent === "command";
-      $("pg-intent").innerHTML =
-        `<span class="ghost-slot" data-eyes="${isRequest ? "happy" : "center"}" data-ghost></span>` +
-        `Heard as <b>${isRequest ? "a request to Max" : "dictation"}</b> · ${esc(res.reason)}` +
-        `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
-      $("pg-intent").classList.remove("hidden");
-      paintGhosts($("pg-intent"));
-    } else {
-      text = await api.compose(req);
-    }
-    if (to && isRequest) {
-      draft = { to, ...parseEmailDraft(text) };
-      $("pg-to").textContent = to;
-      $("pg-subject").textContent = draft.subject || "(no subject)";
-      $("pg-email").classList.remove("hidden");
-      $("pg-draft").classList.remove("hidden");
-      output.textContent = draft.body;
-    } else {
-      output.textContent = text;
-    }
-    $("pg-status").textContent = `Written in ${((performance.now() - started) / 1000).toFixed(1)}s`;
-  } catch (err) {
-    $("pg-result").classList.add("hidden");
-    toast(errorText(err), true);
-  } finally {
-    output.classList.remove("streaming");
-    btn.disabled = false;
-    running = false;
+function setTalk(state: "idle" | "listening" | "thinking" | "done", title: string) {
+  talkGhost.dataset.state = state;
+  $("talk-title").textContent = title;
+  clearInterval(lookAround);
+  talkArt.dataset.eyes = state === "done" ? "happy" : "center";
+  if (state === "thinking") {
+    let left = false;
+    lookAround = window.setInterval(() => (talkArt.dataset.eyes = (left = !left) ? "left" : "right"), 420);
   }
 }
 
-$("pg-run").addEventListener("click", runPlayground);
-$("pg-instruction").addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    void runPlayground();
-  }
-});
-$("pg-copy").addEventListener("click", async () => {
-  await api.copy(output.textContent ?? "");
-  toast("Copied");
-});
-$("pg-draft").addEventListener("click", async () => {
-  if (draft) await api.openDraft(draft);
+api.onComposeText((delta) => {
+  if (!talkBusy) return;
+  talkOutput.textContent = delta === null ? "" : talkOutput.textContent + delta;
 });
 
-const pgRecorder = new Recorder();
-$("pg-mic").addEventListener("click", async () => {
-  const mic = $("pg-mic");
+async function runTalk(text: string) {
+  text = text.trim();
+  if (!text || talkBusy) return;
+  talkBusy = true;
+  talkDraft = null;
+  setTalk("thinking", "Max is on it…");
+  $("talk-result").classList.remove("hidden");
+  $("talk-email").classList.add("hidden");
+  $("talk-draft").classList.add("hidden");
+  $("talk-meta").textContent = `“${text}”`;
+  talkOutput.textContent = "";
+  talkOutput.classList.add("streaming");
+  // "Email Priya…" becomes a ready-to-send draft: recipient, subject and body.
+  const to = emailRecipient(text, findMentionedContacts(text, state.contacts));
   try {
-    if (!pgRecorder.active) {
-      await pgRecorder.start();
-      mic.classList.add("recording");
+    const res = await api.smart({ instruction: text, app: "Wispr Max", emailDraft: Boolean(to) });
+    const asked = res.intent === "command";
+    $("talk-meta").innerHTML =
+      `“${esc(text)}” · heard as <b>${asked ? "a request to Max" : "dictation"}</b>` +
+      `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
+    if (asked && to) {
+      talkDraft = { to, ...parseEmailDraft(res.text) };
+      $("talk-to").textContent = to;
+      $("talk-subject").textContent = talkDraft.subject || "(no subject)";
+      $("talk-email").classList.remove("hidden");
+      $("talk-draft").classList.remove("hidden");
+      talkOutput.textContent = talkDraft.body;
+    } else {
+      talkOutput.textContent = res.text;
+    }
+    setTalk("done", asked ? "Here's what Max wrote." : "Here's your text, cleaned up.");
+  } catch (err) {
+    $("talk-result").classList.add("hidden");
+    setTalk("idle", "Click the ghost and talk.");
+    toast(errorText(err), true);
+  } finally {
+    talkOutput.classList.remove("streaming");
+    talkBusy = false;
+  }
+}
+
+talkGhost.addEventListener("click", async () => {
+  try {
+    if (!talkRecorder.active) {
+      if (talkBusy) return;
+      await talkRecorder.start();
+      setTalk("listening", "Listening… click the ghost when you're done.");
       return;
     }
-    mic.classList.remove("recording");
-    const text = await api.transcribe(await pgRecorder.stop());
-    if (!text) return toast("Didn't catch that. Try again?", true);
-    $<HTMLTextAreaElement>("pg-instruction").value = text;
-    void runPlayground();
+    setTalk("thinking", "Transcribing…");
+    const text = await api.transcribe(await talkRecorder.stop());
+    if (!text) {
+      setTalk("idle", "Didn't catch that. Click the ghost and try again.");
+      return;
+    }
+    await runTalk(text);
   } catch (err) {
-    mic.classList.remove("recording");
+    await talkRecorder.cancel();
+    setTalk("idle", "Click the ghost and talk.");
     toast(errorText(err), true);
   }
+});
+
+$("talk-input").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const input = e.target as HTMLInputElement;
+  void runTalk(input.value);
+  input.value = "";
+});
+$("talk-copy").addEventListener("click", async () => {
+  await api.copy(talkOutput.textContent ?? "");
+  toast("Copied");
+});
+$("talk-draft").addEventListener("click", async () => {
+  if (talkDraft) await api.openDraft(talkDraft);
 });
 
 // ---------- dictionary ----------
@@ -528,6 +485,7 @@ function renderContacts() {
               <div class="name">${esc(c.name)}</div>
               <div class="sub">${esc([c.title, c.company].filter(Boolean).join(" · ") || c.email || "")}</div>
               ${c.relationship ? `<div class="rel">${esc(c.relationship)}</div>` : ""}
+              ${c.links?.length ? `<div class="platforms">${c.links.map((l) => esc(l.platform)).join(" · ")}</div>` : ""}
             </span>
           </button>`,
         )
@@ -536,6 +494,77 @@ function renderContacts() {
 }
 
 $("c-search").addEventListener("input", renderContacts);
+
+// ---------- one-paste contacts ----------
+
+const qaInput = $<HTMLTextAreaElement>("qa-input");
+const qaRecorder = new Recorder();
+let qaBusy = false;
+
+async function quickAdd(text: string) {
+  text = text.trim();
+  if (!text || qaBusy) return;
+  qaBusy = true;
+  $("qa-status").textContent = "Adding…";
+  try {
+    const { contacts, added } = await api.quickAddContacts(text);
+    state.contacts = contacts;
+    qaInput.value = "";
+    renderAll();
+    const names = added.map((c) => c.name).join(", ");
+    const needsNote = added.length === 1 && !added[0].relationship && !added[0].notes;
+    $("qa-status").innerHTML =
+      `Added <b>${esc(names)}</b>.` +
+      (needsNote ? ` <button class="link-btn" data-edit="${esc(added[0].id)}">Add how you know them</button>` : "");
+  } catch (err) {
+    $("qa-status").textContent = "";
+    toast(errorText(err), true);
+  } finally {
+    qaBusy = false;
+  }
+}
+
+qaInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    void quickAdd(qaInput.value);
+  }
+});
+// Paste a link or number and it's added straight away; a description waits for Enter.
+qaInput.addEventListener("paste", () => {
+  setTimeout(() => {
+    const p = parseContactInput(qaInput.value);
+    if ((p.links.length || p.email || p.phone) && !hasDescription(p)) void quickAdd(qaInput.value);
+  });
+});
+$("qa-status").addEventListener("click", (e) => {
+  const id = (e.target as HTMLElement).closest<HTMLElement>("[data-edit]")?.dataset.edit;
+  const c = state.contacts.find((x) => x.id === id);
+  if (c) openContact(c);
+});
+$("qa-mic").addEventListener("click", async () => {
+  const mic = $("qa-mic");
+  try {
+    if (!qaRecorder.active) {
+      await qaRecorder.start();
+      mic.classList.add("recording");
+      $("qa-status").textContent = "Listening… say who they are, then click the mic again.";
+      return;
+    }
+    mic.classList.remove("recording");
+    $("qa-status").textContent = "Transcribing…";
+    const said = await api.transcribe(await qaRecorder.stop());
+    if (!said) {
+      $("qa-status").textContent = "Didn't catch that.";
+      return;
+    }
+    await quickAdd([qaInput.value, said].filter(Boolean).join(" "));
+  } catch (err) {
+    mic.classList.remove("recording");
+    $("qa-status").textContent = "";
+    toast(errorText(err), true);
+  }
+});
 $("c-list").addEventListener("click", (e) => {
   const id = (e.target as HTMLElement).closest<HTMLElement>(".contact")?.dataset.id;
   const c = state.contacts.find((x) => x.id === id);
@@ -562,7 +591,8 @@ function openContact(c?: Contact) {
   $("contact-dialog-title").textContent = c ? "Edit contact" : "New contact";
   $("contact-delete").classList.toggle("hidden", !c);
   for (const el of Array.from(contactForm.elements) as HTMLInputElement[]) {
-    if (el.name) el.value = (c as unknown as Record<string, string> | undefined)?.[el.name] ?? "";
+    if (el.name === "links") el.value = c?.links?.map((l) => l.url).join("\n") ?? "";
+    else if (el.name) el.value = (c as unknown as Record<string, string> | undefined)?.[el.name] ?? "";
   }
   dialog.showModal();
 }
@@ -570,10 +600,13 @@ function openContact(c?: Contact) {
 contactForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(contactForm)) as Record<string, string>;
+  const { links, ...fields } = data;
   const contact = Object.fromEntries(
-    Object.entries(data).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v),
+    Object.entries(fields).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v),
   ) as unknown as Contact;
   contact.id = data.id ?? "";
+  const parsedLinks = parseContactInput(links ?? "").links;
+  if (parsedLinks.length) contact.links = parsedLinks;
   state.contacts = await api.saveContact(contact);
   dialog.close();
   renderAll();

@@ -9,6 +9,7 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  net,
   screen,
   session,
   shell,
@@ -24,6 +25,7 @@ import {
   newId,
   parseContactsFile,
 } from "../core/contacts";
+import { hasDescription, parseContactInput, parseProfileMeta } from "../core/contact-input";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
 import { guessIntent } from "../core/intent";
 import { buildVocabulary } from "../core/prompts";
@@ -35,6 +37,7 @@ import type {
   AppStatus,
   AudioPayload,
   Contact,
+  ContactLink,
   FocusContext,
   Mode,
   OverlayCommand,
@@ -639,6 +642,23 @@ function registerIpc() {
     return { contacts, imported: parsed.length };
   });
 
+  // One-paste contacts: links, numbers, emails or a sentence; one contact per line.
+  ipcMain.handle("app:quick-add", async (_e, text: string) => {
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const entries =
+      lines.length > 1 && lines.every((l) => { const p = parseContactInput(l); return p.links.length || p.email || p.phone; })
+        ? lines
+        : [text.trim()];
+    const added = await Promise.all(entries.map(quickContact));
+    for (const c of added) contacts = mergeContacts(contacts, [c]);
+    store.saveContacts(contacts);
+    // Return the stored versions (a pasted link may have merged into an existing contact).
+    const saved = added.map(
+      (c) => contacts.find((x) => x.id === c.id || (c.email && x.email === c.email) || x.name === c.name) ?? c,
+    );
+    return { contacts, added: saved };
+  });
+
   ipcMain.handle("app:add-samples", () => {
     contacts = mergeContacts(
       contacts,
@@ -728,6 +748,79 @@ function registerIpc() {
   ipcMain.handle("app:open-external", (_e, url: string) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
   });
+}
+
+// ---------- one-paste contacts ----------
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36";
+
+async function quickContact(text: string): Promise<Contact> {
+  const parsed = parseContactInput(text);
+  let contact: Contact = {
+    id: newId(),
+    name: parsed.name ?? "",
+    ...(parsed.email && { email: parsed.email }),
+    ...(parsed.phone && { phone: parsed.phone }),
+    ...(parsed.links.length && { links: parsed.links }),
+  };
+  let named = Boolean(parsed.name && !parsed.nameGuessed);
+
+  // A description ("recruiter at Northwind, handling my PM application") is read by Claude.
+  if (hasDescription(parsed)) {
+    const fields = store.anthropicKey(settings)
+      ? await writer().extractContact(text).catch(() => ({}) as Partial<Contact>)
+      : { notes: parsed.description };
+    contact = { ...contact, ...fields, id: contact.id, links: contact.links };
+    if (fields.name) named = true;
+  }
+
+  // Public profile pages fill in what's still missing.
+  if (parsed.links.length) {
+    const profile = await profileFromLinks(parsed.links);
+    if (profile.name && !named) contact.name = profile.name;
+    contact.title ||= profile.title;
+    contact.company ||= profile.company;
+    contact.notes ||= profile.notes;
+  }
+
+  contact.name ||= parsed.email ?? parsed.phone ?? parsed.links[0]?.handle ?? "New contact";
+  return Object.fromEntries(Object.entries(contact).filter(([, v]) => v !== undefined && v !== "")) as unknown as Contact;
+}
+
+/** Best effort: many sites hide profiles from apps, so this quietly gives up after a few seconds. */
+async function profileFromLinks(links: ContactLink[]): Promise<Partial<Contact>> {
+  for (const link of links) {
+    if (link.platform === "WhatsApp") continue;
+    try {
+      if (link.platform === "GitHub" && link.handle) {
+        const res = await net.fetch(`https://api.github.com/users/${encodeURIComponent(link.handle)}`, {
+          headers: { "user-agent": "WisprMax", accept: "application/vnd.github+json" },
+          signal: AbortSignal.timeout(4000),
+        });
+        if (!res.ok) continue;
+        const u = (await res.json()) as { name?: string; company?: string; bio?: string };
+        if (u.name) {
+          return {
+            name: u.name,
+            ...(u.company && { company: u.company.replace(/^@/, "") }),
+            ...(u.bio && { notes: `From GitHub: ${u.bio}` }),
+          };
+        }
+        continue;
+      }
+      const res = await net.fetch(link.url, {
+        headers: { "user-agent": BROWSER_UA, "accept-language": "en" },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) continue;
+      const profile = parseProfileMeta((await res.text()).slice(0, 400_000), link.platform);
+      if (profile.name) return profile;
+    } catch {
+      // Blocked, offline or slow: the contact still gets added from what was pasted.
+    }
+  }
+  return {};
 }
 
 // ---------- lifecycle ----------

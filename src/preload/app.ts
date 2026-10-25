@@ -8,6 +8,7 @@ const api: AppApi = {
   deleteContact: (id) => ipcRenderer.invoke("app:delete-contact", id),
   importContacts: () => ipcRenderer.invoke("app:import-contacts"),
   addSampleContacts: () => ipcRenderer.invoke("app:add-samples"),
+  quickAddContacts: (text) => ipcRenderer.invoke("app:quick-add", text),
   clearHistory: () => ipcRenderer.invoke("app:clear-history"),
   compose: (req) => ipcRenderer.invoke("app:compose", req),
   smart: (req) => ipcRenderer.invoke("app:smart", req),

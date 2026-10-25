@@ -66,13 +66,13 @@ Details Max doesn't know become `[placeholders]`. It never makes them up.
 
 ## Demo script (90 seconds)
 
-1. **Contacts**, then **Add sample contacts** (or import a CSV/vCard). **About you**: enter your name.
+1. **Contacts**: paste someone's LinkedIn link (or X, Instagram, GitHub, a WhatsApp number, an email) and they're added instantly. Or click **Add sample contacts**. **About you**: enter your name.
 2. Anywhere (Slack, a browser, the desktop), press **Max** and say *"Email Priya asking whether my job is confirmed."* A Gmail draft opens with To, Subject and a polite follow-up that mentions the Oct 14 final round.
 3. In Slack, press **Max**: *"Tell Daniel I'll be ten minutes late to standup."* You get a casual one-liner, not an email.
 4. Highlight a paragraph, press **Max**: *"make this shorter and friendlier."* It's rewritten in place.
 5. Press **Dictate** and ramble: *"so um the meeting is at 4, no actually 5, and send them my calendar link."* You get something like *"The meeting is at 5, and send them https://cal.com/you/30min."*
 
-No mic or OS permissions on the demo machine? Use **Try Max** on the Home screen: pick Gmail, click the first example, then **Open as email draft**.
+No mic or OS permissions on the demo machine? On the Home screen, click the big ghost and talk, or type to Max, then **Open as email draft**.
 
 ## How it works
 

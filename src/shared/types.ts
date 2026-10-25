@@ -28,9 +28,18 @@ export interface Snippet {
   text: string;
 }
 
+export interface ContactLink {
+  /** "LinkedIn", "X", "Instagram", "GitHub", "WhatsApp"… or a site's hostname. */
+  platform: string;
+  url: string;
+  handle?: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
+  /** Profiles on LinkedIn, X, Instagram, GitHub and so on. */
+  links?: ContactLink[];
   email?: string;
   phone?: string;
   company?: string;

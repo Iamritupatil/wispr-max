@@ -35,68 +35,33 @@
             <div id="stats" class="stats"></div>
           </header>
 
-          <div class="hint-banner">
-            <span class="ghost-slot big" data-eyes="happy" data-ghost></span>
-            <div>
-              <p class="serif">Talk anywhere. <em>Max</em> writes.</p>
-              <p class="muted">
-                Press <span id="kbd-dictate" class="keys"></span> to dictate, or
-                <span id="kbd-max" class="keys"></span> and tell Max what to write: <em>"Email Priya asking whether my job is confirmed."</em>
-              </p>
+          <section class="talk">
+            <button id="talk-ghost" class="talk-ghost" data-state="idle" title="Click and talk to Max">
+              <span id="talk-ghost-art" class="ghost-slot huge" data-eyes="center" data-ghost></span>
+              <span class="talk-shadow"><i></i><i></i><i></i><i></i></span>
+            </button>
+            <div class="talk-body">
+              <p id="talk-title" class="serif talk-title">Click the ghost and talk.</p>
+              <p class="muted">Say what you'd type, or ask Max to write it: <em>"Email Priya asking whether my job is confirmed."</em></p>
+              <input id="talk-input" class="talk-input" placeholder="…or type to Max and press Enter" autocomplete="off" />
+              <p class="muted small">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
             </div>
-          </div>
+          </section>
+
+          <section id="talk-result" class="talk-result hidden">
+            <p id="talk-meta" class="talk-meta"></p>
+            <div id="talk-email" class="email-head hidden">
+              <div><span class="muted">To</span> <b id="talk-to"></b></div>
+              <div><span class="muted">Subject</span> <b id="talk-subject"></b></div>
+            </div>
+            <pre id="talk-output" class="output"></pre>
+            <div class="talk-actions">
+              <button id="talk-draft" class="link-btn hidden">Open as email draft</button>
+              <button id="talk-copy" class="link-btn">Copy</button>
+            </div>
+          </section>
 
           <div id="setup" class="card setup"></div>
-
-          <div class="card playground">
-            <div class="card-title">
-              <h2 class="serif">Try Max</h2>
-              <span class="muted">Same brain as the hotkey, right here.</span>
-            </div>
-
-            <div id="pg-mode" class="segmented mode-switch">
-              <button data-mode="max" class="active">Ask Max</button>
-              <button data-mode="auto">Speak naturally · auto-detect</button>
-            </div>
-            <p id="pg-mode-hint" class="muted small"></p>
-
-            <div id="pg-apps" class="segmented" role="tablist">
-              <button data-app="Gmail" data-title="Compose - Gmail" class="active">Gmail</button>
-              <button data-app="Slack" data-title="Slack">Slack</button>
-              <button data-app="LinkedIn" data-title="Messaging | LinkedIn">LinkedIn</button>
-              <button data-app="Messages" data-title="iMessage">iMessage</button>
-              <button data-app="Notes" data-title="Notes">Notes</button>
-            </div>
-
-            <div class="instruction">
-              <textarea id="pg-instruction" rows="2" placeholder="Email Priya asking whether my job is confirmed"></textarea>
-              <button id="pg-mic" class="icon-btn" title="Speak your instruction">
-                <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
-              </button>
-              <button id="pg-run" class="btn primary">Write <kbd>⏎</kbd></button>
-            </div>
-            <div id="pg-examples" class="examples"></div>
-
-            <details>
-              <summary>Add a message you're replying to, or text to rewrite</summary>
-              <textarea id="pg-selection" rows="3" placeholder="Paste it here…"></textarea>
-            </details>
-
-            <div id="pg-result" class="result hidden">
-              <div id="pg-intent" class="intent hidden"></div>
-              <div id="pg-email" class="email-head hidden">
-                <div><span class="muted">To</span> <b id="pg-to"></b></div>
-                <div><span class="muted">Subject</span> <b id="pg-subject"></b></div>
-              </div>
-              <pre id="pg-output" class="output"></pre>
-              <div class="row">
-                <span id="pg-status" class="muted small"></span>
-                <span class="spacer"></span>
-                <button id="pg-draft" class="btn hidden">Open as email draft</button>
-                <button id="pg-copy" class="btn">Copy</button>
-              </div>
-            </div>
-          </div>
 
           <div class="feed-head">
             <h2 class="serif">Activity</h2>
@@ -146,17 +111,23 @@
 
         <!-- ================= CONTACTS ================= -->
         <section id="tab-contacts" class="tab">
-          <header class="page-head row-head">
-            <div>
-              <h1>Contacts</h1>
-              <p class="muted">Max uses these to write to people. Notes are the secret sauce: how you know them and what's going on.</p>
-            </div>
-            <div class="actions">
-              <button id="c-import" class="btn">Import CSV / vCard</button>
-              <button id="c-new" class="btn primary">New contact</button>
-            </div>
+          <header class="page-head">
+            <h1>Contacts</h1>
+            <p class="muted">Paste someone's link or number and Max does the rest. Add a few words about how you know them if you like; it's optional.</p>
           </header>
-          <input id="c-search" class="search" type="search" placeholder="Search contacts" />
+          <div class="quick-add">
+            <textarea id="qa-input" rows="1" placeholder="Paste a LinkedIn, X, Instagram or GitHub link, a WhatsApp or phone number, or an email. Or say who they are."></textarea>
+            <button id="qa-mic" class="icon-btn quiet" title="Say who they are">
+              <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+            </button>
+          </div>
+          <p id="qa-status" class="muted small qa-status"></p>
+          <div class="contacts-bar">
+            <input id="c-search" class="search" type="search" placeholder="Search" />
+            <span class="spacer"></span>
+            <button id="c-new" class="link-btn">Add by hand</button>
+            <button id="c-import" class="link-btn">Import CSV / vCard</button>
+          </div>
           <div id="c-list" class="contact-grid"></div>
         </section>
 
@@ -286,9 +257,10 @@
           <div class="field"><label>Company</label><input name="company" placeholder="Northwind" /></div>
           <div class="field"><label>Title</label><input name="title" placeholder="Senior Recruiter" /></div>
           <div class="field"><label>Phone</label><input name="phone" /></div>
-          <div class="field"><label>How you know them</label><input name="relationship" placeholder="Recruiter for my PM application" /></div>
+          <div class="field"><label>How you know them <span class="muted">(optional)</span></label><input name="relationship" placeholder="Recruiter for my PM application" /></div>
         </div>
-        <div class="field"><label>Notes for Max</label><textarea name="notes" rows="3" placeholder="Final round was Oct 14. She said I'd hear back within a week."></textarea></div>
+        <div class="field"><label>Profiles <span class="muted">(LinkedIn, X, Instagram, GitHub… one per line)</span></label><textarea name="links" rows="2" placeholder="https://www.linkedin.com/in/priya-sharma"></textarea></div>
+        <div class="field"><label>Notes for Max <span class="muted">(optional)</span></label><textarea name="notes" rows="3" placeholder="Final round was Oct 14. She said I'd hear back within a week."></textarea></div>
         <div class="row">
           <button id="contact-delete" type="button" class="btn danger">Delete</button>
           <span class="spacer"></span>
