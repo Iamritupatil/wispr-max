@@ -841,6 +841,30 @@ input.hotkey.recording {
   }
 }
 
+.mode-switch {
+  margin-bottom: -6px;
+}
+
+.intent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.intent b {
+  color: var(--ink);
+}
+
+.intent .by {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+}
+
 .result .row {
   padding: 10px 12px 10px 16px;
   border-top: 1px solid var(--line);

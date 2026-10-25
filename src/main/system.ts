@@ -134,6 +134,13 @@ $h = [W]::GetForegroundWindow(); $sb = New-Object System.Text.StringBuilder 512
 [void][W]::GetWindowText($h, $sb, 512); $p = 0; [void][W]::GetWindowThreadProcessId($h, [ref]$p)
 (Get-Process -Id $p).ProcessName; $sb.ToString()`;
 
+const TERMINALS =
+  /\b(terminal|iterm2?|warp|alacritty|kitty|wezterm|hyper|ghostty|tabby|konsole|xterm|tilix|terminator|cmd|powershell|pwsh|windowsterminal|conhost|mintty|wt)\b/i;
+
+export function isTerminal(ctx: Pick<FocusContext, "app" | "windowTitle">): boolean {
+  return TERMINALS.test(ctx.app ?? "");
+}
+
 /** Name and window title of the app the user is typing into. */
 export async function activeApp(): Promise<Pick<FocusContext, "app" | "windowTitle">> {
   try {

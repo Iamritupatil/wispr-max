@@ -5,18 +5,9 @@ import {
   buildProfileAndContacts,
   buildVocabulary,
   cleanOutput,
-  stripWakePhrase,
 } from "../src/core/prompts";
 
 const profile = { name: "Alex Chen", role: "", email: "", signature: "Best,\nAlex", style: "" };
-
-test("wake phrase routes dictation to Max but ignores a person called Max", () => {
-  assert.equal(stripWakePhrase("Hey Max, email Priya about the role"), "Email Priya about the role");
-  assert.equal(stripWakePhrase("hey max write a haiku"), "Write a haiku");
-  assert.equal(stripWakePhrase("Max, see you at five"), null);
-  assert.equal(stripWakePhrase("Hey Maxine, how are you"), null);
-  assert.equal(stripWakePhrase("Hey Max."), null);
-});
 
 test("compose prompt carries app, window, selection and instruction", () => {
   const msg = buildComposeUser(

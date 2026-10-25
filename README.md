@@ -22,7 +22,20 @@ Wispr Max is a little ghost that floats at the bottom of your screen, with two h
 | `Ctrl/Cmd + Shift + Space` | **Dictate** | Speak, and your words appear at the cursor, cleaned up: no "um"s, proper punctuation, and "no wait, I mean…" corrections applied. |
 | `Ctrl/Cmd + Shift + M` | **Max** | Say what you *want*. Max writes it **as you**, using your contacts, your style and the app you're in, and types it in. |
 
-Press once to talk, press again to finish, and `Esc` cancels. You can also start any dictation with **"Hey Max, …"**.
+Press once to talk, press again to finish, and `Esc` cancels.
+
+### It knows when you're asking
+
+You don't have to remember which hotkey to press. With **smart intent** on, the Dictate hotkey works out whether you're *dictating* or *asking Max to write something*:
+
+| You say (Dictate hotkey) | Wispr Max hears | Typed |
+|---|---|---|
+| "Okay, I want to write an email to Priya. Can you write it?" | a request to Max | the whole email (or a ready-to-send draft) |
+| "Hey Max, tell Daniel I'll be late" | a request to Max | a message to Daniel |
+| "Can you send me the deck by Friday?" | dictation, a question for your coworker | *Can you send me the deck by Friday?* |
+| "I need you to email the client today" | dictation, an instruction to your coworker | *I need you to email the client today.* |
+
+Clear-cut phrasing is decided instantly by rules, with no API call. Ambiguous phrasing goes to Claude, which decides and writes in the **same** call, so it costs no extra time. When it's genuinely unclear, Wispr Max types your own words: that's the safer mistake. The `Max` hotkey always means "write this for me".
 
 ### The email feature
 
@@ -37,7 +50,7 @@ Details Max doesn't know become `[placeholders]`. It never makes them up.
 
 | Wispr Flow feature | In Wispr Max |
 |---|---|
-| Dictation in any app | ✓ Two hotkeys, works system-wide |
+| Dictation in any app | ✓ Works system-wide, and knows when you're asking instead of dictating |
 | AI auto-edits | ✓ Smart formatting removes fillers, fixes punctuation and applies self-corrections |
 | Command Mode | ✓ Highlight text, press Max and say "make this more formal" or "reply saying I'm free Thursday" |
 | Personal dictionary | ✓ Words to always spell right, plus "often heard as" auto-fixes. Contact names are added automatically. |
@@ -81,20 +94,30 @@ No mic or OS permissions on the demo machine? Use **Try Max** on the Home screen
 ```
 
 - **Writing:** Claude (`claude-opus-5-5` by default, effort `low` for speed) via the official Anthropic SDK, streamed. Contacts, profile and snippets are prompt-cached. Server-side refusal fallbacks are on.
-- **Speech:** Groq `whisper-large-v3-turbo` (fast, generous free tier) or OpenAI `gpt-4o-mini-transcribe`.
+- **Intent:** `src/core/intent.ts` rules decide clear cases instantly, and Claude decides the rest inside the writing call. They're tested against a labeled set of 38 real-world phrasings (`test/fixtures/intents.json`); the rules never mislabel a single one.
+- **Speech:** AssemblyAI (default; your contacts and dictionary go in as key terms), Groq `whisper-large-v3-turbo`, or OpenAI `gpt-4o-mini-transcribe`.
 - **No native modules:** `osascript` on macOS, PowerShell on Windows, `xdotool`/`wtype` on Linux. `npm install` just works.
 - **Private by default:** contacts, history, stats and settings live in your local app-data folder. API keys are encrypted with the OS keychain.
 
 ## Getting started
 
-Requirements: Node 20+, plus API keys for [Anthropic](https://console.anthropic.com/settings/keys) and either [Groq](https://console.groq.com/keys) or [OpenAI](https://platform.openai.com/api-keys).
+Requirements: Node 20+, plus API keys for [Anthropic](https://console.anthropic.com/settings/keys) (writing) and one speech-to-text provider: [AssemblyAI](https://www.assemblyai.com/dashboard/api-keys) (default), [Groq](https://console.groq.com/keys) or [OpenAI](https://platform.openai.com/api-keys).
 
 ```bash
 npm install
 npm run dev        # build and launch
 ```
 
-Add your keys in **Settings** (or export `ANTHROPIC_API_KEY` and `GROQ_API_KEY` before launching), fill in **About you**, and add contacts.
+Add your keys in **Settings** (or export `ANTHROPIC_API_KEY` and `ASSEMBLYAI_API_KEY` before launching), fill in **About you**, and add contacts.
+
+### Checking quality
+
+```bash
+npm test                                   # offline: intent rules, prompts, drafts, speech-to-text flow (mocked)
+ANTHROPIC_API_KEY=sk-ant-... npm run eval  # live: intent accuracy + writing-quality checks against Claude
+```
+
+`npm run eval` sends every labeled phrase through the real Dictate-hotkey routing and reports accuracy. It then checks Max's writing against concrete rules: no preamble or markdown, a subject line only for drafts, greets the right person, uses your contact notes and snippets, short messages in Slack, lowercase in "very casual" apps, and dictation that is cleaned up but never answered.
 
 ### Permissions
 
@@ -110,7 +133,8 @@ Add your keys in **Settings** (or export `ANTHROPIC_API_KEY` and `GROQ_API_KEY` 
 |---|---|
 | `npm run dev` | Build and launch |
 | `npm run watch` | Rebuild on change (run `npm start` alongside) |
-| `npm test` | Unit tests: contacts, prompts, email drafts, styles, dictionary, snippets, stats |
+| `npm test` | Unit tests: intent detection, contacts, prompts, email drafts, styles, dictionary, snippets, stats, speech-to-text (mocked) |
+| `npm run eval` | Live quality check against Claude (needs `ANTHROPIC_API_KEY`) |
 | `npm run typecheck` | TypeScript checks |
 | `npm run dist` | Package an installer into `release/` (dmg / nsis / AppImage) |
 | `npm run icons` | Re-render the ghost icons in `assets/` (needs Playwright) |
@@ -121,13 +145,14 @@ Add your keys in **Settings** (or export `ANTHROPIC_API_KEY` and `GROQ_API_KEY` 
 src/
   core/            platform-independent logic, unit tested
     ai.ts          Claude client: compose (Max) and polish (Dictate), streaming
-    prompts.ts     system prompts and context building, "Hey Max"
+    intent.ts      dictating or asking? instant rules + Claude for the ambiguous rest
+    prompts.ts     system prompts and context building
     email.ts       email intent, subject parsing, Gmail/Outlook/mailto draft URLs
     style.ts       app → Personal/Work/Email/Other, and the four tones
     text.ts        dictionary auto-fixes, snippet expansion
     contacts.ts    CSV/vCard import, merging, finding who an instruction is about
     stats.ts       streaks and words per minute
-    stt.ts         speech-to-text over Groq or OpenAI
+    stt.ts         speech-to-text: AssemblyAI, Groq or OpenAI
   main/            Electron main process: hotkeys, sessions, paste, tray, storage
   preload/         narrow, typed bridges for each window
   renderer/

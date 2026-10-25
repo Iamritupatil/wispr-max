@@ -145,7 +145,7 @@ function renderHome() {
 
   const checks = [
     { ok: status.aiReady, title: "Anthropic API key", hint: "Powers Max and smart formatting.", action: `<button class="btn small" data-go="settings">Add key</button>` },
-    { ok: status.sttReady, title: "Speech-to-text key", hint: "Groq is the fastest and has a free tier.", action: `<button class="btn small" data-go="settings">Add key</button>` },
+    { ok: status.sttReady, title: "Speech-to-text key", hint: "AssemblyAI, Groq or OpenAI.", action: `<button class="btn small" data-go="settings">Add key</button>` },
     ...(status.platform === "darwin"
       ? [{ ok: status.accessibilityTrusted, title: "Accessibility permission", hint: "Lets Wispr Max type into other apps.", action: `<button id="grant-ax" class="btn small">Grant</button>` }]
       : []),
@@ -174,12 +174,23 @@ function renderHome() {
 
   const names = contacts.map((c) => c.name.replace(/^(dr|prof)\.?\s+/i, "").split(" ")[0]);
   const who = (i: number, fallback: string) => names[i] ?? fallback;
-  const examples = [
-    `Email ${who(0, "Priya")} asking whether my job is confirmed`,
-    `Tell ${who(1, "Daniel")} I'll be ten minutes late`,
-    `Thank ${who(2, "Elena")} for the feedback on my draft`,
-  ];
+  const examples =
+    pgMode === "auto"
+      ? [
+          `Okay, I want to email ${who(0, "Priya")} about whether my job is confirmed. Can you write it?`,
+          "Can you send me the deck by Friday?",
+          "so um the meeting is at 4, no actually 5, and bring the slides",
+        ]
+      : [
+          `Email ${who(0, "Priya")} asking whether my job is confirmed`,
+          `Tell ${who(1, "Daniel")} I'll be ten minutes late`,
+          `Thank ${who(2, "Elena")} for the feedback on my draft`,
+        ];
   $("pg-examples").innerHTML = examples.map((x) => `<button>${esc(x)}</button>`).join("");
+  $("pg-mode-hint").textContent =
+    pgMode === "auto"
+      ? "Type or speak anything, as you would on the Dictate hotkey. Wispr Max works out whether you're dictating or asking it to write."
+      : "Tell Max what to write, as you would on the Max hotkey.";
 
   const line = (ok: boolean, text: string) =>
     `<div class="s"><span class="dot" style="background:var(--${ok ? "ok" : "warn"})"></span>${esc(text)}</div>`;
@@ -216,6 +227,7 @@ function renderFeed() {
       lastDay = day;
       const meta = [
         h.mode === "max" ? `<span class="tag">MAX</span>` : "",
+        h.autoDetected ? `<span>auto-detected ·</span>` : "",
         h.draftTo ? `<span>Email draft to ${esc(h.draftTo)}</span>` : h.app ? `<span>${esc(h.app)}</span>` : "",
         h.mode === "max" ? `<span>· “${esc(h.transcript)}”</span>` : "",
       ].join("");
@@ -248,6 +260,14 @@ api.onHistory(({ history, stats }) => {
 // ---------- Try Max ----------
 
 let pgApp = { app: "Gmail", title: "Compose - Gmail" };
+let pgMode: "max" | "auto" = "max";
+$("pg-mode").addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+  if (!b) return;
+  pgMode = b.dataset.mode as "max" | "auto";
+  $("pg-mode").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
+  renderHome();
+});
 $("pg-apps").addEventListener("click", (e) => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
   if (!b) return;
@@ -285,19 +305,35 @@ async function runPlayground() {
   $("pg-result").classList.remove("hidden");
   $("pg-email").classList.add("hidden");
   $("pg-draft").classList.add("hidden");
+  $("pg-intent").classList.add("hidden");
   output.textContent = "";
   output.classList.add("streaming");
   $("pg-status").textContent = "Max is writing…";
   const started = performance.now();
   try {
-    const text = await api.compose({
+    const req = {
       instruction,
       app: pgApp.app,
       windowTitle: pgApp.title,
       selection: $<HTMLTextAreaElement>("pg-selection").value.trim() || undefined,
       emailDraft: Boolean(to),
-    });
-    if (to) {
+    };
+    let text: string;
+    let isRequest = true;
+    if (pgMode === "auto") {
+      const res = await api.smart(req);
+      text = res.text;
+      isRequest = res.intent === "command";
+      $("pg-intent").innerHTML =
+        `<span class="ghost-slot" data-eyes="${isRequest ? "happy" : "center"}" data-ghost></span>` +
+        `Heard as <b>${isRequest ? "a request to Max" : "dictation"}</b> · ${esc(res.reason)}` +
+        `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
+      $("pg-intent").classList.remove("hidden");
+      paintGhosts($("pg-intent"));
+    } else {
+      text = await api.compose(req);
+    }
+    if (to && isRequest) {
       draft = { to, ...parseEmailDraft(text) };
       $("pg-to").textContent = to;
       $("pg-subject").textContent = draft.subject || "(no subject)";

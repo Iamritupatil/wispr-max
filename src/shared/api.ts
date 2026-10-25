@@ -34,6 +34,14 @@ export interface ComposeRequest {
   emailDraft?: boolean;
 }
 
+export interface SmartResult {
+  intent: "dictation" | "command";
+  /** Whether the instant rules or Claude made the call. */
+  decidedBy: "rules" | "claude";
+  reason: string;
+  text: string;
+}
+
 /** Exposed to the main window as `window.wispr`. */
 export interface AppApi {
   getState(): Promise<AppSnapshot>;
@@ -44,6 +52,8 @@ export interface AppApi {
   addSampleContacts(): Promise<Contact[]>;
   clearHistory(): Promise<HistoryEntry[]>;
   compose(req: ComposeRequest): Promise<string>;
+  /** Dictation or request? Decides like the Dictate hotkey, then writes. */
+  smart(req: ComposeRequest): Promise<SmartResult>;
   /** Streams Max output; `null` means discard what was shown and start over. */
   onComposeText(cb: (delta: string | null) => void): void;
   transcribe(audio: AudioPayload): Promise<string>;

@@ -11,7 +11,8 @@
     "typecheck": "tsc",
     "test": "tsx --test test/*.test.ts",
     "icons": "tsx scripts/icons.mts",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "eval": "tsx scripts/eval.mts"
   },
   "license": "MIT",
   "dependencies": {

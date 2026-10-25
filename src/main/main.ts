@@ -25,11 +25,12 @@ import {
   parseContactsFile,
 } from "../core/contacts";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
-import { buildVocabulary, stripWakePhrase } from "../core/prompts";
+import { guessIntent } from "../core/intent";
+import { buildVocabulary } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
 import { applyDictionary, countWords, expandSnippets } from "../core/text";
-import type { AppSnapshot, ComposeRequest } from "../shared/api";
+import type { AppSnapshot, ComposeRequest, SmartResult } from "../shared/api";
 import type {
   AppStatus,
   AudioPayload,
@@ -41,7 +42,7 @@ import type {
   Settings,
 } from "../shared/types";
 import * as store from "./store";
-import { activeApp, insertText, readSelection } from "./system";
+import { activeApp, insertText, isTerminal, readSelection } from "./system";
 
 const isMac = process.platform === "darwin";
 const OVERLAY_SIZE = { width: 560, height: 320 };
@@ -97,14 +98,17 @@ function startSession(mode: Mode) {
 
 /** Learns where the text is going while the user is still talking. */
 async function gatherContext(mode: Mode): Promise<FocusContext> {
-  const appInfo = activeApp();
-  let selection = "";
-  if (mode === "max" && settings.useSelection) {
+  const [appInfo] = await Promise.all([
+    activeApp(),
     // Wait for the hotkey's modifiers to be released, or Cmd+C becomes Cmd+Shift+C.
-    await sleep(350);
+    sleep(350),
+  ]);
+  let selection = "";
+  // Ctrl+C in a terminal interrupts the running program, so never "copy" there.
+  if (mode === "max" && settings.useSelection && !isTerminal(appInfo)) {
     selection = await readSelection();
   }
-  return { ...(await appInfo), selection: selection || undefined };
+  return { ...appInfo, selection: selection || undefined };
 }
 
 function stopRecording(s: Session) {
@@ -169,23 +173,29 @@ async function handleAudio(s: Session, audio: AudioPayload) {
     const transcript = applyDictionary(raw, settings.dictionary);
     if (!transcript) return failSession(s, "Didn't catch that. Try again?");
 
-    let mode = s.mode;
-    let instruction = transcript;
-    if (mode === "dictate" && settings.wakePhrase) {
-      const stripped = stripWakePhrase(transcript);
-      if (stripped) {
-        mode = "max";
-        instruction = stripped;
-      }
-    }
-
     const context = await s.context;
     if (current !== s) return;
 
-    const result: Result =
-      mode === "max"
-        ? await writeWithMax(s, instruction, context)
-        : { output: await polishDictation(s, transcript, context, vocabulary) };
+    // Max hotkey: always a request. Dictate hotkey: dictation, unless smart intent
+    // hears a request to Max. Clear cases are decided instantly by rules; ambiguous
+    // ones go to Claude, which decides and writes in a single call.
+    let mode = s.mode;
+    let instruction = transcript;
+    let result: Result;
+    if (mode === "max") {
+      result = await writeWithMax(s, instruction, context);
+    } else {
+      const guess = settings.smartIntent ? guessIntent(transcript, contacts) : null;
+      if (guess?.intent === "command") {
+        mode = "max";
+        instruction = guess.instruction;
+        result = await writeWithMax(s, instruction, context);
+      } else if (guess?.intent === "unsure" && store.anthropicKey(settings)) {
+        ({ mode, result } = await smartDictation(s, transcript, context, vocabulary));
+      } else {
+        result = { output: await polishDictation(s, transcript, context, vocabulary) };
+      }
+    }
     if (current !== s) return;
     if (!result.output) return failSession(s, "Nothing to insert.");
 
@@ -209,6 +219,7 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       output: result.output,
       app: context.app,
       draftTo: result.draftTo,
+      autoDetected: s.mode === "dictate" && mode === "max",
     });
     const stats = store.recordStats(countWords(result.output), audio.durationMs);
     mainWindow?.webContents.send("app:history", { history, stats });
@@ -236,15 +247,28 @@ async function polishDictation(s: Session, transcript: string, context: FocusCon
   return expandSnippets(text, settings.snippets);
 }
 
+/** "Email Priya…" from outside an email app opens a ready-to-send draft instead of typing. */
+function draftRecipient(instruction: string, mentioned: Contact[], context: FocusContext) {
+  return settings.emailDrafts !== "off" && toneFor(settings.styles, context).category !== "email" && !context.selection
+    ? emailRecipient(instruction, mentioned)
+    : null;
+}
+
+/** Style guide for this request: an email draft is written in the email style. */
+function toneGuide(context: FocusContext, draftTo: string | null) {
+  return toneFor(settings.styles, draftTo ? { app: "Mail" } : context).guide;
+}
+
+async function openDraftIfAny(s: Session, output: string, draftTo: string | null): Promise<Result> {
+  if (!draftTo || current !== s) return { output };
+  const url = draftUrl(settings.emailDrafts, { to: draftTo, ...parseEmailDraft(output) });
+  if (url) await shell.openExternal(url);
+  return { output, draftTo };
+}
+
 async function writeWithMax(s: Session, instruction: string, context: FocusContext): Promise<Result> {
   const mentioned = findMentionedContacts(instruction, contacts);
-  // "Email Priya…" from outside an email app opens a ready-to-send draft.
-  const tone = toneFor(settings.styles, context);
-  const draftTo =
-    settings.emailDrafts !== "off" && tone.category !== "email" && !context.selection
-      ? emailRecipient(instruction, mentioned)
-      : null;
-
+  const draftTo = draftRecipient(instruction, mentioned, context);
   const base: OverlayState = {
     phase: "thinking",
     mode: "max",
@@ -261,10 +285,7 @@ async function writeWithMax(s: Session, instruction: string, context: FocusConte
       profile: settings.profile,
       contacts,
       snippets: settings.snippets,
-      options: {
-        tone: draftTo ? toneFor(settings.styles, { app: "Mail" }).guide : tone.guide,
-        emailDraft: Boolean(draftTo),
-      },
+      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo) },
     },
     {
       onText: (delta) => {
@@ -277,11 +298,59 @@ async function writeWithMax(s: Session, instruction: string, context: FocusConte
     },
     s.abort.signal,
   );
+  return openDraftIfAny(s, output, draftTo);
+}
 
-  if (!draftTo || current !== s) return { output };
-  const url = draftUrl(settings.emailDrafts, { to: draftTo, ...parseEmailDraft(output) });
-  if (url) await shell.openExternal(url);
-  return { output, draftTo };
+/** Ambiguous speech on the Dictate hotkey: Claude decides and writes in one pass. */
+async function smartDictation(
+  s: Session,
+  transcript: string,
+  context: FocusContext,
+  vocabulary: string[],
+): Promise<{ mode: Mode; result: Result }> {
+  const mentioned = findMentionedContacts(transcript, contacts);
+  const draftTo = draftRecipient(transcript, mentioned, context);
+  setOverlay({ phase: "thinking", mode: "dictate", transcript });
+  let mode: Mode = "dictate";
+  let text = "";
+  const res = await writer().auto(
+    {
+      instruction: transcript,
+      context,
+      profile: settings.profile,
+      contacts,
+      snippets: settings.snippets,
+      vocabulary,
+      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo) },
+    },
+    {
+      onDecision: (intent) => {
+        mode = intent === "command" ? "max" : "dictate";
+      },
+      onText: (delta) => {
+        text += delta;
+        // Max's card only appears once Claude has decided this is a request.
+        if (mode === "max") {
+          setOverlay({
+            phase: "writing",
+            mode,
+            text,
+            transcript,
+            contacts: mentioned.slice(0, 3).map((c) => c.name),
+            app: draftTo ? "New email draft" : context.app,
+          });
+        }
+      },
+      onRestart: () => {
+        text = "";
+      },
+    },
+    s.abort.signal,
+  );
+  if (res.intent === "dictation") {
+    return { mode: "dictate", result: { output: expandSnippets(res.text, settings.snippets) } };
+  }
+  return { mode: "max", result: await openDraftIfAny(s, res.text, draftTo) };
 }
 
 function writer() {
@@ -523,6 +592,39 @@ function registerIpc() {
         onRestart: () => e.sender.send("app:compose-text", null),
       },
     );
+  });
+
+  // Try Max in "auto-detect" mode: the same routing as the Dictate hotkey.
+  ipcMain.handle("app:smart", async (e, req: ComposeRequest): Promise<SmartResult> => {
+    const context = { app: req.app, windowTitle: req.windowTitle, selection: req.selection };
+    const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
+    const guess = guessIntent(req.instruction, contacts);
+    const stream = {
+      onText: (delta: string) => e.sender.send("app:compose-text", delta),
+      onRestart: () => e.sender.send("app:compose-text", null),
+    };
+    const input = {
+      context,
+      profile: settings.profile,
+      contacts,
+      snippets: settings.snippets,
+      options: { tone: toneFor(settings.styles, context).guide, emailDraft: req.emailDraft },
+    };
+    if (guess.intent === "dictation") {
+      const text = await writer().polish(req.instruction, context, vocabulary, input.options.tone);
+      return { intent: "dictation", decidedBy: "rules", reason: guess.reason, text: expandSnippets(text, settings.snippets) };
+    }
+    if (guess.intent === "command") {
+      const text = await writer().compose({ ...input, instruction: guess.instruction }, stream);
+      return { intent: "command", decidedBy: "rules", reason: guess.reason, text };
+    }
+    const res = await writer().auto({ ...input, instruction: req.instruction, vocabulary }, stream);
+    return {
+      intent: res.intent,
+      decidedBy: "claude",
+      reason: res.intent === "command" ? "Claude heard a request to write" : "Claude heard dictation",
+      text: res.intent === "dictation" ? expandSnippets(res.text, settings.snippets) : res.text,
+    };
   });
 
   ipcMain.handle("app:open-draft", (_e, draft: { to: string; subject: string; body: string }) => {

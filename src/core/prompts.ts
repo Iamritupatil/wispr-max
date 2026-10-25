@@ -94,7 +94,7 @@ export function buildComposeUser(
     lines.push(
       "",
       "<output_format>",
-      "This opens as a new email draft with the recipient already filled in. Write a subject line and the full email body.",
+      "If you write an email, it opens as a new draft with the recipient already filled in: write a subject line and the full email body.",
       "</output_format>",
     );
   }
@@ -146,16 +146,6 @@ export function buildVocabulary(
   return [...words];
 }
 
-const WAKE_PHRASE = /^\s*(?:hey|hi|okay|ok)[,.]?\s+max\b[\s,.:!?-]*/i;
-
-/** "Hey Max, write ..." → "write ...". Returns null when the phrase is absent. */
-export function stripWakePhrase(transcript: string): string | null {
-  const m = transcript.match(WAKE_PHRASE);
-  if (!m) return null;
-  const rest = transcript.slice(m[0].length).trim();
-  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : null;
-}
-
 /** Strips wrappers a model sometimes adds despite instructions. */
 export function cleanOutput(text: string): string {
   let t = text.trim();
@@ -163,4 +153,39 @@ export function cleanOutput(text: string): string {
   if (fence) t = fence[1].trim();
   if (/^"[\s\S]*"$/.test(t) && !t.slice(1, -1).includes('"')) t = t.slice(1, -1).trim();
   return t;
+}
+
+/**
+ * One-pass "dictating or asking?" prompt: Claude decides and writes in the same
+ * response, so an ambiguous utterance costs no extra round trip.
+ */
+export const AUTO_SYSTEM = `You are Wispr Max, a voice keyboard. The user pressed the dictation hotkey and spoke. Whatever you output after the header line is pasted at their cursor.
+
+First decide which of these they meant:
+
+- dictation: their words ARE the text they want typed. This includes questions and requests aimed at the person they are writing to ("Can you send me the deck by Friday?", "I need you to email the client today", "Write back when you land").
+- write: they are asking you, their writing assistant, to produce or change text ("Can you write an email to Priya asking…", "I need to email my professor about an extension, can you write it?", "Make this more formal", "Reply saying I'm free Thursday").
+
+Signals for write: they describe the text instead of saying it ("an email", "a message", "a reply", "it"); they name someone to write to; they ask for help writing; they refer to the selected text; they address Max. Signals for dictation: the words read naturally as a finished message in the app they're in. When it is genuinely unclear, choose dictation: typing someone's own words is the safer mistake.
+
+Output format: the first line is exactly "MODE: dictation" or "MODE: write", then a blank line, then the text to insert and nothing else.
+
+If dictation, clean it up and keep it theirs:
+${POLISH_SYSTEM.split("\n").slice(2).join("\n")}
+
+If write, follow these rules:
+${COMPOSE_SYSTEM.split("\n").slice(1).join("\n")}`;
+
+export function buildAutoUser(
+  speech: string,
+  ctx: FocusContext,
+  opts: ComposeOptions & { vocabulary?: string[] } = {},
+  now: Date = new Date(),
+): string {
+  const lines = buildComposeUser(speech, ctx, opts, now).split("\n");
+  // Same context block as Max, but the speech isn't necessarily an instruction.
+  const start = lines.indexOf("<instruction>");
+  const head = lines.slice(0, start);
+  if (opts.vocabulary?.length) head.push(`Known names and vocabulary: ${opts.vocabulary.join(", ")}`, "");
+  return [...head, "<speech>", speech, "</speech>"].join("\n");
 }

@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Contact, Effort, FocusContext, Profile, Snippet } from "../shared/types";
+import { type Intent, parseAutoOutput } from "./intent";
 import {
+  AUTO_SYSTEM,
   COMPOSE_SYSTEM,
   POLISH_SYSTEM,
+  buildAutoUser,
   buildComposeUser,
   buildPolishUser,
   buildProfileAndContacts,
@@ -31,6 +34,11 @@ export interface StreamHandlers {
   onRestart?: () => void;
 }
 
+export interface AutoHandlers extends StreamHandlers {
+  /** Fires once Claude has decided, before any text streams. */
+  onDecision?: (intent: Intent) => void;
+}
+
 export class AiError extends Error {}
 
 export class Writer {
@@ -56,6 +64,56 @@ export class Writer {
       handlers,
       signal,
     );
+  }
+
+  /**
+   * Smart dictation: Claude decides whether the speech is dictation or a request
+   * to write something, and produces the text to insert in the same response.
+   */
+  async auto(
+    input: ComposeInput & { vocabulary?: string[] },
+    handlers: AutoHandlers = {},
+    signal?: AbortSignal,
+  ): Promise<{ intent: Intent; text: string }> {
+    // Hold text back until the "MODE: …" header line has been read.
+    let buffer = "";
+    let decided = false;
+    const raw = await this.run(
+      [
+        { type: "text", text: AUTO_SYSTEM },
+        {
+          type: "text",
+          text: buildProfileAndContacts(input.profile, input.contacts, input.instruction, input.snippets),
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      buildAutoUser(input.instruction, input.context, { ...input.options, vocabulary: input.vocabulary }),
+      {
+        onText: (delta) => {
+          if (decided) return handlers.onText?.(delta);
+          buffer += delta;
+          const parsed = parseAutoOutput(buffer);
+          if (parsed) {
+            decided = true;
+            handlers.onDecision?.(parsed.intent);
+            if (parsed.text) handlers.onText?.(parsed.text);
+          } else if (buffer.length > 40 && !/^\s*MODE:?/i.test(buffer)) {
+            // No header after all: treat it as dictation and show what we have.
+            decided = true;
+            handlers.onDecision?.("dictation");
+            handlers.onText?.(buffer);
+          }
+        },
+        onRestart: () => {
+          buffer = "";
+          decided = false;
+          handlers.onRestart?.();
+        },
+      },
+      signal,
+    );
+    const parsed = parseAutoOutput(raw);
+    return parsed ? { intent: parsed.intent, text: cleanOutput(parsed.text) } : { intent: "dictation", text: raw };
   }
 
   /** Dictation mode: clean up a raw transcript without changing its meaning. */

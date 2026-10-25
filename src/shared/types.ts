@@ -2,7 +2,7 @@ export type Mode = "dictate" | "max";
 
 export type Effort = "low" | "medium" | "high";
 
-export type SttProvider = "groq" | "openai";
+export type SttProvider = "assemblyai" | "groq" | "openai";
 
 /** Where the user is writing, for picking a tone (as in Wispr Flow's Styles). */
 export type StyleCategory = "personal" | "work" | "email" | "other";
@@ -54,6 +54,7 @@ export interface Settings {
   model: string;
   effort: Effort;
   sttProvider: SttProvider;
+  assemblyaiApiKey: string;
   groqApiKey: string;
   openaiApiKey: string;
   /** ISO-639-1 code, or "" for auto-detect. */
@@ -66,8 +67,11 @@ export interface Settings {
   useSelection: boolean;
   /** Leave Max output on the clipboard so it can be pasted again. */
   keepResultOnClipboard: boolean;
-  /** Dictation that starts with "Hey Max" is routed to Max mode. */
-  wakePhrase: boolean;
+  /**
+   * The Dictate hotkey notices when you're asking Max to write something
+   * ("Hey Max…", "can you write an email to…") and hands it over.
+   */
+  smartIntent: boolean;
   /** Play soft chimes when recording starts and stops. */
   sounds: boolean;
   /** Keep the little ghost floating on screen between sessions. */
@@ -97,6 +101,8 @@ export interface HistoryEntry {
   app?: string;
   /** Set when Max opened an email draft instead of typing. */
   draftTo?: string;
+  /** Dictate-hotkey sessions that smart intent routed to Max. */
+  autoDetected?: boolean;
 }
 
 export type Phase =

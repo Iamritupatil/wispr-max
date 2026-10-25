@@ -8,7 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   anthropicApiKey: "",
   model: "claude-opus-5-5",
   effort: "low",
-  sttProvider: "groq",
+  sttProvider: "assemblyai",
+  assemblyaiApiKey: "",
   groqApiKey: "",
   openaiApiKey: "",
   language: "",
@@ -17,7 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   polishDictation: true,
   useSelection: true,
   keepResultOnClipboard: true,
-  wakePhrase: true,
+  smartIntent: true,
   sounds: true,
   showIdleGhost: true,
   emailDrafts: "gmail",
@@ -27,7 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   profile: { name: "", role: "", email: "", signature: "", style: "" },
 };
 
-const SECRET_KEYS = ["anthropicApiKey", "groqApiKey", "openaiApiKey"] as const;
+const SECRET_KEYS = ["anthropicApiKey", "assemblyaiApiKey", "groqApiKey", "openaiApiKey"] as const;
 const HISTORY_LIMIT = 100;
 
 function file(name: string) {
@@ -84,9 +85,14 @@ export function anthropicKey(s: Settings) {
 }
 
 export function sttKey(s: Settings) {
-  return s.sttProvider === "groq"
-    ? s.groqApiKey || process.env.GROQ_API_KEY || ""
-    : s.openaiApiKey || process.env.OPENAI_API_KEY || "";
+  switch (s.sttProvider) {
+    case "assemblyai":
+      return s.assemblyaiApiKey || process.env.ASSEMBLYAI_API_KEY || "";
+    case "groq":
+      return s.groqApiKey || process.env.GROQ_API_KEY || "";
+    default:
+      return s.openaiApiKey || process.env.OPENAI_API_KEY || "";
+  }
 }
 
 export function saveSettings(s: Settings) {

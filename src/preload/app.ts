@@ -10,6 +10,7 @@ const api: AppApi = {
   addSampleContacts: () => ipcRenderer.invoke("app:add-samples"),
   clearHistory: () => ipcRenderer.invoke("app:clear-history"),
   compose: (req) => ipcRenderer.invoke("app:compose", req),
+  smart: (req) => ipcRenderer.invoke("app:smart", req),
   onComposeText: (cb) => ipcRenderer.on("app:compose-text", (_e, text) => cb(text)),
   transcribe: (audio) => ipcRenderer.invoke("app:transcribe", audio),
   requestAccessibility: () => ipcRenderer.invoke("app:request-accessibility"),
