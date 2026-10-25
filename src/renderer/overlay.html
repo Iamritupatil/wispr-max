@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <link rel="stylesheet" href="overlay.css" />
+  </head>
+  <body>
+    <div id="root" class="root" data-phase="idle" data-mode="dictate">
+      <section class="card">
+        <header class="card-head">
+          <span class="badge">MAX</span>
+          <span id="to" class="chip"></span>
+          <span id="app" class="where"></span>
+        </header>
+        <p id="heard" class="heard"></p>
+        <div id="text" class="text"></div>
+      </section>
+
+      <div class="bar">
+        <div id="ghost" class="ghost-wrap" data-eyes="center"></div>
+        <div id="wave" class="wave" aria-hidden="true"></div>
+        <span id="label" class="label"></span>
+        <kbd class="hint">esc</kbd>
+      </div>
+      <div id="shadow" class="shadow" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    </div>
+    <script src="overlay.js"></script>
+  </body>
+</html>

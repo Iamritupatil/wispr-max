@@ -1,0 +1,58 @@
+{
+  "name": "wispr-max",
+  "version": "0.1.0",
+  "description": "Wispr Flow, maxed out: voice dictation plus an AI writer that types into any app.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs && electron .",
+    "start": "electron .",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc",
+    "test": "tsx --test test/*.test.ts",
+    "icons": "tsx scripts/icons.mts",
+    "dist": "npm run build && electron-builder"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "build": {
+    "appId": "com.wisprmax.app",
+    "productName": "Wispr Max",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "target": "dmg",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Wispr Max listens while you hold the hotkey so it can type what you say.",
+        "NSAppleEventsUsageDescription": "Wispr Max uses System Events to paste text into the app you are typing in."
+      }
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  }
+}

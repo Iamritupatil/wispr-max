@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:" />
+    <title>Wispr Max</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="ghost-slot" data-eyes="center" data-ghost></span>
+          <span class="brand-name">Wispr Max</span>
+        </div>
+        <nav id="nav" class="nav">
+          <button data-tab="home" class="active"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+          <button data-tab="dictionary"><svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5zM4 19.5A1.5 1.5 0 0 0 5.5 21H20"/><path d="M9 8h6"/></svg>Dictionary</button>
+          <button data-tab="snippets"><svg viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>Snippets</button>
+          <button data-tab="style"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>Style</button>
+          <button data-tab="contacts"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></svg>Contacts</button>
+          <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>About you</button>
+        </nav>
+        <div class="sidebar-foot">
+          <div id="sidebar-status" class="sidebar-status"></div>
+          <button data-tab="settings" class="nav-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</button>
+        </div>
+      </aside>
+
+      <main class="content">
+        <!-- ================= HOME ================= -->
+        <section id="tab-home" class="tab active">
+          <header class="home-head">
+            <h1 id="greeting">Welcome back</h1>
+            <div id="stats" class="stats"></div>
+          </header>
+
+          <div class="hint-banner">
+            <span class="ghost-slot big" data-eyes="happy" data-ghost></span>
+            <div>
+              <p class="serif">Talk anywhere. <em>Max</em> writes.</p>
+              <p class="muted">
+                Press <span id="kbd-dictate" class="keys"></span> to dictate, or
+                <span id="kbd-max" class="keys"></span> and tell Max what to write: <em>"Email Priya asking whether my job is confirmed."</em>
+              </p>
+            </div>
+          </div>
+
+          <div id="setup" class="card setup"></div>
+
+          <div class="card playground">
+            <div class="card-title">
+              <h2 class="serif">Try Max</h2>
+              <span class="muted">Same brain as the hotkey, right here.</span>
+            </div>
+
+            <div id="pg-apps" class="segmented" role="tablist">
+              <button data-app="Gmail" data-title="Compose - Gmail" class="active">Gmail</button>
+              <button data-app="Slack" data-title="Slack">Slack</button>
+              <button data-app="LinkedIn" data-title="Messaging | LinkedIn">LinkedIn</button>
+              <button data-app="Messages" data-title="iMessage">iMessage</button>
+              <button data-app="Notes" data-title="Notes">Notes</button>
+            </div>
+
+            <div class="instruction">
+              <textarea id="pg-instruction" rows="2" placeholder="Email Priya asking whether my job is confirmed"></textarea>
+              <button id="pg-mic" class="icon-btn" title="Speak your instruction">
+                <svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+              </button>
+              <button id="pg-run" class="btn primary">Write <kbd>⏎</kbd></button>
+            </div>
+            <div id="pg-examples" class="examples"></div>
+
+            <details>
+              <summary>Add a message you're replying to, or text to rewrite</summary>
+              <textarea id="pg-selection" rows="3" placeholder="Paste it here…"></textarea>
+            </details>
+
+            <div id="pg-result" class="result hidden">
+              <div id="pg-email" class="email-head hidden">
+                <div><span class="muted">To</span> <b id="pg-to"></b></div>
+                <div><span class="muted">Subject</span> <b id="pg-subject"></b></div>
+              </div>
+              <pre id="pg-output" class="output"></pre>
+              <div class="row">
+                <span id="pg-status" class="muted small"></span>
+                <span class="spacer"></span>
+                <button id="pg-draft" class="btn hidden">Open as email draft</button>
+                <button id="pg-copy" class="btn">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-head">
+            <h2 class="serif">Activity</h2>
+            <button id="h-clear" class="btn ghost small">Clear</button>
+          </div>
+          <div id="feed" class="feed"></div>
+        </section>
+
+        <!-- ================= DICTIONARY ================= -->
+        <section id="tab-dictionary" class="tab">
+          <header class="page-head">
+            <h1>Dictionary</h1>
+            <p class="muted">Names, jargon and brand words Wispr Max should always spell right. Add what it tends to mishear, and it'll fix it automatically. Contact names are included for you.</p>
+          </header>
+          <form id="dict-form" class="card add-row">
+            <input name="word" placeholder="Correct spelling, e.g. Wispr" required />
+            <input name="heardAs" placeholder="Often heard as (optional), e.g. whisper" />
+            <button class="btn primary" type="submit">Add</button>
+          </form>
+          <div id="dict-list" class="chips"></div>
+        </section>
+
+        <!-- ================= SNIPPETS ================= -->
+        <section id="tab-snippets" class="tab">
+          <header class="page-head">
+            <h1>Snippets</h1>
+            <p class="muted">Say a cue, get the full text. Dictate "my calendar link" and your booking URL is typed out. Max can use snippets too: "email Daniel my calendar link".</p>
+          </header>
+          <form id="snip-form" class="card snip-form">
+            <input name="trigger" placeholder="When I say… e.g. my calendar link" required />
+            <textarea name="text" rows="2" placeholder="Type this… e.g. https://cal.com/alex/30min" required></textarea>
+            <div class="row"><span class="spacer"></span><button class="btn primary" type="submit">Add snippet</button></div>
+          </form>
+          <div id="snip-list" class="list"></div>
+        </section>
+
+        <!-- ================= STYLE ================= -->
+        <section id="tab-style" class="tab">
+          <header class="page-head">
+            <h1>Style</h1>
+            <p class="muted">Sound like yourself everywhere. Pick a tone for each kind of app; dictation and Max both follow it.</p>
+          </header>
+          <div id="style-cats" class="segmented"></div>
+          <p id="style-apps" class="muted small"></p>
+          <div id="style-options" class="style-grid"></div>
+        </section>
+
+        <!-- ================= CONTACTS ================= -->
+        <section id="tab-contacts" class="tab">
+          <header class="page-head row-head">
+            <div>
+              <h1>Contacts</h1>
+              <p class="muted">Max uses these to write to people. Notes are the secret sauce: how you know them and what's going on.</p>
+            </div>
+            <div class="actions">
+              <button id="c-import" class="btn">Import CSV / vCard</button>
+              <button id="c-new" class="btn primary">New contact</button>
+            </div>
+          </header>
+          <input id="c-search" class="search" type="search" placeholder="Search contacts" />
+          <div id="c-list" class="contact-grid"></div>
+        </section>
+
+        <!-- ================= PROFILE ================= -->
+        <section id="tab-profile" class="tab">
+          <header class="page-head">
+            <h1>About you</h1>
+            <p class="muted">So Max writes as you, with the right name and sign-off.</p>
+          </header>
+          <form id="profile-form" class="card form">
+            <div class="grid-2">
+              <div class="field"><label>Your name</label><input name="name" placeholder="Alex Chen" /></div>
+              <div class="field"><label>Your role</label><input name="role" placeholder="CS student, aspiring PM" /></div>
+            </div>
+            <div class="field"><label>Your email</label><input name="email" placeholder="alex@example.com" /></div>
+            <div class="field"><label>Email sign-off</label><textarea name="signature" rows="3" placeholder="Best,&#10;Alex Chen&#10;linkedin.com/in/alexchen"></textarea></div>
+            <div class="field"><label>Anything else about how you write</label><textarea name="style" rows="3" placeholder="No emojis in email. Use 'Hi' instead of 'Dear'. Keep it short."></textarea></div>
+            <div class="row"><button class="btn primary" type="submit">Save</button></div>
+          </form>
+        </section>
+
+        <!-- ================= SETTINGS ================= -->
+        <section id="tab-settings" class="tab">
+          <header class="page-head">
+            <h1>Settings</h1>
+            <p class="muted">API keys are encrypted with your OS keychain and only used to call the APIs.</p>
+          </header>
+          <form id="settings-form" class="form">
+            <div class="card">
+              <h2>Hotkeys</h2>
+              <p class="muted small">Click a box and press a shortcut. Press once to start, again to finish, Esc to cancel.</p>
+              <div class="grid-2">
+                <div class="field"><label>Dictate</label><input name="dictateHotkey" class="hotkey" readonly /><span id="hk-dictate" class="hk-status"></span></div>
+                <div class="field"><label>Max</label><input name="maxHotkey" class="hotkey" readonly /><span id="hk-max" class="hk-status"></span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Writing (Claude)</h2>
+              <div class="field">
+                <label>Anthropic API key <a href="#" data-href="https://console.anthropic.com/settings/keys">Get one</a></label>
+                <input name="anthropicApiKey" type="password" placeholder="sk-ant-…" autocomplete="off" />
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Model</label>
+                  <input name="model" list="models" />
+                  <datalist id="models">
+                    <option value="claude-opus-5-5"></option>
+                    <option value="claude-sonnet-5-5"></option>
+                    <option value="claude-haiku-5-5"></option>
+                  </datalist>
+                </div>
+                <div class="field">
+                  <label>Effort</label>
+                  <select name="effort">
+                    <option value="low">Low: fastest</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High: most careful</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label>When you ask for an email outside an email app</label>
+                <select name="emailDrafts">
+                  <option value="gmail">Open a Gmail draft</option>
+                  <option value="outlook">Open an Outlook draft</option>
+                  <option value="mailto">Open my default mail app</option>
+                  <option value="off">Just type it where my cursor is</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Voice</h2>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Speech-to-text</label>
+                  <select name="sttProvider">
+                    <option value="groq">Groq Whisper (fastest)</option>
+                    <option value="openai">OpenAI</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Language</label>
+                  <input name="language" placeholder="Auto-detect, or en, es, hi…" />
+                </div>
+              </div>
+              <div class="field" data-provider="groq">
+                <label>Groq API key <a href="#" data-href="https://console.groq.com/keys">Get one</a></label>
+                <input name="groqApiKey" type="password" placeholder="gsk_…" autocomplete="off" />
+              </div>
+              <div class="field" data-provider="openai">
+                <label>OpenAI API key <a href="#" data-href="https://platform.openai.com/api-keys">Get one</a></label>
+                <input name="openaiApiKey" type="password" placeholder="sk-…" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Behaviour</h2>
+              <label class="toggle"><input type="checkbox" name="polishDictation" /><span><b>Smart formatting</b> Remove "um"s, fix punctuation and apply "no wait, I mean…" corrections.</span></label>
+              <label class="toggle"><input type="checkbox" name="useSelection" /><span><b>Command mode on selected text</b> Highlight text, press Max and say "make this more formal" or "reply to this".</span></label>
+              <label class="toggle"><input type="checkbox" name="wakePhrase" /><span><b>"Hey Max" in dictation</b> Start a dictation with "Hey Max" to hand it to Max.</span></label>
+              <label class="toggle"><input type="checkbox" name="keepResultOnClipboard" /><span><b>Keep Max's text on the clipboard</b> So you can paste it again if the cursor wasn't in a text box.</span></label>
+              <label class="toggle"><input type="checkbox" name="sounds" /><span><b>Sounds</b> Tiny chimes when listening starts and stops.</span></label>
+              <label class="toggle"><input type="checkbox" name="showIdleGhost" /><span><b>Show the ghost on screen</b> It floats at the bottom of your screen, ready when you are.</span></label>
+            </div>
+
+            <div class="row sticky-save"><button class="btn primary" type="submit">Save settings</button></div>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="contact-dialog" class="dialog">
+      <form id="contact-form" method="dialog">
+        <h2 id="contact-dialog-title" class="serif">New contact</h2>
+        <input type="hidden" name="id" />
+        <div class="grid-2">
+          <div class="field"><label>Name</label><input name="name" required placeholder="Priya Sharma" /></div>
+          <div class="field"><label>Email</label><input name="email" type="email" placeholder="priya@northwind.io" /></div>
+          <div class="field"><label>Company</label><input name="company" placeholder="Northwind" /></div>
+          <div class="field"><label>Title</label><input name="title" placeholder="Senior Recruiter" /></div>
+          <div class="field"><label>Phone</label><input name="phone" /></div>
+          <div class="field"><label>How you know them</label><input name="relationship" placeholder="Recruiter for my PM application" /></div>
+        </div>
+        <div class="field"><label>Notes for Max</label><textarea name="notes" rows="3" placeholder="Final round was Oct 14. She said I'd hear back within a week."></textarea></div>
+        <div class="row">
+          <button id="contact-delete" type="button" class="btn danger">Delete</button>
+          <span class="spacer"></span>
+          <button type="button" id="contact-cancel" class="btn">Cancel</button>
+          <button type="submit" class="btn primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

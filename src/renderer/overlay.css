@@ -1,0 +1,323 @@
+:root {
+  --ink: #f3f7f6;
+  --muted: rgba(243, 247, 246, 0.6);
+  --glass: rgba(24, 31, 30, 0.94);
+  --line: rgba(255, 255, 255, 0.09);
+  --teal: #4b6f6c;
+  --mint: #cfe3df;
+  --slate: #7f9ba5;
+  --error: #ff9b9b;
+  --ok: #9fe0c9;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  color: var(--ink);
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 6px;
+}
+
+/* ---------- the bar (Flow-style pill that grows out of the ghost) ---------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition:
+    padding 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 220ms,
+    box-shadow 220ms,
+    border-color 220ms;
+}
+
+.root[data-mode="max"] .bar {
+  border-color: rgba(207, 227, 223, 0.35);
+}
+
+/* Multiples of the 18px pixel grid at 2x keep the ghost crisp. */
+.ghost-wrap {
+  width: 27px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: end center;
+}
+
+.ghost-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  transform: translateY(var(--hop, 0px));
+  transition: transform 70ms linear;
+}
+
+.ghost-wrap .eyes {
+  display: none;
+}
+
+.ghost-wrap[data-eyes="center"] .eyes[data-e="center"],
+.ghost-wrap[data-eyes="right"] .eyes[data-e="right"],
+.ghost-wrap[data-eyes="left"] .eyes[data-e="left"],
+.ghost-wrap[data-eyes="closed"] .eyes[data-e="closed"],
+.ghost-wrap[data-eyes="happy"] .eyes[data-e="happy"] {
+  display: inline;
+}
+
+/* Pixel waveform: square-stepped bars that follow your voice. */
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 21px;
+}
+
+.wave i {
+  display: block;
+  width: 3px;
+  height: 3px;
+  background: var(--mint);
+}
+
+.root:is([data-phase="transcribing"], [data-phase="thinking"], [data-phase="writing"]) .wave i {
+  animation: dots 1.1s steps(3) infinite;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+@keyframes dots {
+  0%,
+  100% {
+    height: 3px;
+    opacity: 0.45;
+  }
+  50% {
+    height: 9px;
+    opacity: 1;
+  }
+}
+
+.label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.root[data-phase="done"] .label {
+  color: var(--ok);
+}
+
+.root[data-phase="error"] .label {
+  color: var(--error);
+  white-space: normal;
+}
+
+.root:is([data-phase="done"], [data-phase="error"]) .wave {
+  display: none;
+}
+
+.hint {
+  font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 5px;
+}
+
+.root:is([data-phase="done"], [data-phase="error"]) .hint {
+  display: none;
+}
+
+/* ---------- idle: just the ghost, floating ---------- */
+
+.root[data-phase="idle"] .bar {
+  padding: 0;
+  gap: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.root[data-phase="idle"] :is(.wave, .label, .hint) {
+  display: none;
+}
+
+.root[data-phase="idle"] .ghost-wrap {
+  width: 36px;
+  height: 42px;
+  animation: float 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
+}
+
+@keyframes float {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.shadow {
+  display: flex;
+  gap: 2px;
+  height: 2px;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+
+.shadow i {
+  height: 2px;
+  background: var(--teal);
+}
+
+.shadow i:nth-child(1),
+.shadow i:nth-child(4) {
+  width: 2px;
+}
+
+.shadow i:nth-child(2) {
+  width: 5px;
+}
+
+.shadow i:nth-child(3) {
+  width: 10px;
+}
+
+.root[data-phase="idle"] .shadow {
+  opacity: 0.85;
+  animation: shadow 3.2s ease-in-out infinite;
+}
+
+@keyframes shadow {
+  50% {
+    transform: scaleX(0.8);
+    opacity: 0.5;
+  }
+}
+
+/* ---------- Max card ---------- */
+
+.card {
+  display: none;
+  width: 100%;
+  max-height: 228px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.root[data-mode="max"]:is([data-phase="thinking"], [data-phase="writing"], [data-phase="done"]) .card {
+  display: flex;
+  animation: rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.badge {
+  font: 800 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: #10201e;
+  background: var(--mint);
+}
+
+.chip {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(207, 227, 223, 0.12);
+  color: var(--mint);
+  white-space: nowrap;
+}
+
+.chip:empty {
+  display: none;
+}
+
+.where {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heard {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse; /* keep the newest lines in view */
+  min-height: 0;
+  flex: 1;
+}
+
+.text:empty::after {
+  content: "Writing…";
+  color: var(--muted);
+}
+
+.root[data-phase="writing"] .text span::after {
+  content: "▍";
+  color: var(--mint);
+  animation: blink 0.9s steps(2) infinite;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0;
+  }
+}

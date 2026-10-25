@@ -1,0 +1,56 @@
+import type {
+  AppStatus,
+  AudioPayload,
+  Contact,
+  HistoryEntry,
+  OverlayCommand,
+  OverlayState,
+  Settings,
+  Stats,
+} from "./types";
+
+/** Exposed to the overlay window as `window.overlay`. */
+export interface OverlayApi {
+  onCommand(cb: (cmd: OverlayCommand) => void): void;
+  onState(cb: (state: OverlayState) => void): void;
+  sendAudio(payload: AudioPayload): void;
+  sendError(message: string): void;
+}
+
+export interface AppSnapshot {
+  settings: Settings;
+  contacts: Contact[];
+  history: HistoryEntry[];
+  stats: Stats;
+  status: AppStatus;
+}
+
+export interface ComposeRequest {
+  instruction: string;
+  app?: string;
+  windowTitle?: string;
+  selection?: string;
+  /** Ask for a subject line too, to open the result as an email draft. */
+  emailDraft?: boolean;
+}
+
+/** Exposed to the main window as `window.wispr`. */
+export interface AppApi {
+  getState(): Promise<AppSnapshot>;
+  saveSettings(patch: Partial<Settings>): Promise<AppSnapshot>;
+  saveContact(contact: Contact): Promise<Contact[]>;
+  deleteContact(id: string): Promise<Contact[]>;
+  importContacts(): Promise<{ contacts: Contact[]; imported: number } | null>;
+  addSampleContacts(): Promise<Contact[]>;
+  clearHistory(): Promise<HistoryEntry[]>;
+  compose(req: ComposeRequest): Promise<string>;
+  /** Streams Max output; `null` means discard what was shown and start over. */
+  onComposeText(cb: (delta: string | null) => void): void;
+  transcribe(audio: AudioPayload): Promise<string>;
+  requestAccessibility(): Promise<AppStatus>;
+  copy(text: string): Promise<void>;
+  openExternal(url: string): Promise<void>;
+  openDraft(draft: { to: string; subject: string; body: string }): Promise<void>;
+  onHistory(cb: (update: { history: HistoryEntry[]; stats: Stats }) => void): void;
+  onNavigate(cb: (tab: string) => void): void;
+}
