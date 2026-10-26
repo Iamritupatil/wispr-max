@@ -28,6 +28,6 @@ export const DEFAULT_SETTINGS: Settings = {
   profile: { name: "", role: "", email: "", signature: "", style: "" },
   voiceInput: "flow",
   screenContext: true,
-  flowHistory: false,
+  listenToFlow: true,
   cloudUrl: CLOUD_URL,
 };

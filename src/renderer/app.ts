@@ -812,7 +812,7 @@ function renderSettings() {
     $("hk-dictate").textContent = "Wispr Flow handles dictation";
     $("hk-dictate").className = "hk-status";
   }
-  const watch = state.status.flowHistory;
+  const watch = state.status.flowListen;
   $("flow-watch").textContent = watch?.message ?? "";
   $("flow-watch").style.color = watch ? `var(--${watch.ok ? "ok" : "warn"})` : "";
 }

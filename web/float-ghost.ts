@@ -4,7 +4,7 @@ import { ghostSvg } from "../src/renderer/ghost";
 import { applyTheme } from "../src/renderer/theme";
 import type { TalkView } from "../src/renderer/talk";
 import type { Settings } from "../src/shared/types";
-import { onSharingChange, sharing, startSharing, stopSharing } from "./screen";
+import { attachImage, clearImage, hasPasted, imageIn, onContextChange, sharing, startSharing, stopSharing } from "./screen";
 
 // The floating ghost on the web: a small ghost you can drag anywhere. Click it
 // and a slim pill opens for Wispr Flow to type into. Otherwise it stays out of
@@ -15,7 +15,6 @@ import { onSharingChange, sharing, startSharing, stopSharing } from "./screen";
 
 const POS_KEY = "wm.ghost";
 const isMac = navigator.platform.toLowerCase().includes("mac");
-const FLOW_KEY = isMac ? "fn" : "Ctrl + Win";
 const RESULT_MS = 10_000;
 
 const icon = (path: string) => `<svg viewBox="0 0 24 24">${path}</svg>`;
@@ -159,7 +158,7 @@ function render(v: TalkView) {
   const asking = v.status === "asking";
   const shown = Boolean(pip) || !root.classList.contains("hidden");
 
-  input.placeholder = asking ? "Answer with Flow, or type it" : `Hold ${FLOW_KEY} and talk`;
+  input.placeholder = asking ? "Answer with Flow, or type it" : "Hold your Flow key and talk";
   q(".fg-mic").classList.toggle("on", v.status === "listening");
 
   // What the bubble says, when there's something to say.
@@ -220,20 +219,28 @@ q(".fg-copy").addEventListener("click", () => void copyResult(false));
 q(".fg-draft").addEventListener("click", () => void talk.openDraft());
 q(".fg-mic").addEventListener("click", () => void talk.toggleVoice());
 
-// ---------- reading a tab ----------
+// ---------- screen context: a pasted screenshot or a shared tab ----------
 
+const isMacKeys = isMac ? "Cmd + Shift + 4, then Cmd + V" : "Win + Shift + S, then Ctrl + V";
 const screenButton = q(".fg-screen");
-function renderSharing(on: boolean) {
+function renderContext() {
+  const on = sharing() || hasPasted();
   screenButton.classList.toggle("on", on);
-  screenButton.title = on ? "Max is reading the tab you shared. Click to stop." : "Read a tab: let Max see the chat you're replying to";
+  screenButton.title = sharing()
+    ? "Max is reading the tab you shared. Click to stop."
+    : hasPasted()
+      ? "Max will read the screenshot you pasted. Click to remove it."
+      : "Read a tab: let Max see the chat you're replying to (or just paste a screenshot)";
   document.querySelectorAll<HTMLElement>("[data-share-screen]").forEach((b) => {
-    b.textContent = on ? "Stop sharing" : "Share a tab with Max";
-    b.classList.toggle("on", on);
+    b.textContent = sharing() ? "Stop sharing" : "Share a tab";
+    b.classList.toggle("on", sharing());
   });
-  document.querySelectorAll<HTMLElement>("[data-share-status]").forEach((s) => {
-    s.textContent = on
+  document.querySelectorAll<HTMLElement>("[data-share-status]").forEach((el) => {
+    el.innerHTML = sharing()
       ? "Max can see the tab you shared and will use it as context."
-      : "Share the tab you're replying in (LinkedIn, Gmail, Slack) and Max reads the conversation first.";
+      : hasPasted()
+        ? `Max will read the screenshot you pasted. <button type="button" class="link-btn" data-clear-shot>Remove</button>`
+        : `Show Max the chat you're replying to: paste a screenshot here (${isMacKeys}), or share a tab.`;
   });
 }
 export async function toggleSharing() {
@@ -245,12 +252,31 @@ export async function toggleSharing() {
     if (err instanceof Error && err.name !== "NotAllowedError") toast(`Couldn't share the screen: ${err.message}`, true);
   }
 }
-screenButton.addEventListener("click", () => void toggleSharing());
-document.addEventListener("click", (e) => {
-  if ((e.target as HTMLElement).closest("[data-share-screen]")) void toggleSharing();
+screenButton.addEventListener("click", () => {
+  if (hasPasted() && !sharing()) clearImage();
+  else void toggleSharing();
 });
-onSharingChange(renderSharing);
-renderSharing(sharing());
+document.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (target.closest("[data-share-screen]")) void toggleSharing();
+  if (target.closest("[data-clear-shot]")) clearImage();
+});
+
+/** A screenshot pasted into either talk box becomes Max's context. */
+function acceptScreenshots(el: HTMLElement) {
+  el.addEventListener("paste", (e) => {
+    const image = imageIn(e.clipboardData);
+    if (!image) return; // Text (including Wispr Flow's) goes in as usual.
+    e.preventDefault();
+    void attachImage(image)
+      .then(() => toast("Got it. Max will read that screenshot."))
+      .catch(() => toast("Couldn't read that image.", true));
+  });
+}
+acceptScreenshots(input);
+acceptScreenshots(document.getElementById("talk-input")!);
+onContextChange(renderContext);
+renderContext();
 
 // ---------- pop out (Document Picture-in-Picture) ----------
 

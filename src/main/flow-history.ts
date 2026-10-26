@@ -3,15 +3,15 @@ import os from "node:os";
 import { DatabaseSync } from "node:sqlite";
 import { type FlowSchema, flowDatabaseCandidates, pickFlowSchema } from "../core/flow-schema";
 
-// Experimental: notices each new Wispr Flow dictation, read-only, by watching
-// Flow's local history. Nothing is ever written to Flow's database.
+// Max's ear on Wispr Flow: notices each new Flow dictation, read-only, by
+// watching Flow's local history. Nothing is ever written to Flow's database.
 
 export interface FlowDictation {
   text: string;
   app?: string;
 }
 
-const POLL_MS = 800;
+const POLL_MS = 250;
 
 export class FlowHistoryWatcher {
   private db?: DatabaseSync;
@@ -42,7 +42,7 @@ export class FlowHistoryWatcher {
       const last = this.db.prepare(`SELECT MAX(rowid) AS id FROM "${schema.table}"`).get() as { id: number | null };
       this.lastId = last.id ?? 0;
       this.timer = setInterval(() => this.poll(onDictation), POLL_MS);
-      return { ok: true, message: "Watching your Wispr Flow dictations." };
+      return { ok: true, message: 'Listening along with Wispr Flow. Start a dictation with "Hey Max" to hand it over.' };
     } catch (err) {
       this.stop();
       return { ok: false, message: `Couldn't open Wispr Flow's history: ${(err as Error).message}` };

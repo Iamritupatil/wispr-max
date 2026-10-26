@@ -31,6 +31,20 @@ const RELAY_CLAUSE = String.raw`(?:asking|saying|that|about|whether|if|for|to|kn
 const THIS = String.raw`(?:this|that|it|the (?:above|selection|selected text|text|paragraph|message|email))`;
 
 const WAKE = new RegExp(String.raw`^\s*(?:hey|hi|okay|ok|yo)[,.]?\s+max\b[\s,.:!?-]*`, "i");
+// "Max, reply to…": a bare name only counts with a pause after it, so dictating
+// "Max will join the call" isn't mistaken for calling Max.
+const CALL = new RegExp(String.raw`^\s*(?:(?:hey|hi|okay|ok|yo)[,.]?\s+max\b|max\s*[,:!])[\s,.:!?-]*`, "i");
+
+/**
+ * Did the user call Max by name ("Hey Max, …", "Max, …") at the start of a
+ * Wispr Flow dictation? Returns the instruction without the name, or null.
+ */
+export function calledMax(transcript: string): string | null {
+  const call = transcript.match(CALL);
+  if (!call) return null;
+  const rest = transcript.slice(call[0].length).trim();
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : null;
+}
 
 // "a quick LinkedIn post", "a polite Slack message": up to two describing words before the thing.
 const DET = String.raw`(?:an? |the |my |this |that |some )?(?:[\w'-]+ ){0,2}?`;

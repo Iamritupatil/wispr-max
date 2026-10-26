@@ -103,8 +103,11 @@ export interface Settings {
   voiceInput: "flow" | "built-in";
   /** Send a screenshot with each request so Max can read the conversation you're in. */
   screenContext: boolean;
-  /** Experimental: notice requests in your normal Flow dictations and offer to write them. */
-  flowHistory: boolean;
+  /**
+   * Max listens along while you use Wispr Flow as usual: "Hey Max, …" hands the
+   * dictation to Max; other requests get a quick offer. Reads Flow's local history.
+   */
+  listenToFlow: boolean;
   /** The hosted Wispr Max server, used when there's no Anthropic key on this computer. */
   cloudUrl: string;
 }
@@ -198,8 +201,8 @@ export interface AppStatus {
   hotkeys: { dictate: boolean; max: boolean };
   aiReady: boolean;
   sttReady: boolean;
-  /** Experimental Flow-history watcher: whether it's running, and why not. */
-  flowHistory?: { ok: boolean; message: string };
+  /** Listening along with Wispr Flow: whether it's running, and why not. */
+  flowListen?: { ok: boolean; message: string };
 }
 
 /** What was on screen when the user asked: the conversation they're replying in, usually. */

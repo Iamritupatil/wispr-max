@@ -29,7 +29,7 @@ import {
   parseContactsFile,
 } from "../core/contacts";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
-import { guessIntent } from "../core/intent";
+import { calledMax, guessIntent } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
@@ -126,23 +126,34 @@ function startSession(mode: Mode) {
   sendOverlay({ type: "start", mode, sounds: settings.sounds });
 }
 
-// ---------- experimental: notice requests in normal Flow dictations ----------
+// ---------- listening along with Wispr Flow ----------
+//
+// Use Flow exactly as usual, with your own Flow key. Max reads each dictation
+// from Flow's history the moment it lands: "Hey Max, …" (or "Max, …") is
+// handed straight to Max, which takes back what Flow typed, reads the screen
+// and types the finished message instead. Other requests get a quick offer.
 
 const flowWatcher = new FlowHistoryWatcher();
 let flowWatch = { ok: false, message: "" };
 let offer: { text: string; timer: NodeJS.Timeout } | null = null;
 
 function syncFlowWatcher() {
-  if (settings.flowHistory) flowWatch = flowWatcher.start(onFlowDictation);
+  if (settings.listenToFlow) flowWatch = flowWatcher.start(onFlowDictation);
   else {
     flowWatcher.stop();
     flowWatch = { ok: false, message: "" };
   }
 }
 
-/** A new Flow dictation: if it reads like a request to write something, offer to. */
+/** A new Flow dictation: called Max? Take over. A request? Offer to write it. */
 function onFlowDictation(d: FlowDictation) {
+  // Flow typing into Max's own bubble is already a Max session.
   if (current) return;
+  const called = calledMax(d.text);
+  if (called) {
+    clearOffer();
+    return void takeOverFromFlow(called);
+  }
   const guess = guessIntent(d.text, contacts);
   if (guess.intent !== "command") return;
   if (offer) clearTimeout(offer.timer);
@@ -165,20 +176,34 @@ function clearOffer() {
   if (!settings.showIdleGhost) overlay.hide();
 }
 
-/** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
 async function acceptOffer() {
   if (!offer) return;
   const text = offer.text;
   clearOffer();
-  await undoLastEdit();
-  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: gatherContext("max"), spokenMs: 0 };
+  await takeOverFromFlow(text);
+}
+
+/** Flow may still be inserting the text when its history updates. */
+const FLOW_SETTLE_MS = 350;
+
+/** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
+async function takeOverFromFlow(instruction: string) {
+  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0 };
   current = s;
+  showOverlay();
+  setOverlay({ phase: "thinking", mode: "max", transcript: instruction });
+  await sleep(FLOW_SETTLE_MS);
+  if (current !== s) return;
+  // If this fails, Flow's words stay and Max's text lands after them: untidy, not lost.
+  await undoLastEdit().catch(() => undefined);
+  // Read the screen once Flow's text is gone, so Max sees the conversation as it was.
+  s.context = gatherContext("max");
   try {
     globalShortcut.register("Escape", cancelSession);
   } catch {
     // optional
   }
-  void handleTranscript(s, text);
+  void handleTranscript(s, instruction);
 }
 
 /** Learns where the text is going while the user is still talking. */
@@ -789,7 +814,7 @@ function status(): AppStatus {
     // Without a key, Max uses the hosted server; with Wispr Flow, Flow does the listening.
     aiReady: true,
     sttReady: flowMode() || Boolean(store.sttKey(settings)),
-    flowHistory: settings.flowHistory ? flowWatch : undefined,
+    flowListen: settings.listenToFlow ? flowWatch : undefined,
   };
 }
 

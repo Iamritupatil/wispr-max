@@ -1669,3 +1669,13 @@ input.hotkey.recording {
 .swatch.system {
   background: linear-gradient(135deg, #faf9f6 50%, #121615 50%);
 }
+
+.desktop-cta {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}

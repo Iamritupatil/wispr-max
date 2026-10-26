@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { guessIntent, parseAutoOutput } from "../src/core/intent";
+import { calledMax, guessIntent, parseAutoOutput } from "../src/core/intent";
 import cases from "./fixtures/intents.json";
 
 const contacts = [
@@ -55,4 +55,15 @@ test("auto mode can ask instead of writing", () => {
     text: "",
     question: "Which role was this for?",
   });
+});
+
+test("calling Max by name in a Flow dictation hands it to Max", () => {
+  assert.equal(calledMax("Hey Max, reply saying Thursday works."), "Reply saying Thursday works.");
+  assert.equal(calledMax("Max, write a short note to the recruiter"), "Write a short note to the recruiter");
+  assert.equal(calledMax("ok max write an email to Priya"), "Write an email to Priya");
+  assert.equal(calledMax("Max: thank Elena for the referral"), "Thank Elena for the referral");
+  // Dictation that merely mentions Max is left alone.
+  assert.equal(calledMax("Max will join the call at five."), null);
+  assert.equal(calledMax("I told Max, sounds good"), null);
+  assert.equal(calledMax("Hey Max"), null);
 });

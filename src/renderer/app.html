@@ -47,10 +47,11 @@
               <p id="talk-hint" class="muted">Say what you'd type, or ask Max to write anything: a Slack reply, a LinkedIn note, an email, a tweet.</p>
               <input id="talk-input" class="talk-input" placeholder="…or type to Max and press Enter" autocomplete="off" />
               <div class="web-only share-row">
-                <button type="button" class="btn small" data-share-screen>Share a tab with Max</button>
+                <button type="button" class="btn small" data-share-screen>Share a tab</button>
                 <span class="muted small" data-share-status></span>
               </div>
-              <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic. Want it in every app? <a href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Get the desktop app</a>.</p>
+              <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic.</p>
+              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Download it</a></p>
               <p class="muted small desktop-only">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
             </div>
           </section>
@@ -246,8 +247,8 @@
 
             <div class="card web-only">
               <h2>Screen context</h2>
-              <p class="muted small">Share the tab you're replying in and Max reads the conversation, so you don't have to explain it, and matches how you write there. A frame goes to Claude with each request and is never stored.</p>
-              <div class="row"><button type="button" class="btn" data-share-screen>Share a tab with Max</button><span class="muted small" data-share-status></span></div>
+              <p class="muted small">Show Max the conversation you're replying to, so you don't have to explain it: paste a screenshot of it into the talk box, or share the tab. The picture goes to Claude with your request and is never stored. The desktop app does this by itself.</p>
+              <div class="row"><button type="button" class="btn" data-share-screen>Share a tab</button><span class="muted small" data-share-status></span></div>
             </div>
 
             <div class="card desktop-only">
@@ -261,7 +262,7 @@
                 </select>
               </div>
               <label class="toggle"><input type="checkbox" name="screenContext" /><span><b>Read my screen for context</b> Max looks at the conversation you're in, so you don't have to explain it, and writes in the style of your own messages. Screenshots go only to Claude with that one request and are never stored.</span></label>
-              <label class="toggle"><input type="checkbox" name="flowHistory" /><span><b>Notice requests in my Flow dictations</b> <span class="tag-exp">Experimental</span> When something you dictate with Flow sounds like a request ("write an email to…"), the ghost offers to write it. Reads Flow's local history; never changes it.<span id="flow-watch" class="block small"></span></span></label>
+              <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Listen along with Wispr Flow</b> Use Flow exactly as you do now, with your own Flow key. Start with <i>"Hey Max, …"</i> and Max takes over: it reads your screen, writes the message in your style and swaps it in for what Flow typed. Other requests ("write an email to…") get a quick offer from the ghost. Reads Flow's local history; never changes it.<span id="flow-watch" class="block small"></span></span></label>
             </div>
 
             <div class="card desktop-only">

@@ -34,6 +34,8 @@ export function pickFlowSchema(tables: Record<string, string[]>): FlowSchema | n
 
 /** Where Flow keeps its database on each platform (the first that exists is used). */
 export function flowDatabaseCandidates(platform: NodeJS.Platform, env: Record<string, string | undefined>, home: string): string[] {
+  // WISPR_FLOW_DB points at Flow's database when it lives somewhere unusual.
+  if (env.WISPR_FLOW_DB) return [env.WISPR_FLOW_DB];
   const join = (...p: string[]) => p.join(platform === "win32" ? "\\" : "/");
   if (platform === "darwin") return [join(home, "Library", "Application Support", "Wispr Flow", "flow.sqlite")];
   if (platform === "win32") {

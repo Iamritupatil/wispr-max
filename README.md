@@ -11,7 +11,7 @@
 
 Wispr Max is a layer on top of [Wispr Flow](https://wisprflow.ai), not a replacement for it. Flow does what it's best at, turning your voice into text, and Max picks up from there:
 
-1. **You talk with Flow.** Click the ghost (or press `Ctrl/Cmd + Shift + M`) and hold your Flow key. Flow types what you say into Max's bubble.
+1. **You talk with Flow, as always.** Hold your own Flow key (Caps Lock, Ctrl + Win, fn…) and start with **"Hey Max, …"** or **"Max, …"**. Max listens along with Flow: it takes back what Flow typed and handles it. (Or click the ghost / press `Ctrl/Cmd + Shift + M` and Flow types into Max's bubble.)
 2. **Max reads your screen.** The LinkedIn chat with the recruiter, the Slack thread, the email you're answering: Max sees it, so you don't have to explain anything.
 3. **Max writes it as you.** Short and professional if that's how you write, using your contacts, your sign-off and how you've been talking to this person.
 4. **It types it in.** No ChatGPT tab, no copy, no paste. About one to two seconds with Claude Haiku.
