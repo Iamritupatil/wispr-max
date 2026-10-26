@@ -11,7 +11,7 @@ const configs = [
     outdir: "dist",
     platform: "node",
     format: "cjs",
-    external: ["electron", "electron-updater", "node:sqlite"],
+    external: ["electron", "electron-updater", "node:sqlite", "uiohook-napi"],
   },
   {
     ...common,

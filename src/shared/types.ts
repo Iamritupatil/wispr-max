@@ -108,6 +108,8 @@ export interface Settings {
    * dictation to Max; other requests get a quick offer. Reads Flow's local history.
    */
   listenToFlow: boolean;
+  /** Hold to talk, double-tap for hands-free. */
+  talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
   /** A request heard in a Flow dictation (without "Hey Max"): write it at once, or offer first. */
   flowRequests: "auto" | "ask";
   /** The hosted Wispr Max server, used when there's no Anthropic key on this computer. */

@@ -49,6 +49,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
+import { setTalkKey, stopTalkKey } from "./talk-key";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
@@ -794,6 +795,21 @@ function pretty(accelerator: string) {
 
 function registerHotkeys() {
   globalShortcut.unregisterAll();
+  // Hold the talk key to talk (release to send), or double-tap it.
+  let held: Session | null = null;
+  setTalkKey(settings.talkKey, {
+    holdStart: () => {
+      if (current) return;
+      startSession(flowMode() ? "max" : "dictate");
+      held = current;
+    },
+    holdEnd: () => {
+      // With Flow, the bubble stays open for Flow to type into.
+      if (!flowMode() && current && current === held && current.phase === "recording") stopRecording(current);
+      held = null;
+    },
+    doubleTap: () => onHotkey(flowMode() ? "max" : "dictate"),
+  });
   const register = (accelerator: string, mode: Mode) => {
     try {
       return globalShortcut.register(accelerator, () => onHotkey(mode));
@@ -1069,7 +1085,10 @@ if (!app.requestSingleInstanceLock()) {
   app.on("before-quit", () => {
     quitting = true;
   });
-  app.on("will-quit", () => globalShortcut.unregisterAll());
+  app.on("will-quit", () => {
+    globalShortcut.unregisterAll();
+    stopTalkKey();
+  });
   // Keep running in the tray when every window is closed.
   app.on("window-all-closed", () => undefined);
 }

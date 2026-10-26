@@ -324,8 +324,8 @@ q(".fg-pop").addEventListener("click", () => void popOut().catch(() => undefined
 // ---------- when to show it ----------
 
 function sync() {
-  // The Home screen has its own big ghost.
-  root.classList.toggle("hidden", !pip && (!enabled || onHome));
+  // The ghost floats on every page, Home included, wherever you drag it.
+  root.classList.toggle("hidden", !pip && !enabled);
   place();
 }
 

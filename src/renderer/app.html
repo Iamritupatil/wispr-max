@@ -276,7 +276,17 @@
 
             <div class="card desktop-only">
               <h2>Hotkeys</h2>
-              <p class="muted small">Click a box and press a shortcut. Press once to start, again to finish, Esc to cancel.</p>
+              <div class="field">
+                <label>Talk key: hold it to talk, or double-tap it</label>
+                <select name="talkKey">
+                  <option value="alt">Alt</option>
+                  <option value="right-alt">Right Alt only</option>
+                  <option value="shift">Shift</option>
+                  <option value="ctrl">Ctrl</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+              <p class="muted small">Or use a shortcut: click a box and press one. Press once to start, again to finish, Esc to cancel.</p>
               <div class="grid-2">
                 <div class="field"><label>Dictate</label><input name="dictateHotkey" class="hotkey" readonly /><span id="hk-dictate" class="hk-status"></span></div>
                 <div class="field"><label>Max</label><input name="maxHotkey" class="hotkey" readonly /><span id="hk-max" class="hk-status"></span></div>
