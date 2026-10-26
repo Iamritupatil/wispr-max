@@ -84,3 +84,31 @@ export class RemoteWriter implements WriterLike {
     }
   }
 }
+
+/** Speech to text on the Wispr Max server, for "Max on its own" without a speech key. */
+export async function remoteTranscribe(
+  baseUrl: string,
+  audio: Uint8Array,
+  mime: string,
+  opts: { language?: string; vocabulary?: string[] },
+  fetchFn: FetchLike = (url, init) => fetch(url, init),
+  signal?: AbortSignal,
+): Promise<string> {
+  let binary = "";
+  for (let i = 0; i < audio.length; i += 0x8000) binary += String.fromCharCode(...audio.subarray(i, i + 0x8000));
+  let res: Response;
+  try {
+    res = await fetchFn(`${baseUrl}/api/transcribe`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ audio: btoa(binary), mime, ...opts }),
+      signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new ServerError("Couldn't reach the Wispr Max server. Check your connection.");
+  }
+  const body = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+  if (!res.ok || typeof body.text !== "string") throw new ServerError(body.error ?? `Transcription failed (${res.status}).`);
+  return body.text;
+}

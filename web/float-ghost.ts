@@ -57,6 +57,7 @@ let barOpen = false;
 let bubbleOpen = false;
 let pip: Window | null = null;
 let enabled = true;
+let withFlow = true;
 let onHome = true;
 let hideTimer: number | undefined;
 
@@ -113,6 +114,11 @@ ghost.addEventListener("pointerup", () => {
   }
   // Click: open the pill (and put away an old result), or close it again.
   if (bubbleOpen && talk.view.status === "done") showBubble(false);
+  if (!withFlow) {
+    // On its own: the ghost listens through the browser's microphone.
+    setBar(true);
+    return void talk.toggleVoice();
+  }
   setBar(pip ? true : !barOpen);
 });
 ghost.addEventListener("click", (e) => e.preventDefault());
@@ -158,7 +164,9 @@ function render(v: TalkView) {
   const asking = v.status === "asking";
   const shown = Boolean(pip) || !root.classList.contains("hidden");
 
-  input.placeholder = asking ? "Answer with Flow, or type it" : "Hold your Flow key and talk";
+  input.placeholder = asking
+    ? withFlow ? "Answer with Flow, or type it" : "Click the ghost and answer, or type"
+    : withFlow ? "Hold your Flow key and talk" : "Click the ghost and talk, or type";
   q(".fg-mic").classList.toggle("on", v.status === "listening");
 
   // What the bubble says, when there's something to say.
@@ -331,6 +339,8 @@ onHome = home.classList.contains("active");
 document.addEventListener("wispr:state", (e) => {
   const settings = (e as CustomEvent<{ settings: Settings }>).detail.settings;
   enabled = settings.showIdleGhost;
+  withFlow = settings.voiceInput === "flow";
+  render(talk.view);
   if (pip) applyTheme(settings.theme, pip.document);
   sync();
 });

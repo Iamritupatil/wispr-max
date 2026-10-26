@@ -1,7 +1,8 @@
 import { toBlob } from "html-to-image";
 import { SAMPLE_CONTACTS, mergeContacts, newId, parseContactsFile } from "../src/core/contacts";
 import { draftUrl } from "../src/core/email";
-import { RemoteWriter } from "../src/core/remote";
+import { buildVocabulary } from "../src/core/prompts";
+import { RemoteWriter, remoteTranscribe } from "../src/core/remote";
 import * as service from "../src/core/service";
 import { addUse, emptyStats } from "../src/core/stats";
 import { countWords } from "../src/core/text";
@@ -171,9 +172,12 @@ const api: AppApi = {
   smart: (req) => service.smart(writer, writeRequest(req), stream),
   onComposeText: (cb) => void textListeners.add(cb),
 
-  async transcribe() {
-    throw new Error("Talk with Wispr Flow into the box, or use your browser's microphone.");
-  },
+  // Browsers without built-in speech recognition (Firefox) send the recording to the server.
+  transcribe: (audio) =>
+    remoteTranscribe("", audio.data, audio.mime, {
+      language: settings.language || undefined,
+      vocabulary: buildVocabulary(contacts, settings.dictionary, settings.profile),
+    }),
 
   requestAccessibility: status,
   copy: (text) => navigator.clipboard.writeText(text),

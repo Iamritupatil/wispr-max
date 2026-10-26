@@ -19,7 +19,7 @@ import {
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Writer, type WriterLike, isAbort } from "../core/ai";
-import { RemoteWriter } from "../core/remote";
+import { RemoteWriter, remoteTranscribe } from "../core/remote";
 import { CLOUD_URL } from "../shared/defaults";
 import {
   SAMPLE_CONTACTS,
@@ -156,6 +156,8 @@ function onFlowDictation(d: FlowDictation) {
   }
   const guess = guessIntent(d.text, contacts);
   if (guess.intent !== "command") return;
+  // "Write me an email to…" in any app: the ghost pops up and does it.
+  if (settings.flowRequests !== "ask") return void takeOverFromFlow(guess.instruction);
   if (offer) clearTimeout(offer.timer);
   offer = { text: guess.instruction, timer: setTimeout(clearOffer, 9000) };
   showOverlay();
@@ -300,17 +302,7 @@ async function handleAudio(s: Session, audio: AudioPayload) {
     }
     s.spokenMs += audio.durationMs;
     const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
-    const raw = await transcribe(
-      audio.data,
-      audio.mime,
-      {
-        provider: settings.sttProvider,
-        apiKey: store.sttKey(settings),
-        language: settings.language || undefined,
-        vocabulary,
-      },
-      s.abort.signal,
-    );
+    const raw = await speechToText(audio, vocabulary, s.abort.signal);
     if (current !== s) return;
     await handleTranscript(s, applyDictionary(raw, settings.dictionary));
   } catch (err) {
@@ -533,6 +525,16 @@ function recordUse(use: UseRecord) {
 }
 
 /** Claude directly with your own key, or the hosted Wispr Max server (no key needed). */
+/** Your own speech key if you added one; otherwise the Wispr Max server transcribes. */
+function speechToText(audio: AudioPayload, vocabulary: string[], signal?: AbortSignal) {
+  const apiKey = store.sttKey(settings);
+  const language = settings.language || undefined;
+  if (!apiKey) {
+    return remoteTranscribe(settings.cloudUrl || CLOUD_URL, audio.data, audio.mime, { language, vocabulary }, (url, init) => net.fetch(url, init), signal);
+  }
+  return transcribe(audio.data, audio.mime, { provider: settings.sttProvider, apiKey, language, vocabulary }, signal);
+}
+
 function writer(): WriterLike {
   const apiKey = store.anthropicKey(settings);
   if (!apiKey) return new RemoteWriter(settings.cloudUrl || CLOUD_URL, (url, init) => net.fetch(url, init));
@@ -813,7 +815,8 @@ function status(): AppStatus {
     hotkeys: { ...hotkeys },
     // Without a key, Max uses the hosted server; with Wispr Flow, Flow does the listening.
     aiReady: true,
-    sttReady: flowMode() || Boolean(store.sttKey(settings)),
+    // Without a speech key, the Wispr Max server transcribes.
+    sttReady: true,
     flowListen: settings.listenToFlow ? flowWatch : undefined,
   };
 }
@@ -986,12 +989,7 @@ function registerIpc() {
   });
 
   ipcMain.handle("app:transcribe", (_e, audio: AudioPayload) =>
-    transcribe(audio.data, audio.mime, {
-      provider: settings.sttProvider,
-      apiKey: store.sttKey(settings),
-      language: settings.language || undefined,
-      vocabulary: buildVocabulary(contacts, settings.dictionary, settings.profile),
-    }),
+    speechToText(audio, buildVocabulary(contacts, settings.dictionary, settings.profile)),
   );
 
   ipcMain.handle("app:request-accessibility", () => {

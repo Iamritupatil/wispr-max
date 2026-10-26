@@ -13,6 +13,9 @@ export function serverWriter() {
 
 export const hasKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
 
+/** Speech to text for "Max on its own"; either name works. */
+export const assemblyKey = () => process.env.ASSEMBLYAI_API_KEY || process.env.ASSEMBLY_API_KEY || "";
+
 export function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,

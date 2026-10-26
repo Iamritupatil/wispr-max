@@ -3,7 +3,7 @@
 <h1 align="center">Wispr Max</h1>
 <p align="center"><b>Wispr Flow, maxed out.</b> Talk with Wispr Flow, and a tiny ghost reads the conversation on your screen, writes the reply in your style and types it where your cursor is.</p>
 
-<p align="center"><b>Try it in your browser:</b> <a href="https://wispr-max.vercel.app">wispr-max.vercel.app</a> (no sign-up, no API keys) · <a href="https://github.com/Iamritupatil/wispr-max/releases/latest">Desktop app for Windows and macOS</a></p>
+<p align="center"><b>Try it in your browser:</b> <a href="https://wispr-max.vercel.app">wispr-max.vercel.app</a> (no sign-up, no API keys) · <a href="https://wispr-max.vercel.app/api/download?os=win">Download for Windows</a> · <a href="https://wispr-max.vercel.app/api/download?os=mac">for Mac</a></p>
 
 ---
 

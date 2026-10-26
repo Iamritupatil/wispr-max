@@ -29,5 +29,6 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceInput: "flow",
   screenContext: true,
   listenToFlow: true,
+  flowRequests: "auto",
   cloudUrl: CLOUD_URL,
 };

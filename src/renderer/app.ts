@@ -156,8 +156,8 @@ function renderHome() {
     : [
         { ok: status.aiReady, title: "Claude", hint: "Uses the Wispr Max server, or your own key in Settings.", action: `<button class="btn small" data-go="settings">Settings</button>` },
         ...(settings.voiceInput === "flow"
-          ? []
-          : [{ ok: status.sttReady, title: "Speech-to-text key", hint: "AssemblyAI, Groq or OpenAI.", action: `<button class="btn small" data-go="settings">Add key</button>` }]),
+          ? [{ ok: Boolean(status.flowListen?.ok), title: "Connect Wispr Flow", hint: "Max listens along with Flow in every app.", action: `<button class="btn small" data-go="settings">Connect</button>` }]
+          : []),
         ...(status.platform === "darwin"
           ? [{ ok: status.accessibilityTrusted, title: "Accessibility permission", hint: "Lets Wispr Max type into other apps.", action: `<button id="grant-ax" class="btn small">Grant</button>` }]
           : []),
@@ -189,7 +189,9 @@ function renderHome() {
   $("sidebar-status").innerHTML = isWeb
     ? line(status.aiReady, status.aiReady ? "Claude connected" : "Server unreachable") + line(true, "Voice: Wispr Flow or your mic")
     : line(status.aiReady, status.aiReady ? "Claude connected" : "Claude not connected") +
-      line(status.sttReady || settings.voiceInput === "flow", settings.voiceInput === "flow" ? "Voice: Wispr Flow" : status.sttReady ? "Voice ready" : "Voice key missing");
+      (settings.voiceInput === "flow"
+        ? line(Boolean(status.flowListen?.ok), status.flowListen?.ok ? "Wispr Flow connected" : "Wispr Flow not connected")
+        : line(true, "Voice: Max's own mic"));
 }
 
 // ---------- activity feed ----------
@@ -276,7 +278,8 @@ export const talk = new Talk(api, () => state, {
 });
 
 /** On the desktop with Wispr Flow, Flow does the listening; elsewhere the ghost's mic does. */
-const flowTypes = () => !isWeb && state?.settings.voiceInput === "flow";
+/** With Wispr Flow, Flow does the listening; on its own, the ghost's mic does. */
+const flowTypes = () => state?.settings.voiceInput === "flow";
 
 function renderTalk(v: TalkView) {
   talkGhost.dataset.state = v.status;
@@ -812,10 +815,37 @@ function renderSettings() {
     $("hk-dictate").textContent = "Wispr Flow handles dictation";
     $("hk-dictate").className = "hk-status";
   }
-  const watch = state.status.flowListen;
-  $("flow-watch").textContent = watch?.message ?? "";
-  $("flow-watch").style.color = watch ? `var(--${watch.ok ? "ok" : "warn"})` : "";
+  renderFlowConnect();
 }
+
+/** Under "With Wispr Flow / On its own": whether Flow is connected, and what to do next. */
+function renderFlowConnect() {
+  const { settings, status } = state;
+  const flow = settings.voiceInput === "flow";
+  document.querySelectorAll<HTMLElement>("[data-voice]").forEach((el) => el.classList.toggle("hidden", el.dataset.voice !== settings.voiceInput));
+  const dot = (ok: boolean) => `<span class="dot" style="background:var(--${ok ? "ok" : "warn"})"></span>`;
+  let html: string;
+  if (isWeb) {
+    html = flow
+      ? `${dot(true)}<span>Click the talk box or the ghost and hold your Flow key: Flow types, Max takes it from there. For Flow in every app, <a href="#" data-download>get the desktop app</a>.</span>`
+      : `${dot(true)}<span>Click the ghost and talk. Your browser listens (Chrome, Edge or Safari work best).</span>`;
+  } else if (!flow) {
+    html = `${dot(true)}<span>Max listens with its own microphone: <span class="keys">${keyCaps(settings.dictateHotkey)}</span> to dictate, <span class="keys">${keyCaps(settings.maxHotkey)}</span> for Max, or click the ghost. Speech runs on the Wispr Max server, or add your own key under Voice.</span>`;
+  } else if (status.flowListen?.ok) {
+    html = `${dot(true)}<span><b>Connected to Wispr Flow.</b> Hold your Flow key in any app and say "Hey Max, …" or "write an email to…". The ghost takes it from there.</span>`;
+  } else if (!settings.listenToFlow) {
+    html = `${dot(false)}<span>Max isn't listening along with Flow, so it only hears you through its own bubble (click the ghost).</span><button type="button" class="btn small" data-flow-connect>Connect</button>`;
+  } else {
+    html = `${dot(false)}<span>${esc(status.flowListen?.message || "Looking for Wispr Flow…")} <a href="#" data-href="https://wisprflow.ai/downloads">Get Wispr Flow</a></span><button type="button" class="btn small" data-flow-connect>Check again</button>`;
+  }
+  $("flow-connect").innerHTML = html;
+}
+
+$("flow-connect").addEventListener("click", async (e) => {
+  if (!(e.target as HTMLElement).closest("[data-flow-connect]")) return;
+  await save({ voiceInput: "flow", listenToFlow: true });
+  toast(state.status.flowListen?.ok ? "Connected to Wispr Flow" : "Still can't find Wispr Flow", !state.status.flowListen?.ok);
+});
 
 function syncProvider() {
   const provider = (settingsForm.elements.namedItem("sttProvider") as HTMLSelectElement).value;
@@ -826,9 +856,9 @@ function syncProvider() {
 
 (settingsForm.elements.namedItem("sttProvider") as HTMLSelectElement).addEventListener("change", syncProvider);
 
-// The theme switches as soon as you pick one.
-settingsForm.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((radio) =>
-  radio.addEventListener("change", () => void save({ theme: radio.value as Settings["theme"] })),
+// The theme and the Flow choice apply as soon as you pick them.
+settingsForm.querySelectorAll<HTMLInputElement>('input[type="radio"]').forEach((radio) =>
+  radio.addEventListener("change", () => void save({ [radio.name]: radio.value } as Partial<Settings>)),
 );
 
 settingsForm.querySelectorAll<HTMLInputElement>("input.hotkey").forEach((input) => {

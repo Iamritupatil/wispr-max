@@ -51,7 +51,7 @@
                 <span class="muted small" data-share-status></span>
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic.</p>
-              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Download it</a></p>
+              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download>Download it</a></p>
               <p class="muted small desktop-only">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
             </div>
           </section>
@@ -241,7 +241,7 @@
                 <button type="button" class="btn hidden" data-install>Install Wispr Max</button>
                 <span class="muted small" data-installed></span>
                 <span class="spacer"></span>
-                <a class="btn" href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Download for Windows or Mac</a>
+                <a class="btn" href="/api/download" data-download data-download-label>Download the desktop app</a>
               </div>
             </div>
 
@@ -251,18 +251,27 @@
               <div class="row"><button type="button" class="btn" data-share-screen>Share a tab</button><span class="muted small" data-share-status></span></div>
             </div>
 
-            <div class="card desktop-only">
+            <div class="card" id="flow-card">
               <h2>Wispr Flow</h2>
-              <p class="muted small">Wispr Max is a layer on Wispr Flow: Flow turns your voice into text, Max works out what you want and writes it.</p>
-              <div class="field">
-                <label>Where your words come from</label>
-                <select name="voiceInput">
-                  <option value="flow">Wispr Flow types into Max's bubble (recommended)</option>
-                  <option value="built-in">Max's own microphone (needs a speech-to-text key)</option>
-                </select>
+              <p class="muted small">Wispr Max is a layer on <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a>: Flow turns your voice into text, Max works out what you want and writes it. Rather not use Flow? Max can listen on its own.</p>
+              <div class="row">
+                <div class="segmented" role="radiogroup" aria-label="How you talk to Max">
+                  <label><input type="radio" name="voiceInput" value="flow" />With Wispr Flow</label>
+                  <label><input type="radio" name="voiceInput" value="built-in" />On its own</label>
+                </div>
               </div>
-              <label class="toggle"><input type="checkbox" name="screenContext" /><span><b>Read my screen for context</b> Max looks at the conversation you're in, so you don't have to explain it, and writes in the style of your own messages. Screenshots go only to Claude with that one request and are never stored.</span></label>
-              <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Listen along with Wispr Flow</b> Use Flow exactly as you do now, with your own Flow key. Start with <i>"Hey Max, …"</i> and Max takes over: it reads your screen, writes the message in your style and swaps it in for what Flow typed. Other requests ("write an email to…") get a quick offer from the ghost. Reads Flow's local history; never changes it.<span id="flow-watch" class="block small"></span></span></label>
+              <div id="flow-connect" class="flow-connect"></div>
+              <div data-voice="flow" class="desktop-only">
+                <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Listen along with Wispr Flow</b> Use Flow exactly as you do now, with your own Flow key, in any app. Say <i>"Hey Max, …"</i> or ask for something ("write an email to Sam…") and the ghost pops up, reads your screen and swaps in the finished message for what Flow typed. Reads Flow's local history; never changes it.</span></label>
+                <div class="field">
+                  <label>When Flow hears a request without "Hey Max"</label>
+                  <select name="flowRequests">
+                    <option value="auto">Max writes it right away</option>
+                    <option value="ask">Max offers first (click the ghost to accept)</option>
+                  </select>
+                </div>
+              </div>
+              <label class="toggle desktop-only"><input type="checkbox" name="screenContext" /><span><b>Read my screen for context</b> Max looks at the conversation you're in, so you don't have to explain it, and writes in the style of your own messages. Screenshots go only to Claude with that one request and are never stored.</span></label>
             </div>
 
             <div class="card desktop-only">
