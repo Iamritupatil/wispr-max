@@ -42,20 +42,26 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "assets/icon.png",
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Wispr Max listens while you hold the hotkey so it can type what you say.",
         "NSAppleEventsUsageDescription": "Wispr Max uses System Events to paste text into the app you are typing in."
-      }
+      },
+      "artifactName": "Wispr-Max-${version}-${arch}.${ext}"
     },
     "win": {
       "icon": "assets/icon.png",
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "Wispr-Max-Setup-${version}.${ext}"
     },
     "linux": {
       "icon": "assets/icon.png",
       "target": "AppImage",
-      "category": "Utility"
+      "category": "Utility",
+      "artifactName": "Wispr-Max-${version}.${ext}"
     },
     "publish": [
       {
@@ -63,11 +69,16 @@
         "owner": "Iamritupatil",
         "repo": "wispr-max"
       }
-    ]
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    }
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Iamritupatil/wispr-max.git"
   },
-  "homepage": "https://github.com/Iamritupatil/wispr-max"
+  "homepage": "https://github.com/Iamritupatil/wispr-max",
+  "author": "Ritu Patil"
 }

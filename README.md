@@ -7,11 +7,13 @@
 
 ## The problem
 
-Voice dictation tools like Wispr Flow type what you *say*. But a lot of writing isn't dictation, it's delegation:
+Voice dictation tools like Wispr Flow type what you *say*. But a lot of writing isn't dictation, it's delegation: a reply in Slack, a note on LinkedIn, a follow-up email, a tweet, a cover letter.
 
-> "Write an email to Priya asking whether my job is confirmed."
+> "Reply to Daniel saying I'll push the fix tonight."
+> "Write a LinkedIn note thanking Elena for the referral."
+> "Email the recruiter asking whether my job is confirmed."
 
-Today that means opening ChatGPT, explaining who Priya is, pasting in context, generating, copying, switching back to Gmail, finding her address, and pasting. That's seven steps and two context switches for a three-paragraph email.
+Today each of those means opening ChatGPT, explaining who the person is and what's going on, generating, copying, switching back, and pasting. Wispr Max writes it in real time, right where your cursor already is: **no copying, no pasting, no switching apps.**
 
 ## The solution
 
@@ -37,7 +39,11 @@ You don't have to remember which hotkey to press. With **smart intent** on, the 
 
 Clear-cut phrasing is decided instantly by rules, with no API call. Ambiguous phrasing goes to Claude, which decides and writes in the **same** call, so it costs no extra time. When it's genuinely unclear, Wispr Max types your own words: that's the safer mistake. The `Max` hotkey always means "write this for me".
 
-### The email feature
+### It asks instead of guessing
+
+Max doesn't make up the parts it can't know. Say *"email the person I'm getting a job from, it's been a week"* and the ghost asks back, in a little speech bubble, *"Which role was this for, and who's it going to?"* Answer out loud and it writes. It asks only when guessing would make the message wrong (at most twice); small gaps like a date become `[placeholders]`.
+
+### Email drafts
 
 Say **"Email Priya asking whether my job is confirmed"** and:
 
@@ -59,7 +65,8 @@ Details Max doesn't know become `[placeholders]`. It never makes them up.
 | 100+ languages | ✓ Whisper auto-detects, or pin a language |
 | Flow bar | ✓ The ghost: it floats when idle, listens with a pixel waveform, glances around while thinking, and smiles when done |
 | Sounds | ✓ Tiny 8-bit chimes on start and stop |
-| Stats and history | ✓ Day streak, words, WPM, and a day-by-day activity feed with one-click copy |
+| Insights / usage | ✓ A **Usage** page: words, time saved, speaking speed, streak, a words-per-day chart, where you talk, and a share card for build-in-public posts |
+| History | ✓ A day-by-day activity feed with one-click copy |
 | ~~Meeting notes~~ | Deliberately left out |
 | **New: Max** | AI writing from a spoken instruction, aware of your contacts, profile, style, app and selection |
 | **New: Email drafts** | Pre-filled Gmail / Outlook / Mail drafts from one sentence |
@@ -71,6 +78,7 @@ Details Max doesn't know become `[placeholders]`. It never makes them up.
 3. In Slack, press **Max**: *"Tell Daniel I'll be ten minutes late to standup."* You get a casual one-liner, not an email.
 4. Highlight a paragraph, press **Max**: *"make this shorter and friendlier."* It's rewritten in place.
 5. Press **Dictate** and ramble: *"so um the meeting is at 4, no actually 5, and send them my calendar link."* You get something like *"The meeting is at 5, and send them https://cal.com/you/30min."*
+6. Press **Max** and say *"email the person I'm getting a job from, it's been a week and I haven't heard back."* The ghost asks which role and who it's for. Answer out loud and Max writes it.
 
 No mic or OS permissions on the demo machine? On the Home screen, click the big ghost and talk, or type to Max, then **Open as email draft**.
 
@@ -99,7 +107,18 @@ No mic or OS permissions on the demo machine? On the Home screen, click the big 
 - **No native modules:** `osascript` on macOS, PowerShell on Windows, `xdotool`/`wtype` on Linux. `npm install` just works.
 - **Private by default:** contacts, history, stats and settings live in your local app-data folder. API keys are encrypted with the OS keychain.
 
-## Getting started
+## Download
+
+Grab the installer for Windows, macOS or Linux from **[Releases](https://github.com/Iamritupatil/wispr-max/releases)**. The builds aren't code-signed yet: Windows shows a SmartScreen prompt (**More info → Run anyway**), and on macOS right-click the app and choose **Open** the first time.
+
+### Updating
+
+Open **Settings → Updates → Check for updates**, then **Update now**. Wispr Max also checks quietly in the background and shows *Update available* in the sidebar.
+
+- **Installed from Releases:** it downloads the new version and restarts into it.
+- **Running from a git clone:** it pulls the latest code, reinstalls packages if they changed, rebuilds and restarts. It never overwrites your own edits; if you've changed files, it asks you to run `git pull` yourself.
+
+## Getting started (from source)
 
 Requirements: Node 20+, plus API keys for [Anthropic](https://console.anthropic.com/settings/keys) (writing) and one speech-to-text provider: [AssemblyAI](https://www.assemblyai.com/dashboard/api-keys) (default), [Groq](https://console.groq.com/keys) or [OpenAI](https://platform.openai.com/api-keys).
 
@@ -154,6 +173,7 @@ src/
     stats.ts       streaks and words per minute
     stt.ts         speech-to-text: AssemblyAI, Groq or OpenAI
   main/            Electron main process: hotkeys, sessions, paste, tray, storage
+    updater.ts     the Update button: GitHub Releases for installers, git pull for clones
   preload/         narrow, typed bridges for each window
   renderer/
     ghost.ts       the pixel-art mascot, drawn from a grid as crisp SVG
@@ -161,6 +181,24 @@ src/
     app.*          Home, Dictionary, Snippets, Style, Contacts, About you, Settings
 test/              node:test suites
 ```
+
+## Contributing
+
+Wispr Max is open source and contributions are welcome.
+
+1. Fork the repo and create a branch.
+2. `npm install`, then `npm run dev` to run it.
+3. Before opening a pull request, run `npm run typecheck` and `npm test`. CI runs both on every push.
+4. If you change prompts, run `npm run eval` with your own `ANTHROPIC_API_KEY`, and mention the result in the PR.
+
+### Releasing
+
+```bash
+npm version minor          # bumps the version and tags it
+git push --follow-tags     # GitHub Actions builds Windows, macOS and Linux installers
+```
+
+The **Release** workflow publishes the installers to GitHub Releases, and installed copies pick them up through the Update button.
 
 ## Roadmap
 
