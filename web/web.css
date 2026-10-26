@@ -1,0 +1,267 @@
+/* The web app: the same page as the desktop window, plus the floating ghost. */
+
+html,
+body.web {
+  background: var(--bg);
+}
+
+body.web .sidebar {
+  padding-top: 22px;
+}
+
+/* ---------- floating ghost ---------- */
+
+.fg {
+  position: fixed;
+  z-index: 50;
+  left: 0;
+  top: 0;
+  touch-action: none;
+}
+
+.fg-ghost {
+  border: 0;
+  background: transparent;
+  padding: 6px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: grab;
+}
+
+.fg.dragging .fg-ghost {
+  cursor: grabbing;
+}
+
+.fg-ghost .ghost-slot {
+  filter: drop-shadow(0 4px 10px rgba(30, 40, 38, 0.18));
+  animation: float 3.2s ease-in-out infinite;
+  transition: transform 160ms ease;
+}
+
+.fg-ghost:hover .ghost-slot {
+  transform: scale(1.06);
+}
+
+.fg[data-state="listening"] .fg-ghost .ghost-slot,
+.fg[data-state="asking"] .fg-ghost .ghost-slot {
+  animation: hop 0.6s steps(2) infinite;
+}
+
+.fg[data-state="thinking"] .fg-ghost .ghost-slot,
+.fg.dragging .fg-ghost .ghost-slot {
+  animation: none;
+}
+
+.fg-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: min(340px, calc(100vw - 32px));
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 10px 40px rgba(20, 30, 28, 0.14);
+}
+
+.fg.left .fg-panel {
+  left: auto;
+  right: 0;
+}
+
+.fg.below .fg-panel {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+.fg.open .fg-panel {
+  display: flex;
+}
+
+.fg-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+/* The ghost's question gets a speech bubble. */
+.fg-title.bubble-q {
+  align-self: flex-start;
+  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid var(--accent);
+  background: var(--field);
+}
+
+.fg-live:empty {
+  display: none;
+}
+
+.fg-live {
+  margin: 0;
+}
+
+.fg-out {
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: var(--field);
+  padding: 10px 12px;
+  min-height: 0;
+  font-size: 13px;
+}
+
+.fg-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fg-input {
+  font: inherit;
+  font-size: 14px;
+  resize: none;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--ink);
+  padding: 9px 12px;
+}
+
+.fg-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.fg-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fg-tool {
+  font: inherit;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.fg-tool:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.fg-tool.on,
+.fg-tool.recording {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.fg-tool svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---------- popped out: a small always-on-top window ---------- */
+
+body.fg-pip-body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+}
+
+.fg.pip {
+  position: static;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px;
+}
+
+.fg.pip .fg-ghost {
+  cursor: default;
+  padding-top: 12px;
+}
+
+.fg.pip .fg-panel {
+  position: static;
+  display: flex;
+  flex: 1;
+  width: auto;
+  box-shadow: none;
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 760px) {
+  body.web .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  body.web .sidebar {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+
+  body.web .brand-name,
+  body.web .sidebar-status {
+    display: none;
+  }
+
+  body.web .nav {
+    flex-direction: row;
+  }
+
+  body.web .nav button,
+  body.web .nav-settings {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  body.web .sidebar-foot {
+    margin: 0;
+    flex-direction: row;
+  }
+
+  body.web .content {
+    padding: 22px 16px 48px;
+  }
+
+  body.web .talk {
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  body.web .sticky-save {
+    margin: 0 -16px -48px;
+    padding: 12px 16px 18px;
+  }
+}

@@ -1,6 +1,6 @@
 import type { Written } from "../shared/api";
 import type { Contact, FocusContext } from "../shared/types";
-import { AiError, type AutoHandlers, type ComposeInput, type StreamHandlers, type WriterLike } from "./ai";
+import type { AutoHandlers, ComposeInput, StreamHandlers, WriterLike } from "./ai";
 import type { Intent } from "./intent";
 
 // The hosted backend, behind the same interface as calling Claude directly.
@@ -13,6 +13,9 @@ type ServerEvent =
   | { t: "decision"; intent: Intent }
   | { t: "done"; result: unknown }
   | { t: "error"; message: string };
+
+/** A message to show the user, like AiError (kept separate so the web app doesn't bundle the Anthropic SDK). */
+export class ServerError extends Error {}
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -53,11 +56,11 @@ export class RemoteWriter implements WriterLike {
       });
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") throw err;
-      throw new AiError("Couldn't reach the Wispr Max server. Check your connection.");
+      throw new ServerError("Couldn't reach the Wispr Max server. Check your connection.");
     }
     if (!res.ok || !res.body) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new AiError(body.error ?? `The Wispr Max server had a problem (${res.status}).`);
+      throw new ServerError(body.error ?? `The Wispr Max server had a problem (${res.status}).`);
     }
 
     const reader = res.body.getReader();
@@ -75,9 +78,9 @@ export class RemoteWriter implements WriterLike {
         else if (event.t === "reset") handlers.onRestart?.();
         else if (event.t === "decision") handlers.onDecision?.(event.intent);
         else if (event.t === "done") return event.result;
-        else if (event.t === "error") throw new AiError(event.message);
+        else if (event.t === "error") throw new ServerError(event.message);
       }
-      if (done) throw new AiError("The Wispr Max server stopped before finishing.");
+      if (done) throw new ServerError("The Wispr Max server stopped before finishing.");
     }
   }
 }

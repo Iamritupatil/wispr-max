@@ -46,7 +46,12 @@
               <p id="talk-title" class="serif talk-title">Click the ghost and talk.</p>
               <p id="talk-hint" class="muted">Say what you'd type, or ask Max to write anything: a Slack reply, a LinkedIn note, an email, a tweet.</p>
               <input id="talk-input" class="talk-input" placeholder="…or type to Max and press Enter" autocomplete="off" />
-              <p class="muted small">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
+              <div class="web-only share-row">
+                <button type="button" class="btn small" data-share-screen>Share a tab with Max</button>
+                <span class="muted small" data-share-status></span>
+              </div>
+              <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic. Want it in every app? <a href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Get the desktop app</a>.</p>
+              <p class="muted small desktop-only">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
             </div>
           </section>
 
@@ -204,7 +209,8 @@
         <section id="tab-settings" class="tab">
           <header class="page-head">
             <h1>Settings</h1>
-            <p class="muted">API keys are encrypted with your OS keychain and only used to call the APIs.</p>
+            <p class="muted desktop-only">API keys are encrypted with your OS keychain and only used to call the APIs.</p>
+            <p class="muted web-only">Your contacts, profile and history stay in this browser. Only what Max needs for one message goes to the server.</p>
           </header>
           <form id="settings-form" class="form">
             <div class="card">
@@ -216,7 +222,24 @@
               </div>
             </div>
 
-            <div class="card">
+            <div class="card web-only">
+              <h2>Get the app</h2>
+              <p class="muted small">Install Wispr Max to open it like any other app, or get the desktop app: it sits on top of Wispr Flow in every app, reads the chat you're in and types the reply for you.</p>
+              <div class="row">
+                <button type="button" class="btn hidden" data-install>Install Wispr Max</button>
+                <span class="muted small" data-installed></span>
+                <span class="spacer"></span>
+                <a class="btn" href="#" data-href="https://github.com/Iamritupatil/wispr-max/releases/latest">Download for Windows or Mac</a>
+              </div>
+            </div>
+
+            <div class="card web-only">
+              <h2>Screen context</h2>
+              <p class="muted small">Share the tab you're replying in and Max reads the conversation, so you don't have to explain it, and matches how you write there. A frame goes to Claude with each request and is never stored.</p>
+              <div class="row"><button type="button" class="btn" data-share-screen>Share a tab with Max</button><span class="muted small" data-share-status></span></div>
+            </div>
+
+            <div class="card desktop-only">
               <h2>Wispr Flow</h2>
               <p class="muted small">Wispr Max is a layer on Wispr Flow: Flow turns your voice into text, Max works out what you want and writes it.</p>
               <div class="field">
@@ -230,7 +253,7 @@
               <label class="toggle"><input type="checkbox" name="flowHistory" /><span><b>Notice requests in my Flow dictations</b> <span class="tag-exp">Experimental</span> When something you dictate with Flow sounds like a request ("write an email to…"), the ghost offers to write it. Reads Flow's local history; never changes it.<span id="flow-watch" class="block small"></span></span></label>
             </div>
 
-            <div class="card">
+            <div class="card desktop-only">
               <h2>Hotkeys</h2>
               <p class="muted small">Click a box and press a shortcut. Press once to start, again to finish, Esc to cancel.</p>
               <div class="grid-2">
@@ -240,12 +263,12 @@
             </div>
 
             <div class="card">
-              <h2>Writing (Claude)</h2>
-              <div class="field">
+              <h2>Writing</h2>
+              <div class="field desktop-only">
                 <label>Anthropic API key <span class="muted">(optional)</span> <a href="#" data-href="https://console.anthropic.com/settings/keys">Get one</a></label>
                 <input name="anthropicApiKey" type="password" placeholder="Leave empty to use the Wispr Max server" autocomplete="off" />
               </div>
-              <div class="grid-2">
+              <div class="grid-2 desktop-only">
                 <div class="field">
                   <label>Model</label>
                   <input name="model" list="models" />
@@ -270,12 +293,12 @@
                   <option value="gmail">Open a Gmail draft</option>
                   <option value="outlook">Open an Outlook draft</option>
                   <option value="mailto">Open my default mail app</option>
-                  <option value="off">Just type it where my cursor is</option>
+                  <option value="off" class="desktop-only">Just type it where my cursor is</option>
                 </select>
               </div>
             </div>
 
-            <div class="card">
+            <div class="card desktop-only">
               <h2>Voice</h2>
               <div class="grid-2">
                 <div class="field">
@@ -308,11 +331,11 @@
             <div class="card">
               <h2>Behaviour</h2>
               <label class="toggle"><input type="checkbox" name="polishDictation" /><span><b>Smart formatting</b> Remove "um"s, fix punctuation and apply "no wait, I mean…" corrections.</span></label>
-              <label class="toggle"><input type="checkbox" name="useSelection" /><span><b>Command mode on selected text</b> Highlight text, press Max and say "make this more formal" or "reply to this".</span></label>
+              <label class="toggle desktop-only"><input type="checkbox" name="useSelection" /><span><b>Command mode on selected text</b> Highlight text, press Max and say "make this more formal" or "reply to this".</span></label>
               <label class="toggle"><input type="checkbox" name="smartIntent" /><span><b>Smart intent</b> The Dictate hotkey notices when you're asking Max to write ("Can you write an email to Priya…", "Hey Max…") and hands it over. Everything else is typed as you said it.</span></label>
-              <label class="toggle"><input type="checkbox" name="keepResultOnClipboard" /><span><b>Keep Max's text on the clipboard</b> So you can paste it again if the cursor wasn't in a text box.</span></label>
-              <label class="toggle"><input type="checkbox" name="sounds" /><span><b>Sounds</b> Tiny chimes when listening starts and stops.</span></label>
-              <label class="toggle"><input type="checkbox" name="showIdleGhost" /><span><b>Show the ghost on screen</b> It floats where you leave it, ready when you are. Drag it anywhere; right-click it to hide it or quit.</span></label>
+              <label class="toggle desktop-only"><input type="checkbox" name="keepResultOnClipboard" /><span><b>Keep Max's text on the clipboard</b> So you can paste it again if the cursor wasn't in a text box.</span></label>
+              <label class="toggle desktop-only"><input type="checkbox" name="sounds" /><span><b>Sounds</b> Tiny chimes when listening starts and stops.</span></label>
+              <label class="toggle"><input type="checkbox" name="showIdleGhost" /><span><b>Show the ghost on screen</b> It floats where you leave it, ready when you are. Drag it anywhere<span class="desktop-only">; right-click it to hide it or quit</span>.</span></label>
               <div class="field desktop-only">
                 <label>When you close this window</label>
                 <select name="closeBehavior">

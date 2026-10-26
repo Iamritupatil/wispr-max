@@ -8,6 +8,8 @@
     "dev": "node scripts/build.mjs && electron .",
     "start": "electron .",
     "watch": "node scripts/build.mjs --watch",
+    "build:web": "node scripts/build-web.mjs",
+    "web": "node scripts/build-web.mjs && tsx scripts/serve-web.mts",
     "typecheck": "tsc",
     "test": "tsx --test test/*.test.ts",
     "icons": "tsx scripts/icons.mts",
@@ -25,6 +27,7 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
+    "html-to-image": "^1.11.13",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

@@ -1,0 +1,14 @@
+{
+  "name": "Wispr Max",
+  "short_name": "Wispr Max",
+  "description": "Wispr Flow, maxed out: talk, and Max writes the message for you.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf9f6",
+  "theme_color": "#faf9f6",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

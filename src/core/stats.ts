@@ -15,6 +15,33 @@ export function streak(days: string[], today = new Date()): number {
   return n;
 }
 
+import type { Mode, Stats } from "../shared/types";
+
+export function emptyStats(): Stats {
+  return { words: 0, ms: 0, sessions: 0, days: [], daily: {}, apps: {}, maxSessions: 0 };
+}
+
+/** Adds one finished session to the usage totals (returns the same object, updated). */
+export function addUse(stats: Stats, words: number, ms: number, session: { mode: Mode; app?: string }, now = new Date()): Stats {
+  const today = localDay(now);
+  const isMax = session.mode === "max";
+  stats.words += words;
+  stats.ms += ms;
+  stats.sessions += 1;
+  if (isMax) stats.maxSessions += 1;
+  if (!stats.days.includes(today)) stats.days = [...stats.days, today].slice(-400);
+  const day = (stats.daily[today] ??= { words: 0, ms: 0, sessions: 0, max: 0 });
+  day.words += words;
+  day.ms += ms;
+  day.sessions += 1;
+  if (isMax) day.max += 1;
+  // Keep a year of daily totals.
+  for (const key of Object.keys(stats.daily).sort().slice(0, -400)) delete stats.daily[key];
+  const app = session.app?.trim() || "Other";
+  stats.apps[app] = (stats.apps[app] ?? 0) + words;
+  return stats;
+}
+
 /** Average typing speed, for "time saved". */
 export const TYPING_WPM = 40;
 

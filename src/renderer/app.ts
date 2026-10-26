@@ -1,12 +1,13 @@
 import { hasDescription, parseContactInput } from "../core/contact-input";
 import { findMentionedContacts } from "../core/contacts";
-import { emailRecipient, parseEmailDraft } from "../core/email";
 import { TYPING_WPM, formatDuration, lastDays, localDay, streak, timeSavedMs, topApps, wpm } from "../core/stats";
 import { CATEGORY_LABELS, STYLES } from "../core/style";
 import type { AppApi, AppSnapshot } from "../shared/api";
 import type { Contact, Settings, StyleCategory, StyleId, UpdateState } from "../shared/types";
 import { ghostSvg } from "./ghost";
+import { watchFlowInput } from "./flow-input";
 import { Recorder } from "./recorder";
+import { Talk, type TalkView } from "./talk";
 
 declare global {
   interface Window {
@@ -23,7 +24,7 @@ const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toStrin
 const esc = (s = "") =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-function toast(message: string, error = false) {
+export function toast(message: string, error = false) {
   const t = $("toast");
   t.textContent = message;
   t.className = `toast show${error ? " error" : ""}`;
@@ -145,16 +146,24 @@ function renderHome() {
   $("kbd-dictate").innerHTML = keyCaps(settings.dictateHotkey);
   $("kbd-max").innerHTML = keyCaps(settings.maxHotkey);
 
-  const checks = [
-    { ok: status.aiReady, title: "Anthropic API key", hint: "Powers Max and smart formatting.", action: `<button class="btn small" data-go="settings">Add key</button>` },
-    { ok: status.sttReady, title: "Speech-to-text key", hint: "AssemblyAI, Groq or OpenAI.", action: `<button class="btn small" data-go="settings">Add key</button>` },
-    ...(status.platform === "darwin"
-      ? [{ ok: status.accessibilityTrusted, title: "Accessibility permission", hint: "Lets Wispr Max type into other apps.", action: `<button id="grant-ax" class="btn small">Grant</button>` }]
-      : []),
-    { ok: status.hotkeys.dictate && status.hotkeys.max, title: "Hotkeys", hint: "Another app may be using one of them.", action: `<button class="btn small" data-go="settings">Change</button>` },
-    { ok: contacts.length > 0, title: "Contacts", hint: "The people Max writes to.", action: `<button class="btn small" data-go="contacts">Add</button>` },
-    { ok: Boolean(settings.profile.name), title: "About you", hint: "Your name and sign-off.", action: `<button class="btn small" data-go="profile">Fill in</button>` },
-  ];
+  const checks = isWeb
+    ? [
+        { ok: status.aiReady, title: "Wispr Max server", hint: "Writes with Claude. Nothing to set up; this turns green when it's reachable.", action: "" },
+        { ok: Boolean(settings.profile.name), title: "About you", hint: "Your name and sign-off, so Max writes as you.", action: `<button class="btn small" data-go="profile">Fill in</button>` },
+        { ok: contacts.length > 0, title: "Contacts", hint: "Paste a LinkedIn link or a number; Max knows who's who.", action: `<button class="btn small" data-go="contacts">Add</button>` },
+      ]
+    : [
+        { ok: status.aiReady, title: "Claude", hint: "Uses the Wispr Max server, or your own key in Settings.", action: `<button class="btn small" data-go="settings">Settings</button>` },
+        ...(settings.voiceInput === "flow"
+          ? []
+          : [{ ok: status.sttReady, title: "Speech-to-text key", hint: "AssemblyAI, Groq or OpenAI.", action: `<button class="btn small" data-go="settings">Add key</button>` }]),
+        ...(status.platform === "darwin"
+          ? [{ ok: status.accessibilityTrusted, title: "Accessibility permission", hint: "Lets Wispr Max type into other apps.", action: `<button id="grant-ax" class="btn small">Grant</button>` }]
+          : []),
+        { ok: status.hotkeys.dictate && status.hotkeys.max, title: "Hotkeys", hint: "Another app may be using one of them.", action: `<button class="btn small" data-go="settings">Change</button>` },
+        { ok: contacts.length > 0, title: "Contacts", hint: "The people Max writes to.", action: `<button class="btn small" data-go="contacts">Add</button>` },
+        { ok: Boolean(settings.profile.name), title: "About you", hint: "Your name and sign-off.", action: `<button class="btn small" data-go="profile">Fill in</button>` },
+      ];
   const done = checks.filter((c) => c.ok).length;
   $("setup").innerHTML =
     `<div class="card-title"><h2 class="serif">Get set up</h2><span class="muted">${done} of ${checks.length}</span></div>` +
@@ -176,9 +185,10 @@ function renderHome() {
 
   const line = (ok: boolean, text: string) =>
     `<div class="s"><span class="dot" style="background:var(--${ok ? "ok" : "warn"})"></span>${esc(text)}</div>`;
-  $("sidebar-status").innerHTML =
-    line(status.aiReady, status.aiReady ? "Claude connected" : "Claude key missing") +
-    line(status.sttReady, status.sttReady ? "Voice ready" : "Voice key missing");
+  $("sidebar-status").innerHTML = isWeb
+    ? line(status.aiReady, status.aiReady ? "Claude connected" : "Server unreachable") + line(true, "Voice: Wispr Flow or your mic")
+    : line(status.aiReady, status.aiReady ? "Claude connected" : "Claude not connected") +
+      line(status.sttReady || settings.voiceInput === "flow", settings.voiceInput === "flow" ? "Voice: Wispr Flow" : status.sttReady ? "Voice ready" : "Voice key missing");
 }
 
 // ---------- activity feed ----------
@@ -197,7 +207,11 @@ function renderFeed() {
   $("h-clear").classList.toggle("hidden", !history.length);
   if (!history.length) {
     $("feed").innerHTML = `<div class="empty"><span class="ghost-slot" data-eyes="happy" data-ghost></span>
-      <div>Nothing here yet. Press <span class="keys">${keyCaps(state.settings.dictateHotkey)}</span> in any app and start talking.</div></div>`;
+      <div>${
+        isWeb
+          ? "Nothing here yet. Click the box above, hold your Wispr Flow key and tell Max what to write."
+          : `Nothing here yet. Press <span class="keys">${keyCaps(state.settings.maxHotkey)}</span> in any app and start talking.`
+      }</div></div>`;
     paintGhosts($("feed"));
     return;
   }
@@ -242,145 +256,79 @@ api.onHistory(({ history, stats }) => {
 
 // ---------- talk to Max (Home) ----------
 //
-// Voice first, like the floating ghost: click the big ghost and talk, or type.
-// It decides whether you're dictating or asking Max to write, exactly like the
-// Dictate hotkey, and shows the result here instead of pasting it. When Max
-// needs one detail first, the ghost asks and your next answer finishes it.
+// Voice first: talk with Wispr Flow into the box (Flow types, Max takes it from
+// there), click the ghost to use the microphone where there's no Flow, or type.
+// The conversation itself lives in Talk, shared with the web's floating ghost.
 
-type Ask = { instruction: string; question: string; clarifications: { question: string; answer: string }[] };
-
+export const isWeb = document.body.classList.contains("web");
 const talkGhost = $("talk-ghost");
 const talkArt = $("talk-ghost-art");
 const talkOutput = $("talk-output");
 const talkInput = $<HTMLInputElement>("talk-input");
-const talkRecorder = new Recorder();
 const TALK_HINT = $("talk-hint").textContent ?? "";
-let talkBusy = false;
-let talkDraft: { to: string; subject: string; body: string } | null = null;
-let pendingAsk: Ask | null = null;
 let lookAround: number | undefined;
 
-function setTalk(state: "idle" | "listening" | "thinking" | "asking" | "done", title: string) {
-  talkGhost.dataset.state = state;
-  $("talk-title").textContent = title;
-  $("talk-title").classList.toggle("bubble-q", state === "asking");
+export const talk = new Talk(api, () => state, {
+  app: isWeb ? "Wispr Max on the web" : "Wispr Max",
+  browserSpeech: isWeb,
+  onError: (message) => toast(errorText(new Error(message)), true),
+});
+
+/** On the desktop with Wispr Flow, Flow does the listening; elsewhere the ghost's mic does. */
+const flowTypes = () => !isWeb && state?.settings.voiceInput === "flow";
+
+function renderTalk(v: TalkView) {
+  talkGhost.dataset.state = v.status;
+  $("talk-title").textContent = v.title;
+  $("talk-title").classList.toggle("bubble-q", v.status === "asking");
   $("talk-hint").textContent =
-    state === "asking" ? "Max needs one thing first. Click the ghost and answer, or type it below." : TALK_HINT;
-  talkInput.placeholder = state === "asking" ? "Type your answer and press Enter" : "…or type to Max and press Enter";
+    v.status === "listening" && v.live ? `“${v.live}”`
+    : v.status === "asking" ? "Max needs one thing first. Answer with Wispr Flow in the box below, or type it."
+    : TALK_HINT;
+  talkInput.placeholder =
+    v.status === "asking" ? "Hold your Flow key and answer, or type it" : "Hold your Flow key and talk here, or type, then Enter";
+
   clearInterval(lookAround);
-  talkArt.dataset.eyes = state === "done" ? "happy" : state === "asking" ? "right" : "center";
-  if (state === "thinking") {
+  talkArt.dataset.eyes = v.status === "done" ? "happy" : v.status === "asking" ? "right" : "center";
+  if (v.status === "thinking") {
     let left = false;
     lookAround = window.setInterval(() => (talkArt.dataset.eyes = (left = !left) ? "left" : "right"), 420);
   }
-}
 
-api.onComposeText((delta) => {
-  if (!talkBusy) return;
-  talkOutput.textContent = delta === null ? "" : talkOutput.textContent + delta;
-});
-
-async function runTalk(text: string) {
-  text = text.trim();
-  if (!text || talkBusy) return;
-  talkBusy = true;
-  talkDraft = null;
-  const answering = pendingAsk;
-  pendingAsk = null;
-  const instruction = answering?.instruction ?? text;
-  setTalk("thinking", "Max is on it…");
-  $("talk-result").classList.remove("hidden");
-  $("talk-email").classList.add("hidden");
-  $("talk-draft").classList.add("hidden");
-  $("talk-meta").textContent = answering ? `“${instruction}” · you said: “${text}”` : `“${text}”`;
-  talkOutput.textContent = "";
-  talkOutput.classList.add("streaming");
-  // "Email Priya…" becomes a ready-to-send draft: recipient, subject and body.
-  const about = answering ? `${instruction} ${text}` : text;
-  const to = emailRecipient(about, findMentionedContacts(about, state.contacts));
-  try {
-    let res: { intent: "dictation" | "command"; text: string; question?: string; reason?: string; decidedBy?: string };
-    let clarifications = answering?.clarifications ?? [];
-    if (answering) {
-      clarifications = [...clarifications, { question: answering.question, answer: text }];
-      res = { intent: "command", ...(await api.compose({ instruction, app: "Wispr Max", emailDraft: Boolean(to), clarifications })) };
-    } else {
-      res = await api.smart({ instruction: text, app: "Wispr Max", emailDraft: Boolean(to) });
-    }
-
-    if (res.question) {
-      // Max asks before guessing; the next thing you say or type is the answer.
-      pendingAsk = { instruction, question: res.question, clarifications };
-      $("talk-result").classList.add("hidden");
-      setTalk("asking", res.question);
-      talkInput.focus();
-      return;
-    }
-
-    const asked = res.intent === "command";
-    if (!answering) {
-      $("talk-meta").innerHTML =
-        `“${esc(text)}” · heard as <b>${asked ? "a request to Max" : "dictation"}</b>` +
-        `<span class="by">${res.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`;
-    }
-    if (asked && to) {
-      talkDraft = { to, ...parseEmailDraft(res.text) };
-      $("talk-to").textContent = to;
-      $("talk-subject").textContent = talkDraft.subject || "(no subject)";
-      $("talk-email").classList.remove("hidden");
-      $("talk-draft").classList.remove("hidden");
-      talkOutput.textContent = talkDraft.body;
-    } else {
-      talkOutput.textContent = res.text;
-    }
-    setTalk("done", asked ? "Here's what Max wrote." : "Here's your text, cleaned up.");
-  } catch (err) {
-    $("talk-result").classList.add("hidden");
-    setTalk("idle", "Click the ghost and talk.");
-    toast(errorText(err), true);
-  } finally {
-    talkOutput.classList.remove("streaming");
-    talkBusy = false;
+  $("talk-result").classList.toggle("hidden", !v.showResult);
+  const heard = v.answer ? `“${esc(v.heard)}” · you said: “${esc(v.answer)}”` : `“${esc(v.heard)}”`;
+  $("talk-meta").innerHTML =
+    v.intent && !v.answer
+      ? `${heard} · heard as <b>${v.intent === "command" ? "a request to Max" : "dictation"}</b>` +
+        `<span class="by">${v.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`
+      : heard;
+  $("talk-email").classList.toggle("hidden", !v.draft);
+  $("talk-draft").classList.toggle("hidden", !v.draft);
+  if (v.draft) {
+    $("talk-to").textContent = v.draft.to;
+    $("talk-subject").textContent = v.draft.subject || "(no subject)";
   }
+  talkOutput.textContent = v.output;
+  talkOutput.classList.toggle("streaming", v.streaming);
 }
+talk.onChange(renderTalk);
 
-talkGhost.addEventListener("click", async () => {
-  try {
-    if (!talkRecorder.active) {
-      if (talkBusy) return;
-      await talkRecorder.start();
-      setTalk("listening", pendingAsk ? "Listening for your answer… click the ghost when you're done." : "Listening… click the ghost when you're done.");
-      return;
-    }
-    setTalk("thinking", "Transcribing…");
-    const text = await api.transcribe(await talkRecorder.stop());
-    if (!text) {
-      if (pendingAsk) setTalk("asking", pendingAsk.question);
-      else setTalk("idle", "Didn't catch that. Click the ghost and try again.");
-      return;
-    }
-    await runTalk(text);
-  } catch (err) {
-    await talkRecorder.cancel();
-    if (pendingAsk) setTalk("asking", pendingAsk.question);
-    else setTalk("idle", "Click the ghost and talk.");
-    toast(errorText(err), true);
+watchFlowInput(talkInput, (text) => void talk.submit(text));
+
+talkGhost.addEventListener("click", () => {
+  if (flowTypes()) {
+    // Flow types into whatever has focus: give it the box.
+    talkInput.focus();
+    toast("Hold your Wispr Flow key and talk");
+    return;
   }
-});
-
-talkInput.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter") return;
-  e.preventDefault();
-  void runTalk(talkInput.value);
-  talkInput.value = "";
+  void talk.toggleVoice();
 });
 $("talk-copy").addEventListener("click", async () => {
-  await api.copy(talkOutput.textContent ?? "");
+  await talk.copy();
   toast("Copied");
 });
-$("talk-draft").addEventListener("click", async () => {
-  if (talkDraft) await api.openDraft(talkDraft);
-});
+$("talk-draft").addEventListener("click", () => void talk.openDraft());
 
 // ---------- usage ----------
 
@@ -923,7 +871,9 @@ function renderUpdate(update: UpdateState = state.update) {
       ? "You're running from a git clone; updates come straight from GitHub."
       : update.kind === "release"
         ? "Updates come from GitHub Releases."
-        : "");
+        : update.kind === "web"
+          ? "New versions download in the background; press Update to switch."
+          : "");
   const button = $<HTMLButtonElement>("upd-button");
   button.disabled = working;
   button.classList.toggle("primary", update.status === "available");
@@ -953,6 +903,8 @@ function renderAll() {
   renderProfile();
   renderSettings();
   renderUpdate();
+  // The web's floating ghost follows the settings too.
+  document.dispatchEvent(new CustomEvent("wispr:state", { detail: state }));
 }
 
 paintGhosts();

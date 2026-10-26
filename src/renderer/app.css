@@ -104,6 +104,12 @@ kbd {
   font-size: 12px;
 }
 
+/* One page, two homes: the desktop app and the web app. */
+body.web .desktop-only,
+body:not(.web) .web-only {
+  display: none !important;
+}
+
 .hidden {
   display: none !important;
 }
@@ -1566,4 +1572,16 @@ input.hotkey.recording {
 .talk-actions.left {
   justify-content: flex-start;
   padding: 0;
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+[data-share-screen].on {
+  border-color: var(--accent);
+  color: var(--accent);
 }

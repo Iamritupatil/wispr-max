@@ -121,8 +121,8 @@ export interface UpdateState {
   current: string;
   /** The newer version, or the latest change's title when running from source. */
   latest?: string;
-  /** Installer from GitHub Releases, a git clone, or neither (a downloaded zip). */
-  kind: "release" | "source" | "none";
+  /** Installer from GitHub Releases, a git clone, a downloaded zip, or the web app. */
+  kind: "release" | "source" | "none" | "web";
   message?: string;
 }
 
@@ -191,7 +191,7 @@ export interface AudioPayload {
 }
 
 export interface AppStatus {
-  platform: NodeJS.Platform;
+  platform: NodeJS.Platform | "web";
   accessibilityTrusted: boolean;
   hotkeys: { dictate: boolean; max: boolean };
   aiReady: boolean;

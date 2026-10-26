@@ -5,6 +5,7 @@ import type {
   DictionaryEntry,
   FocusContext,
   Profile,
+  Screenshot,
   Snippet,
   StyleCategory,
   StyleId,
@@ -30,6 +31,8 @@ export interface WriteRequest {
   styles: Record<StyleCategory, StyleId>;
   emailDraft?: boolean;
   clarifications?: Clarification[];
+  /** The user's screen (on the web: a shared tab or window). */
+  screenshot?: Screenshot;
 }
 
 function inputFor(req: WriteRequest) {
@@ -38,6 +41,7 @@ function inputFor(req: WriteRequest) {
     profile: req.profile,
     contacts: req.contacts,
     snippets: req.snippets,
+    screenshot: req.screenshot,
     options: {
       tone: toneFor(req.styles, req.emailDraft ? { app: "Mail" } : req.context).guide,
       emailDraft: req.emailDraft,
