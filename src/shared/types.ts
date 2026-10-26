@@ -160,6 +160,8 @@ export type Phase =
   | "transcribing"
   | "thinking"
   | "writing"
+  /** Max noticed a request in a Wispr Flow dictation and offers to write it. */
+  | "offer"
   | "done"
   | "error";
 
@@ -194,6 +196,8 @@ export interface AppStatus {
   hotkeys: { dictate: boolean; max: boolean };
   aiReady: boolean;
   sttReady: boolean;
+  /** Experimental Flow-history watcher: whether it's running, and why not. */
+  flowHistory?: { ok: boolean; message: string };
 }
 
 /** What was on screen when the user asked: the conversation they're replying in, usually. */

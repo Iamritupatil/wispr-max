@@ -142,7 +142,7 @@ body {
   white-space: normal;
 }
 
-.root:is([data-phase="done"], [data-phase="error"]) .wave {
+.root:is([data-phase="done"], [data-phase="error"], [data-phase="offer"]) .wave {
   display: none;
 }
 
@@ -154,7 +154,7 @@ body {
   padding: 3px 5px;
 }
 
-.root:is([data-phase="done"], [data-phase="error"]) .hint {
+.root:is([data-phase="done"], [data-phase="error"], [data-phase="offer"]) .hint {
   display: none;
 }
 

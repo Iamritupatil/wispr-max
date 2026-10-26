@@ -217,6 +217,20 @@
             </div>
 
             <div class="card">
+              <h2>Wispr Flow</h2>
+              <p class="muted small">Wispr Max is a layer on Wispr Flow: Flow turns your voice into text, Max works out what you want and writes it.</p>
+              <div class="field">
+                <label>Where your words come from</label>
+                <select name="voiceInput">
+                  <option value="flow">Wispr Flow types into Max's bubble (recommended)</option>
+                  <option value="built-in">Max's own microphone (needs a speech-to-text key)</option>
+                </select>
+              </div>
+              <label class="toggle"><input type="checkbox" name="screenContext" /><span><b>Read my screen for context</b> Max looks at the conversation you're in, so you don't have to explain it, and writes in the style of your own messages. Screenshots go only to Claude with that one request and are never stored.</span></label>
+              <label class="toggle"><input type="checkbox" name="flowHistory" /><span><b>Notice requests in my Flow dictations</b> <span class="tag-exp">Experimental</span> When something you dictate with Flow sounds like a request ("write an email to…"), the ghost offers to write it. Reads Flow's local history; never changes it.<span id="flow-watch" class="block small"></span></span></label>
+            </div>
+
+            <div class="card">
               <h2>Hotkeys</h2>
               <p class="muted small">Click a box and press a shortcut. Press once to start, again to finish, Esc to cancel.</p>
               <div class="grid-2">
@@ -228,8 +242,8 @@
             <div class="card">
               <h2>Writing (Claude)</h2>
               <div class="field">
-                <label>Anthropic API key <a href="#" data-href="https://console.anthropic.com/settings/keys">Get one</a></label>
-                <input name="anthropicApiKey" type="password" placeholder="sk-ant-…" autocomplete="off" />
+                <label>Anthropic API key <span class="muted">(optional)</span> <a href="#" data-href="https://console.anthropic.com/settings/keys">Get one</a></label>
+                <input name="anthropicApiKey" type="password" placeholder="Leave empty to use the Wispr Max server" autocomplete="off" />
               </div>
               <div class="grid-2">
                 <div class="field">

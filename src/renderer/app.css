@@ -656,6 +656,23 @@ input.hotkey.recording {
   font-weight: 600;
 }
 
+.tag-exp {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  vertical-align: 1px;
+}
+
+.block {
+  display: block;
+  margin-top: 4px;
+}
+
 .sticky-save {
   position: sticky;
   bottom: -64px;

@@ -858,6 +858,13 @@ function renderSettings() {
   };
   hk("hk-dictate", state.status.hotkeys.dictate);
   hk("hk-max", state.status.hotkeys.max);
+  if (state.settings.voiceInput === "flow") {
+    $("hk-dictate").textContent = "Wispr Flow handles dictation";
+    $("hk-dictate").className = "hk-status";
+  }
+  const watch = state.status.flowHistory;
+  $("flow-watch").textContent = watch?.message ?? "";
+  $("flow-watch").style.color = watch ? `var(--${watch.ok ? "ok" : "warn"})` : "";
 }
 
 function syncProvider() {

@@ -48,7 +48,8 @@ import type {
   Settings,
 } from "../shared/types";
 import * as store from "./store";
-import { activeApp, captureScreen, insertText, isTerminal, readSelection } from "./system";
+import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
+import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
 const isMac = process.platform === "darwin";
@@ -92,6 +93,7 @@ let current: Session | null = null;
 const flowMode = () => settings.voiceInput === "flow";
 
 function onHotkey(mode: Mode) {
+  if (!current && offer) return void acceptOffer();
   if (!current) startSession(flowMode() ? "max" : mode);
   else if (current.phase === "recording") stopRecording(current);
   // While a result is being written, hotkeys are ignored; Esc cancels.
@@ -122,6 +124,61 @@ function startSession(mode: Mode) {
   }
   setOverlay({ phase: "listening", mode });
   sendOverlay({ type: "start", mode, sounds: settings.sounds });
+}
+
+// ---------- experimental: notice requests in normal Flow dictations ----------
+
+const flowWatcher = new FlowHistoryWatcher();
+let flowWatch = { ok: false, message: "" };
+let offer: { text: string; timer: NodeJS.Timeout } | null = null;
+
+function syncFlowWatcher() {
+  if (settings.flowHistory) flowWatch = flowWatcher.start(onFlowDictation);
+  else {
+    flowWatcher.stop();
+    flowWatch = { ok: false, message: "" };
+  }
+}
+
+/** A new Flow dictation: if it reads like a request to write something, offer to. */
+function onFlowDictation(d: FlowDictation) {
+  if (current) return;
+  const guess = guessIntent(d.text, contacts);
+  if (guess.intent !== "command") return;
+  if (offer) clearTimeout(offer.timer);
+  offer = { text: guess.instruction, timer: setTimeout(clearOffer, 9000) };
+  showOverlay();
+  setOverlay({
+    phase: "offer",
+    mode: "max",
+    transcript: guess.instruction,
+    message: `Want me to write that? Click me or press ${pretty(settings.maxHotkey)}`,
+  });
+}
+
+function clearOffer() {
+  if (!offer) return;
+  clearTimeout(offer.timer);
+  offer = null;
+  if (current) return;
+  setOverlay({ phase: "idle", mode: "dictate" });
+  if (!settings.showIdleGhost) overlay.hide();
+}
+
+/** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
+async function acceptOffer() {
+  if (!offer) return;
+  const text = offer.text;
+  clearOffer();
+  await undoLastEdit();
+  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: gatherContext("max"), spokenMs: 0 };
+  current = s;
+  try {
+    globalShortcut.register("Escape", cancelSession);
+  } catch {
+    // optional
+  }
+  void handleTranscript(s, text);
 }
 
 /** Learns where the text is going while the user is still talking. */
@@ -732,6 +789,7 @@ function status(): AppStatus {
     // Without a key, Max uses the hosted server; with Wispr Flow, Flow does the listening.
     aiReady: true,
     sttReady: flowMode() || Boolean(store.sttKey(settings)),
+    flowHistory: settings.flowHistory ? flowWatch : undefined,
   };
 }
 
@@ -812,6 +870,7 @@ function registerIpc() {
     store.saveSettings(settings);
     registerHotkeys();
     syncIdleGhost();
+    syncFlowWatcher();
     return snapshot();
   });
 
@@ -972,6 +1031,7 @@ if (!app.requestSingleInstanceLock()) {
     createListenWindow();
     createTray();
     registerHotkeys();
+    syncFlowWatcher();
     if (!process.argv.includes("--hidden")) openMainWindow();
 
     // Look for a new version quietly after start-up, then every six hours.

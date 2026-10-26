@@ -63,6 +63,7 @@ function animateEyes(phase: Phase) {
       setEyes("right"); // reading along as Max writes
       break;
     case "done":
+    case "offer":
       setEyes("happy");
       break;
     case "error":
@@ -125,6 +126,7 @@ const LABELS: Record<Phase, (s: OverlayState) => string> = {
   transcribing: () => "Transcribing",
   thinking: (s) => (s.mode === "max" ? "Max is thinking" : "Polishing"),
   writing: () => "Writing",
+  offer: (s) => s.message ?? "Want me to write that?",
   done: (s) =>
     s.message ??
     (s.mode === "max"
@@ -137,8 +139,9 @@ function render(s: OverlayState) {
   if (root.dataset.phase !== s.phase) animateEyes(s.phase);
   root.dataset.phase = s.phase;
   root.dataset.mode = s.mode;
-  root.dataset.asking = String(Boolean(s.question) && s.phase === "listening");
-  $("ask-q").textContent = s.question ?? "";
+  const offering = s.phase === "offer";
+  root.dataset.asking = String(offering || (Boolean(s.question) && s.phase === "listening"));
+  $("ask-q").textContent = offering ? `Sounds like a request: “${s.transcript ?? ""}”` : (s.question ?? "");
   $("label").textContent = LABELS[s.phase](s);
   $("to").textContent = s.contacts?.length ? `To: ${s.contacts.join(", ")}` : "";
   $("app").textContent = s.app ?? "";

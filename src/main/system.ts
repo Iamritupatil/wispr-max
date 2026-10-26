@@ -45,7 +45,7 @@ function run(cmd: string, args: string[], timeout = 4000): Promise<string> {
 }
 
 /** Sends Cmd/Ctrl + key to the focused app. */
-async function chord(key: "c" | "v") {
+async function chord(key: "c" | "v" | "z") {
   switch (process.platform) {
     case "darwin":
       await run("osascript", [
@@ -117,6 +117,12 @@ export async function insertText(text: string, keepOnClipboard: boolean): Promis
     setTimeout(() => void restore(before), 800);
   }
   return true;
+}
+
+/** Undoes the last edit in the focused app (used to take back what Flow just typed). */
+export async function undoLastEdit() {
+  await chord("z");
+  await sleep(60);
 }
 
 /** Copies whatever is highlighted in the focused app, leaving the clipboard as it was. */
