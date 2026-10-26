@@ -1,9 +1,22 @@
 <p align="center"><img src="assets/icon.png" width="112" alt="Wispr Max: a tiny pixel ghost" /></p>
 
 <h1 align="center">Wispr Max</h1>
-<p align="center"><b>Wispr Flow, maxed out.</b> Dictate anywhere, or tell a tiny ghost what to write and it types the finished text into whatever app you're in.</p>
+<p align="center"><b>Wispr Flow, maxed out.</b> Talk with Wispr Flow, and a tiny ghost reads the conversation on your screen, writes the reply in your style and types it where your cursor is.</p>
+
+<p align="center"><b>Try it in your browser:</b> <a href="https://wispr-max.vercel.app">wispr-max.vercel.app</a> (no sign-up, no API keys) · <a href="https://github.com/Iamritupatil/wispr-max/releases/latest">Desktop app for Windows and macOS</a></p>
 
 ---
+
+## Built on Wispr Flow
+
+Wispr Max is a layer on top of [Wispr Flow](https://wisprflow.ai), not a replacement for it. Flow does what it's best at, turning your voice into text, and Max picks up from there:
+
+1. **You talk with Flow.** Click the ghost (or press `Ctrl/Cmd + Shift + M`) and hold your Flow key. Flow types what you say into Max's bubble.
+2. **Max reads your screen.** The LinkedIn chat with the recruiter, the Slack thread, the email you're answering: Max sees it, so you don't have to explain anything.
+3. **Max writes it as you.** Short and professional if that's how you write, using your contacts, your sign-off and how you've been talking to this person.
+4. **It types it in.** No ChatGPT tab, no copy, no paste. About one to two seconds with Claude Haiku.
+
+If something's missing ("which role?"), the ghost asks one short question in a speech bubble instead of guessing. Without Flow, Max still works with its own microphone; with Flow, it's the feature we'd love to see in Flow itself.
 
 ## The problem
 
@@ -101,11 +114,25 @@ No mic or OS permissions on the demo machine? On the Home screen, click the big 
      clipboard + simulated Cmd/Ctrl+V into the focused app, then your clipboard is restored
 ```
 
-- **Writing:** Claude (`claude-opus-5-5` by default, effort `low` for speed) via the official Anthropic SDK, streamed. Contacts, profile and snippets are prompt-cached. Server-side refusal fallbacks are on.
+- **Voice:** Wispr Flow types into Max's bubble; a burst of text (Flow's dictation) sends itself after a moment, no Enter needed. An experimental watcher can also notice requests in your normal Flow dictations (reads Flow's local history, read-only).
+- **Screen context:** the desktop app captures the screen under your cursor; the web app reads a tab you share. One frame goes to Claude with that request and is never stored.
+- **Writing:** Claude Haiku 5.5 (effort `low`, for one-to-two-second replies) via the official Anthropic SDK, streamed. Bring your own key, or use the hosted Wispr Max server (`api/`) so nobody needs one.
 - **Intent:** `src/core/intent.ts` rules decide clear cases instantly, and Claude decides the rest inside the writing call. They're tested against a labeled set of 38 real-world phrasings (`test/fixtures/intents.json`); the rules never mislabel a single one.
 - **Speech:** AssemblyAI (default; your contacts and dictionary go in as key terms), Groq `whisper-large-v3-turbo`, or OpenAI `gpt-4o-mini-transcribe`.
 - **No native modules:** `osascript` on macOS, PowerShell on Windows, `xdotool`/`wtype` on Linux. `npm install` just works.
 - **Private by default:** contacts, history, stats and settings live in your local app-data folder. API keys are encrypted with the OS keychain.
+
+## Web app
+
+[wispr-max.vercel.app](https://wispr-max.vercel.app) is the same app in your browser: talk with Wispr Flow into the box (or use your browser's mic), share the tab you're replying in so Max can read it, and drag the ghost anywhere. **Pop out** puts the ghost in a small window that stays on top of your other apps (Chrome and Edge); results are copied, ready to paste. Install it from the address bar like any app; **Settings → Updates** switches to new versions.
+
+Your contacts, profile and history stay in your browser. Only what Max needs for one message goes to the server.
+
+### Host your own
+
+The web app and its API deploy to [Vercel](https://vercel.com) as they are: import the repo, add `ANTHROPIC_API_KEY` as an environment variable (and optionally `WISPR_MAX_MODEL`), and deploy. `vercel.json` has the build settings. Requests are rate-limited per visitor; set a spend limit on your Anthropic key too.
+
+Locally: `ANTHROPIC_API_KEY=sk-ant-... npm run web` serves it on http://localhost:3000.
 
 ## Download
 
@@ -120,14 +147,14 @@ Open **Settings → Updates → Check for updates**, then **Update now**. Wispr 
 
 ## Getting started (from source)
 
-Requirements: Node 20+, plus API keys for [Anthropic](https://console.anthropic.com/settings/keys) (writing) and one speech-to-text provider: [AssemblyAI](https://www.assemblyai.com/dashboard/api-keys) (default), [Groq](https://console.groq.com/keys) or [OpenAI](https://platform.openai.com/api-keys).
+Requirements: Node 22+ and [Wispr Flow](https://wisprflow.ai). Keys are optional: without an [Anthropic](https://console.anthropic.com/settings/keys) key, Max writes through the hosted Wispr Max server, and with Flow you don't need a speech-to-text key. To use Max's own microphone instead of Flow, add [AssemblyAI](https://www.assemblyai.com/dashboard/api-keys), [Groq](https://console.groq.com/keys) or [OpenAI](https://platform.openai.com/api-keys).
 
 ```bash
 npm install
 npm run dev        # build and launch
 ```
 
-Add your keys in **Settings** (or export `ANTHROPIC_API_KEY` and `ASSEMBLYAI_API_KEY` before launching), fill in **About you**, and add contacts.
+Fill in **About you** and add a few contacts (paste a LinkedIn link or a number). Keys, if you use your own, go in **Settings** (or export `ANTHROPIC_API_KEY` before launching).
 
 ### Checking quality
 
@@ -156,6 +183,8 @@ ANTHROPIC_API_KEY=sk-ant-... npm run eval  # live: intent accuracy + writing-qua
 | `npm run eval` | Live quality check against Claude (needs `ANTHROPIC_API_KEY`) |
 | `npm run typecheck` | TypeScript checks |
 | `npm run dist` | Package an installer into `release/` (dmg / nsis / AppImage) |
+| `npm run web` | Build the web app and serve it with its API on localhost:3000 |
+| `npm run build:web` | Build the web app into `web-dist/` (what Vercel deploys) |
 | `npm run icons` | Re-render the ghost icons in `assets/` (needs Playwright) |
 
 ## Project structure
@@ -172,13 +201,18 @@ src/
     contacts.ts    CSV/vCard import, merging, finding who an instruction is about
     stats.ts       streaks and words per minute
     stt.ts         speech-to-text: AssemblyAI, Groq or OpenAI
+    service.ts     the writing and contact logic shared by the app and the server
+    remote.ts      the hosted server, behind the same interface as calling Claude
   main/            Electron main process: hotkeys, sessions, paste, tray, storage
     updater.ts     the Update button: GitHub Releases for installers, git pull for clones
   preload/         narrow, typed bridges for each window
   renderer/
     ghost.ts       the pixel-art mascot, drawn from a grid as crisp SVG
     overlay.*      the floating ghost and Flow-style bar
-    app.*          Home, Dictionary, Snippets, Style, Contacts, About you, Settings
+    listen.*       the bubble Wispr Flow types into
+    app.*          Home, Usage, Dictionary, Snippets, Style, Contacts, About you, Settings
+api/               the hosted server (Vercel functions): write, contact, health
+web/               the web app: browser bridge, floating ghost, tab sharing, PWA updates
 test/              node:test suites
 ```
 
