@@ -22,6 +22,8 @@ let state: AppSnapshot;
 const isMac = navigator.platform.toLowerCase().includes("mac");
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+const TALK_KEY: Record<Settings["talkKey"], string> = { alt: "Alt", "right-alt": "Right Alt", shift: "Shift", ctrl: "Ctrl", off: "Alt" };
+
 const esc = (s = "") =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -144,8 +146,7 @@ function renderHome() {
       stat(String(wpm(stats.words, stats.ms)), "wpm")
     : "";
 
-  $("kbd-dictate").innerHTML = keyCaps(settings.dictateHotkey);
-  $("kbd-max").innerHTML = keyCaps(settings.maxHotkey);
+  $("kbd-talk").textContent = TALK_KEY[settings.talkKey];
 
   const checks = isWeb
     ? [
@@ -161,7 +162,6 @@ function renderHome() {
         ...(status.platform === "darwin"
           ? [{ ok: status.accessibilityTrusted, title: "Accessibility permission", hint: "Lets Wispr Max type into other apps.", action: `<button id="grant-ax" class="btn small">Grant</button>` }]
           : []),
-        { ok: status.hotkeys.dictate && status.hotkeys.max, title: "Hotkeys", hint: "Another app may be using one of them.", action: `<button class="btn small" data-go="settings">Change</button>` },
         { ok: contacts.length > 0, title: "Contacts", hint: "The people Max writes to.", action: `<button class="btn small" data-go="contacts">Add</button>` },
         { ok: Boolean(settings.profile.name), title: "About you", hint: "Your name and sign-off.", action: `<button class="btn small" data-go="profile">Fill in</button>` },
       ];
@@ -213,7 +213,7 @@ function renderFeed() {
       <div>${
         isWeb
           ? "Nothing here yet. Click the box above, hold your Wispr Flow key and tell Max what to write."
-          : `Nothing here yet. Press <span class="keys">${keyCaps(state.settings.maxHotkey)}</span> in any app and start talking.`
+          : `Nothing here yet. Hold ${TALK_KEY[state.settings.talkKey]} in any app and start talking.`
       }</div></div>`;
     paintGhosts($("feed"));
     return;
@@ -809,12 +809,7 @@ function renderSettings() {
     $(id).textContent = ok ? "Active" : "Couldn't register: another app may be using it";
     $(id).className = `hk-status ${ok ? "ok" : "bad"}`;
   };
-  hk("hk-dictate", state.status.hotkeys.dictate);
-  hk("hk-max", state.status.hotkeys.max);
-  if (state.settings.voiceInput === "flow") {
-    $("hk-dictate").textContent = "Wispr Flow handles dictation";
-    $("hk-dictate").className = "hk-status";
-  }
+  void hk;
   renderFlowConnect();
 }
 
@@ -830,7 +825,7 @@ function renderFlowConnect() {
       ? `${dot(true)}<span>Click the talk box or the ghost and hold your Flow key: Flow types, Max takes it from there. For Flow in every app, <a href="#" data-download>get the desktop app</a>.</span>`
       : `${dot(true)}<span>Click the ghost and talk. Your browser listens (Chrome, Edge or Safari work best).</span>`;
   } else if (!flow) {
-    html = `${dot(true)}<span>Max listens with its own microphone: <span class="keys">${keyCaps(settings.dictateHotkey)}</span> to dictate, <span class="keys">${keyCaps(settings.maxHotkey)}</span> for Max, or click the ghost. Speech runs on the Wispr Max server, or add your own key under Voice.</span>`;
+    html = `${dot(true)}<span>Max listens with its own microphone: hold ${TALK_KEY[settings.talkKey]} and talk, or click the ghost. Speech runs on the Wispr Max server, or add your own key under Voice.</span>`;
   } else if (status.flowListen?.ok) {
     html = `${dot(true)}<span><b>Connected to Wispr Flow.</b> Hold your Flow key in any app and say "Hey Max, …" or "write an email to…". The ghost takes it from there.</span>`;
   } else if (!settings.listenToFlow) {

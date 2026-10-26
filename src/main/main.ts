@@ -91,6 +91,8 @@ interface Session {
 
 let current: Session | null = null;
 
+const TALK_KEY_LABEL: Record<Settings["talkKey"], string> = { alt: "Alt", "right-alt": "Right Alt", shift: "Shift", ctrl: "Ctrl", off: "Alt" };
+
 const flowMode = () => settings.voiceInput === "flow";
 
 function onHotkey(mode: Mode) {
@@ -166,7 +168,7 @@ function onFlowDictation(d: FlowDictation) {
     phase: "offer",
     mode: "max",
     transcript: guess.instruction,
-    message: `Want me to write that? Click me or press ${pretty(settings.maxHotkey)}`,
+    message: `Want me to write that? Click me or double-tap ${TALK_KEY_LABEL[settings.talkKey]}`,
   });
 }
 
@@ -342,7 +344,7 @@ async function handleTranscript(s: Session, transcript: string) {
         mode = "max";
         instruction = guess.instruction;
         result = await writeWithMax(s, instruction, context);
-      } else if (guess?.intent === "unsure" && store.anthropicKey(settings)) {
+      } else if (guess?.intent === "unsure") {
         ({ mode, result } = await smartDictation(s, transcript, context, vocabulary));
       } else {
         result = { output: await polishDictation(s, transcript, context, vocabulary) };
@@ -384,7 +386,7 @@ async function handleTranscript(s: Session, transcript: string) {
 /** Dictation: polish (if enabled), then swap snippet cues for their text. */
 async function polishDictation(s: Session, transcript: string, context: FocusContext, vocabulary: string[]) {
   let text = transcript;
-  if (settings.polishDictation && store.anthropicKey(settings)) {
+  if (settings.polishDictation) {
     setOverlay({ phase: "thinking", mode: "dictate", transcript });
     const { guide } = toneFor(settings.styles, context);
     text = await writer()
@@ -767,8 +769,7 @@ async function onMainWindowClose(e: Electron.Event) {
 function refreshTrayMenu() {
   tray?.setContextMenu(
     Menu.buildFromTemplate([
-      { label: `Dictate — ${pretty(settings.dictateHotkey)}`, click: () => onHotkey("dictate") },
-      { label: `Max — ${pretty(settings.maxHotkey)}`, click: () => onHotkey("max") },
+      { label: `Talk to Max — hold ${TALK_KEY_LABEL[settings.talkKey]}`, click: () => onHotkey("dictate") },
       { type: "separator" },
       { label: "Open Wispr Max", click: () => openMainWindow() },
       { label: "Contacts", click: () => openMainWindow("contacts") },
@@ -800,7 +801,8 @@ function registerHotkeys() {
   setTalkKey(settings.talkKey, {
     holdStart: () => {
       if (current) return;
-      startSession(flowMode() ? "max" : "dictate");
+      // One key for everything: Max works out whether you're dictating or asking.
+      startSession("dictate");
       held = current;
     },
     holdEnd: () => {
@@ -808,7 +810,7 @@ function registerHotkeys() {
       if (!flowMode() && current && current === held && current.phase === "recording") stopRecording(current);
       held = null;
     },
-    doubleTap: () => onHotkey(flowMode() ? "max" : "dictate"),
+    doubleTap: () => onHotkey("dictate"),
   });
   const register = (accelerator: string, mode: Mode) => {
     try {
@@ -817,9 +819,9 @@ function registerHotkeys() {
       return false; // Malformed accelerator.
     }
   };
-  // With Wispr Flow, Flow owns dictation: only Max's hotkey is needed.
-  hotkeys.dictate = flowMode() ? true : register(settings.dictateHotkey, "dictate");
-  hotkeys.max = settings.maxHotkey !== settings.dictateHotkey && register(settings.maxHotkey, "max");
+  // The talk key is the only key; the old shortcuts are no longer registered.
+  void register;
+  hotkeys.dictate = hotkeys.max = true;
   if (current) globalShortcut.register("Escape", cancelSession);
   refreshTrayMenu();
 }
@@ -884,7 +886,7 @@ function registerIpc() {
     dragFrom = null;
   });
   // A click on the ghost starts or stops dictation, like pressing the hotkey.
-  ipcMain.on("overlay:click", () => onHotkey(flowMode() ? "max" : "dictate"));
+  ipcMain.on("overlay:click", () => onHotkey("dictate"));
   ipcMain.on("overlay:menu", () => {
     Menu.buildFromTemplate([
       { label: "Open Wispr Max", click: () => openMainWindow() },

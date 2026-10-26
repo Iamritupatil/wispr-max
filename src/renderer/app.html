@@ -52,7 +52,7 @@
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic.</p>
               <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download>Download it</a></p>
-              <p class="muted small desktop-only">In any other app: <span id="kbd-dictate" class="keys"></span> to talk, <span id="kbd-max" class="keys"></span> for Max, or click the floating ghost.</p>
+              <p class="muted small desktop-only">In any app: <b>hold <span id="kbd-talk"></span></b> and talk (or double-tap it). Say what to type, or ask Max to write something. That's the only key.</p>
             </div>
           </section>
 
@@ -275,7 +275,7 @@
             </div>
 
             <div class="card desktop-only">
-              <h2>Hotkeys</h2>
+              <h2>Your key</h2>
               <div class="field">
                 <label>Talk key: hold it to talk, or double-tap it</label>
                 <select name="talkKey">
@@ -283,13 +283,7 @@
                   <option value="right-alt">Right Alt only</option>
                   <option value="shift">Shift</option>
                   <option value="ctrl">Ctrl</option>
-                  <option value="off">Off</option>
                 </select>
-              </div>
-              <p class="muted small">Or use a shortcut: click a box and press one. Press once to start, again to finish, Esc to cancel.</p>
-              <div class="grid-2">
-                <div class="field"><label>Dictate</label><input name="dictateHotkey" class="hotkey" readonly /><span id="hk-dictate" class="hk-status"></span></div>
-                <div class="field"><label>Max</label><input name="maxHotkey" class="hotkey" readonly /><span id="hk-max" class="hk-status"></span></div>
               </div>
             </div>
 
