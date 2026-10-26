@@ -189,7 +189,7 @@ function clearOffer() {
   offer = null;
   if (current) return;
   setOverlay({ phase: "idle", mode: "dictate" });
-  if (!settings.showIdleGhost) overlay.hide();
+  if (!ghostStaysOut()) overlay.hide();
 }
 
 async function acceptOffer() {
@@ -269,7 +269,7 @@ function endSession(s: Session, settleMs: number) {
     if (current) return;
     // Between sessions the ghost either floats quietly or disappears.
     setOverlay({ phase: "idle", mode: "dictate" });
-    if (!settings.showIdleGhost) overlay.hide();
+    if (!ghostStaysOut()) overlay.hide();
   }, settleMs);
 }
 
@@ -653,7 +653,7 @@ function createOverlay() {
 function syncIdleGhost() {
   if (current) return;
   setOverlay({ phase: "idle", mode: "dictate" });
-  if (settings.showIdleGhost) showOverlay();
+  if (ghostStaysOut()) showOverlay();
   else overlay.hide();
 }
 
@@ -706,11 +706,19 @@ function placeOverlay(anchor: Point) {
 
 function showOverlay() {
   clearTimeout(hideTimer);
+  const wasHidden = !overlay.isVisible();
   placeOverlay(currentAnchor());
   overlay.showInactive(); // Never steal focus from the app being typed into.
+  // A ghost doesn't just show up: it appears in a puff of smoke.
+  if (wasHidden) sendOverlay({ type: "appear" });
 }
 
+/** With Wispr Flow the ghost only shows up when it's needed; otherwise it floats where you leave it. */
+const ghostStaysOut = () => settings.showIdleGhost && !flowMode();
+
 function setOverlay(state: OverlayState) {
+  // With Wispr Flow the ghost stays quiet: only its question bubble ever shows.
+  if (flowMode() && (!current || current.fromFlow) && state.phase !== "error") state = { ...state, minimal: true };
   overlay.webContents.send("overlay:state", state);
 }
 
@@ -1109,7 +1117,11 @@ if (!app.requestSingleInstanceLock()) {
           ? { phase: "done", mode: "max", message: "Listening to Wispr Flow. Say “write me…” and I'll take it from there." }
           : { phase: "error", mode: "max", message: flowWatch.message || "Couldn't find Wispr Flow." },
       );
-      setTimeout(() => !current && setOverlay({ phase: "idle", mode: "dictate" }), 6000);
+      setTimeout(() => {
+        if (current) return;
+        setOverlay({ phase: "idle", mode: "dictate" });
+        if (!ghostStaysOut()) overlay.hide();
+      }, 6000);
     }
     // With Flow connected there's nothing to open: just the ghost, listening.
     if (!process.argv.includes("--hidden") && !(flowMode() && flowWatch.ok)) openMainWindow();

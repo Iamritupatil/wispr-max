@@ -422,3 +422,71 @@ body {
     opacity: 0;
   }
 }
+
+/* ---------- appearing in a puff of smoke ---------- */
+
+.bar {
+  position: relative;
+}
+
+.smoke {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  pointer-events: none;
+  display: none;
+}
+
+.bar.poof .smoke {
+  display: block;
+}
+
+.smoke i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: rgba(220, 228, 230, 0.9);
+  animation: puff 900ms ease-out forwards;
+}
+
+.smoke i:nth-child(1) { --x: -16px; --y: -6px; }
+.smoke i:nth-child(2) { --x: 14px; --y: -10px; animation-delay: 60ms; }
+.smoke i:nth-child(3) { --x: -8px; --y: 12px; animation-delay: 120ms; }
+.smoke i:nth-child(4) { --x: 16px; --y: 10px; animation-delay: 40ms; }
+.smoke i:nth-child(5) { --x: 0px; --y: -16px; animation-delay: 90ms; }
+
+@keyframes puff {
+  0% { transform: translate(0, 0) scale(0.3); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) scale(1.8); opacity: 0; }
+}
+
+.bar.poof .ghost-wrap {
+  animation: emerge 900ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes emerge {
+  0%, 25% { transform: scale(0.2) translateY(6px); opacity: 0; filter: blur(3px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+}
+
+/* With Wispr Flow: just the ghost, and its speech bubble when it asks. */
+.root[data-minimal="true"] .card,
+.root[data-minimal="true"] .wave,
+.root[data-minimal="true"] .label,
+.root[data-minimal="true"] .hint {
+  display: none !important;
+}
+
+.root[data-minimal="true"] .bar {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}

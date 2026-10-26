@@ -138,6 +138,7 @@ const LABELS: Record<Phase, (s: OverlayState) => string> = {
 function render(s: OverlayState) {
   if (root.dataset.phase !== s.phase) animateEyes(s.phase);
   root.dataset.phase = s.phase;
+  root.dataset.minimal = String(Boolean(s.minimal));
   root.dataset.mode = s.mode;
   const offering = s.phase === "offer";
   root.dataset.asking = String(offering || (Boolean(s.question) && s.phase === "listening"));
@@ -222,6 +223,13 @@ window.overlay.onCommand(async (cmd) => {
     } else if (cmd.type === "stop") {
       if (cmd.sounds) chime([784, 523]);
       window.overlay.sendAudio(await recorder.stop());
+    } else if (cmd.type === "appear") {
+      // A puff of smoke, and the ghost floats out of it.
+      const bar = document.getElementById("bar")!;
+      bar.classList.remove("poof");
+      void bar.offsetWidth;
+      bar.classList.add("poof");
+      setTimeout(() => bar.classList.remove("poof"), 1100);
     } else if (cmd.type === "cancel") {
       await recorder.cancel();
       render({ phase: "idle", mode: "dictate" });

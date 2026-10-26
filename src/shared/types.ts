@@ -177,6 +177,8 @@ export type Phase =
 export interface OverlayState {
   phase: Phase;
   mode: Mode;
+  /** Just the ghost (and its question bubble): no card, no bar. Used with Wispr Flow. */
+  minimal?: boolean;
   /** Streaming or final output text. */
   text?: string;
   transcript?: string;
@@ -191,7 +193,9 @@ export interface OverlayState {
 export type OverlayCommand =
   | { type: "start"; mode: Mode; sounds: boolean }
   | { type: "stop"; sounds: boolean }
-  | { type: "cancel" };
+  | { type: "cancel" }
+  /** Appear in a puff of smoke. */
+  | { type: "appear" };
 
 export interface AudioPayload {
   data: Uint8Array;
