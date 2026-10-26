@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS } from "../src/shared/defaults";
 import type { AppStatus, Contact, HistoryEntry, Settings, Stats } from "../src/shared/types";
 import { checkForUpdates, installUpdate, onUpdate, updateState } from "./pwa";
 import { grabScreen } from "./screen";
+import { applyTheme } from "../src/renderer/theme";
 
 // The browser version of the app's bridge (window.wispr). Everything personal
 // (contacts, profile, history, usage) stays in this browser; writing goes
@@ -44,6 +45,8 @@ let settings: Settings = {
 let contacts = load<Contact[]>(KEYS.contacts, []);
 let history = load<HistoryEntry[]>(KEYS.history, []);
 let stats: Stats = { ...emptyStats(), ...load<Partial<Stats>>(KEYS.stats, {}) };
+
+applyTheme(settings.theme);
 
 const writer = new RemoteWriter(""); // same origin: /api/write
 let health: Promise<{ ai: boolean }> | null = null;

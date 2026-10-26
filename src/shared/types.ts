@@ -85,6 +85,8 @@ export interface Settings {
   sounds: boolean;
   /** Keep the little ghost floating on screen between sessions. */
   showIdleGhost: boolean;
+  /** Light, dark, or whatever the system uses. */
+  theme: "system" | "light" | "dark";
   emailDrafts: EmailDrafts;
   styles: Record<StyleCategory, StyleId>;
   dictionary: DictionaryEntry[];

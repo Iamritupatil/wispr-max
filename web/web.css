@@ -17,16 +17,17 @@ body.web .sidebar {
   left: 0;
   top: 0;
   touch-action: none;
+  font-size: 13px;
 }
 
 .fg-ghost {
   border: 0;
   background: transparent;
-  padding: 6px 8px 4px;
+  padding: 4px 6px 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   cursor: grab;
 }
 
@@ -35,13 +36,14 @@ body.web .sidebar {
 }
 
 .fg-ghost .ghost-slot {
-  filter: drop-shadow(0 4px 10px rgba(30, 40, 38, 0.18));
+  width: 30px;
+  filter: drop-shadow(0 3px 6px rgba(20, 30, 28, 0.2));
   animation: float 3.2s ease-in-out infinite;
   transition: transform 160ms ease;
 }
 
 .fg-ghost:hover .ghost-slot {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 .fg[data-state="listening"] .fg-ghost .ghost-slot,
@@ -54,124 +56,184 @@ body.web .sidebar {
   animation: none;
 }
 
-.fg-panel {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  width: min(340px, calc(100vw - 32px));
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  box-shadow: 0 10px 40px rgba(20, 30, 28, 0.14);
+.fg-ghost .talk-shadow {
+  gap: 2px;
+  height: 2px;
 }
 
-.fg.left .fg-panel {
+.fg-ghost .talk-shadow i {
+  height: 2px;
+}
+
+.fg-ghost .talk-shadow i:nth-child(1),
+.fg-ghost .talk-shadow i:nth-child(4) {
+  width: 2px;
+}
+
+.fg-ghost .talk-shadow i:nth-child(2) {
+  width: 5px;
+}
+
+.fg-ghost .talk-shadow i:nth-child(3) {
+  width: 10px;
+}
+
+/* The pill and the bubble sit above the ghost (below it near the top). */
+.fg-stack {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: min(280px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.fg.left .fg-stack {
   left: auto;
   right: 0;
+  align-items: flex-end;
 }
 
-.fg.below .fg-panel {
+.fg.below .fg-stack {
   bottom: auto;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
+  flex-direction: column-reverse;
 }
 
-.fg.open .fg-panel {
+.fg-bubble,
+.fg-bar {
+  display: none;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 6px 24px rgba(20, 30, 28, 0.14);
+  animation: fg-in 140ms ease-out;
+}
+
+.fg.bubble-open .fg-bubble,
+.fg.bar-open .fg-bar {
   display: flex;
 }
 
-.fg-title {
-  margin: 0;
-  font-family: var(--serif);
-  font-size: 17px;
-  line-height: 1.35;
+@keyframes fg-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
 }
 
-/* The ghost's question gets a speech bubble. */
-.fg-title.bubble-q {
-  align-self: flex-start;
-  font-size: 16px;
-  padding: 8px 12px;
-  border-radius: 6px;
+.fg-bubble {
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+  padding: 9px 12px;
+  border-radius: 12px;
+}
+
+/* Max's question: the ghost's speech bubble. */
+.fg.asking .fg-bubble {
   border: 2px solid var(--accent);
   background: var(--field);
 }
 
-.fg-live:empty {
+.fg-say {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.fg.asking .fg-say {
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+.fg-say:empty {
   display: none;
 }
 
-.fg-live {
+.fg-out {
   margin: 0;
+  max-height: 132px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
 }
 
-.fg-out {
-  max-height: 220px;
-  overflow-y: auto;
-  border-radius: 10px;
-  background: var(--field);
-  padding: 10px 12px;
-  min-height: 0;
-  font-size: 13px;
+.fg-out.streaming::after {
+  content: "▍";
+  color: var(--accent);
+  animation: blink 0.9s steps(2) infinite;
 }
 
 .fg-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.fg-input {
-  font: inherit;
-  font-size: 14px;
-  resize: none;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--field);
-  color: var(--ink);
-  padding: 9px 12px;
+.fg-note {
+  color: var(--muted);
+  font-size: 11.5px;
 }
 
-.fg-input:focus {
-  outline: none;
+.fg-actions .link-btn {
+  font-size: 12px;
+}
+
+.fg-bar {
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 3px 4px 3px 12px;
+  border-radius: 999px;
+}
+
+.fg-bar:focus-within {
   border-color: var(--accent);
 }
 
-.fg-tools {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.fg .fg-input,
+.fg .fg-input:focus {
+  box-shadow: none;
 }
 
-.fg-tool {
+.fg .fg-input {
+  flex: 1;
+  min-width: 0;
   font: inherit;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
   border: 0;
-  border-radius: 7px;
-  padding: 5px 7px;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 5px 4px;
+  border-radius: 0;
+}
+
+.fg-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
 
-.fg-tool:hover {
+.fg-icon:hover {
   background: var(--accent-soft);
   color: var(--ink);
 }
 
-.fg-tool.on,
-.fg-tool.recording {
+.fg-icon.on {
   color: var(--accent);
   background: var(--accent-soft);
 }
 
-.fg-tool svg {
+.fg-icon svg {
   width: 15px;
   height: 15px;
   fill: none;
@@ -193,23 +255,22 @@ body.fg-pip-body {
 .fg.pip {
   position: static;
   display: flex;
-  flex-direction: row-reverse;
   align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
   padding: 10px;
 }
 
 .fg.pip .fg-ghost {
   cursor: default;
-  padding-top: 12px;
+  padding-top: 4px;
 }
 
-.fg.pip .fg-panel {
+.fg.pip .fg-stack {
   position: static;
-  display: flex;
   flex: 1;
   width: auto;
-  box-shadow: none;
+  flex-direction: column-reverse;
+  align-items: stretch;
 }
 
 /* ---------- narrow screens ---------- */

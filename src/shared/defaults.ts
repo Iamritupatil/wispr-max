@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   smartIntent: true,
   sounds: true,
   showIdleGhost: true,
+  theme: "system",
   emailDrafts: "gmail",
   styles: { personal: "casual", work: "casual", email: "formal", other: "formal" },
   dictionary: [],

@@ -8,6 +8,7 @@ import { ghostSvg } from "./ghost";
 import { watchFlowInput } from "./flow-input";
 import { Recorder } from "./recorder";
 import { Talk, type TalkView } from "./talk";
+import { applyTheme } from "./theme";
 
 declare global {
   interface Window {
@@ -796,6 +797,7 @@ function renderSettings() {
   for (const el of Array.from(settingsForm.elements) as HTMLInputElement[]) {
     if (!el.name || !(el.name in s)) continue;
     if (el.type === "checkbox") el.checked = Boolean(s[el.name]);
+    else if (el.type === "radio") el.checked = el.value === s[el.name];
     else if (el.classList.contains("hotkey")) setHotkeyField(el, String(s[el.name]));
     else el.value = String(s[el.name] ?? "");
   }
@@ -824,6 +826,11 @@ function syncProvider() {
 
 (settingsForm.elements.namedItem("sttProvider") as HTMLSelectElement).addEventListener("change", syncProvider);
 
+// The theme switches as soon as you pick one.
+settingsForm.querySelectorAll<HTMLInputElement>('input[name="theme"]').forEach((radio) =>
+  radio.addEventListener("change", () => void save({ theme: radio.value as Settings["theme"] })),
+);
+
 settingsForm.querySelectorAll<HTMLInputElement>("input.hotkey").forEach((input) => {
   input.addEventListener("focus", () => {
     input.value = "Press a shortcut…";
@@ -848,7 +855,7 @@ settingsForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const patch: Record<string, unknown> = {};
   for (const el of Array.from(settingsForm.elements) as HTMLInputElement[]) {
-    if (!el.name) continue;
+    if (!el.name || (el.type === "radio" && !el.checked)) continue;
     patch[el.name] =
       el.type === "checkbox" ? el.checked
       : el.classList.contains("hotkey") ? el.dataset.acc
@@ -893,6 +900,7 @@ api.onUpdate((update) => renderUpdate(update));
 // ---------- boot ----------
 
 function renderAll() {
+  applyTheme(state.settings.theme);
   renderHome();
   renderFeed();
   renderUsage();

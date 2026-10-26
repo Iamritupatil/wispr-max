@@ -868,6 +868,7 @@ function registerIpc() {
     settings = { ...settings, ...patch, profile: { ...settings.profile, ...patch.profile } };
     if (!settings.closeBehavior) delete settings.closeBehavior; // "Ask me"
     store.saveSettings(settings);
+    nativeTheme.themeSource = settings.theme;
     registerHotkeys();
     syncIdleGhost();
     syncFlowWatcher();
@@ -1017,6 +1018,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     settings = store.loadSettings();
+    nativeTheme.themeSource = settings.theme;
     contacts = store.loadContacts();
 
     // The overlay and the playground record from the default mic.
