@@ -2,31 +2,10 @@ import { app, safeStorage } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { localDay } from "../core/stats";
+import { DEFAULT_SETTINGS } from "../shared/defaults";
 import type { Contact, HistoryEntry, Mode, Settings, Stats } from "../shared/types";
 
-export const DEFAULT_SETTINGS: Settings = {
-  anthropicApiKey: "",
-  model: "claude-opus-5-5",
-  effort: "low",
-  sttProvider: "assemblyai",
-  assemblyaiApiKey: "",
-  groqApiKey: "",
-  openaiApiKey: "",
-  language: "",
-  dictateHotkey: "CommandOrControl+Shift+Space",
-  maxHotkey: "CommandOrControl+Shift+M",
-  polishDictation: true,
-  useSelection: true,
-  keepResultOnClipboard: true,
-  smartIntent: true,
-  sounds: true,
-  showIdleGhost: true,
-  emailDrafts: "gmail",
-  styles: { personal: "casual", work: "casual", email: "formal", other: "formal" },
-  dictionary: [],
-  snippets: [],
-  profile: { name: "", role: "", email: "", signature: "", style: "" },
-};
+export { DEFAULT_SETTINGS };
 
 const SECRET_KEYS = ["anthropicApiKey", "assemblyaiApiKey", "groqApiKey", "openaiApiKey"] as const;
 const HISTORY_LIMIT = 100;

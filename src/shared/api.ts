@@ -71,6 +71,18 @@ export interface SmartResult {
   question?: string;
 }
 
+/** A finished talk: goes into History and Usage. */
+export interface UseRecord {
+  mode: "dictate" | "max";
+  transcript: string;
+  output: string;
+  app?: string;
+  draftTo?: string;
+  autoDetected?: boolean;
+  /** How long the user spoke, 0 when typed. */
+  spokenMs: number;
+}
+
 /** Exposed to the main window as `window.wispr`. */
 export interface AppApi {
   getState(): Promise<AppSnapshot>;
@@ -82,6 +94,8 @@ export interface AppApi {
   /** One-paste contacts: links, numbers, emails or a sentence, one contact per line. */
   quickAddContacts(text: string): Promise<{ contacts: Contact[]; added: Contact[] }>;
   clearHistory(): Promise<HistoryEntry[]>;
+  /** Records a finished talk from the Home screen or the floating ghost. */
+  recordUse(use: UseRecord): Promise<void>;
   compose(req: ComposeRequest): Promise<Written>;
   /** Dictation or request? Decides like the Dictate hotkey, then writes. */
   smart(req: ComposeRequest): Promise<SmartResult>;

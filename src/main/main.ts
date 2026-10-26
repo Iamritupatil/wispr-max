@@ -26,19 +26,19 @@ import {
   newId,
   parseContactsFile,
 } from "../core/contacts";
-import { hasDescription, parseContactInput, parseProfileMeta } from "../core/contact-input";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
 import { guessIntent } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
 import { applyDictionary, countWords, expandSnippets } from "../core/text";
-import type { AppSnapshot, ComposeRequest, SmartResult } from "../shared/api";
+import * as service from "../core/service";
+import type { WriteRequest } from "../core/service";
+import type { AppSnapshot, ComposeRequest, UseRecord } from "../shared/api";
 import type {
   AppStatus,
   AudioPayload,
   Contact,
-  ContactLink,
   FocusContext,
   Mode,
   OverlayCommand,
@@ -250,21 +250,15 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       }
     }
 
-    const history = store.addHistory({
-      id: newId(),
-      at: Date.now(),
+    recordUse({
       mode,
       transcript: instruction,
       output: result.output,
       app: context.app,
       draftTo: result.draftTo,
       autoDetected: s.mode === "dictate" && mode === "max",
+      spokenMs: s.spokenMs,
     });
-    const stats = store.recordStats(countWords(result.output), s.spokenMs, {
-      mode,
-      app: result.draftTo ? "Email draft" : context.app,
-    });
-    mainWindow?.webContents.send("app:history", { history, stats });
     setOverlay({ phase: "done", mode, text: result.output, transcript: instruction, app: context.app, message });
     endSession(s, settleMs);
   } catch (err) {
@@ -400,6 +394,17 @@ async function smartDictation(
     return { mode: "dictate", result: { output: expandSnippets(res.text, settings.snippets) } };
   }
   return { mode: "max", result: await openDraftIfAny(s, res.text, draftTo) };
+}
+
+/** Adds a finished session to History and Usage, and tells the main window. */
+function recordUse(use: UseRecord) {
+  const { spokenMs, ...entry } = use;
+  const history = store.addHistory({ id: newId(), at: Date.now(), ...entry });
+  const stats = store.recordStats(countWords(use.output), spokenMs, {
+    mode: use.mode,
+    app: use.draftTo ? "Email draft" : use.app,
+  });
+  mainWindow?.webContents.send("app:history", { history, stats });
 }
 
 function writer() {
@@ -738,12 +743,10 @@ function registerIpc() {
 
   // One-paste contacts: links, numbers, emails or a sentence; one contact per line.
   ipcMain.handle("app:quick-add", async (_e, text: string) => {
-    const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    const entries =
-      lines.length > 1 && lines.every((l) => { const p = parseContactInput(l); return p.links.length || p.email || p.phone; })
-        ? lines
-        : [text.trim()];
-    const added = await Promise.all(entries.map(quickContact));
+    const added = await service.quickContacts(text, {
+      writer: store.anthropicKey(settings) ? writer() : null,
+      fetch: net.fetch,
+    });
     for (const c of added) contacts = mergeContacts(contacts, [c]);
     store.saveContacts(contacts);
     // Return the stored versions (a pasted link may have merged into an existing contact).
@@ -767,61 +770,25 @@ function registerIpc() {
     return [];
   });
 
-  ipcMain.handle("app:compose", (e, req: ComposeRequest) => {
-    const context = { app: req.app, windowTitle: req.windowTitle, selection: req.selection };
-    return writer().compose(
-      {
-        instruction: req.instruction,
-        context,
-        profile: settings.profile,
-        contacts,
-        snippets: settings.snippets,
-        options: {
-          tone: toneFor(settings.styles, context).guide,
-          emailDraft: req.emailDraft,
-          clarifications: req.clarifications,
-        },
-      },
-      {
-        onText: (delta) => e.sender.send("app:compose-text", delta),
-        onRestart: () => e.sender.send("app:compose-text", null),
-      },
-    );
+  const writeRequest = (req: ComposeRequest): WriteRequest => ({
+    instruction: req.instruction,
+    context: { app: req.app, windowTitle: req.windowTitle, selection: req.selection },
+    profile: settings.profile,
+    contacts,
+    snippets: settings.snippets,
+    dictionary: settings.dictionary,
+    styles: settings.styles,
+    emailDraft: req.emailDraft,
+    clarifications: req.clarifications,
   });
-
-  // Try Max in "auto-detect" mode: the same routing as the Dictate hotkey.
-  ipcMain.handle("app:smart", async (e, req: ComposeRequest): Promise<SmartResult> => {
-    const context = { app: req.app, windowTitle: req.windowTitle, selection: req.selection };
-    const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
-    const guess = guessIntent(req.instruction, contacts);
-    const stream = {
-      onText: (delta: string) => e.sender.send("app:compose-text", delta),
-      onRestart: () => e.sender.send("app:compose-text", null),
-    };
-    const input = {
-      context,
-      profile: settings.profile,
-      contacts,
-      snippets: settings.snippets,
-      options: { tone: toneFor(settings.styles, context).guide, emailDraft: req.emailDraft },
-    };
-    if (guess.intent === "dictation") {
-      const text = await writer().polish(req.instruction, context, vocabulary, input.options.tone);
-      return { intent: "dictation", decidedBy: "rules", reason: guess.reason, text: expandSnippets(text, settings.snippets) };
-    }
-    if (guess.intent === "command") {
-      const written = await writer().compose({ ...input, instruction: guess.instruction }, stream);
-      return { intent: "command", decidedBy: "rules", reason: guess.reason, ...written };
-    }
-    const res = await writer().auto({ ...input, instruction: req.instruction, vocabulary }, stream);
-    return {
-      intent: res.intent,
-      decidedBy: "claude",
-      reason: res.intent === "command" ? "Claude heard a request to write" : "Claude heard dictation",
-      text: res.intent === "dictation" ? expandSnippets(res.text, settings.snippets) : res.text,
-      question: res.question,
-    };
+  const streamTo = (sender: Electron.WebContents) => ({
+    onText: (delta: string) => sender.send("app:compose-text", delta),
+    onRestart: () => sender.send("app:compose-text", null),
   });
+  ipcMain.handle("app:compose", (e, req: ComposeRequest) => service.compose(writer(), writeRequest(req), streamTo(e.sender)));
+  // Talking on the Home screen: the same routing as the Dictate hotkey.
+  ipcMain.handle("app:smart", (e, req: ComposeRequest) => service.smart(writer(), writeRequest(req), streamTo(e.sender)));
+  ipcMain.handle("app:record-use", (_e, use: UseRecord) => recordUse(use));
 
   ipcMain.handle("app:open-draft", (_e, draft: { to: string; subject: string; body: string }) => {
     const url = draftUrl(settings.emailDrafts === "off" ? "gmail" : settings.emailDrafts, draft);
@@ -873,79 +840,6 @@ function registerIpc() {
   ipcMain.handle("app:open-external", (_e, url: string) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);
   });
-}
-
-// ---------- one-paste contacts ----------
-
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36";
-
-async function quickContact(text: string): Promise<Contact> {
-  const parsed = parseContactInput(text);
-  let contact: Contact = {
-    id: newId(),
-    name: parsed.name ?? "",
-    ...(parsed.email && { email: parsed.email }),
-    ...(parsed.phone && { phone: parsed.phone }),
-    ...(parsed.links.length && { links: parsed.links }),
-  };
-  let named = Boolean(parsed.name && !parsed.nameGuessed);
-
-  // A description ("recruiter at Northwind, handling my PM application") is read by Claude.
-  if (hasDescription(parsed)) {
-    const fields = store.anthropicKey(settings)
-      ? await writer().extractContact(text).catch(() => ({}) as Partial<Contact>)
-      : { notes: parsed.description };
-    contact = { ...contact, ...fields, id: contact.id, links: contact.links };
-    if (fields.name) named = true;
-  }
-
-  // Public profile pages fill in what's still missing.
-  if (parsed.links.length) {
-    const profile = await profileFromLinks(parsed.links);
-    if (profile.name && !named) contact.name = profile.name;
-    contact.title ||= profile.title;
-    contact.company ||= profile.company;
-    contact.notes ||= profile.notes;
-  }
-
-  contact.name ||= parsed.email ?? parsed.phone ?? parsed.links[0]?.handle ?? "New contact";
-  return Object.fromEntries(Object.entries(contact).filter(([, v]) => v !== undefined && v !== "")) as unknown as Contact;
-}
-
-/** Best effort: many sites hide profiles from apps, so this quietly gives up after a few seconds. */
-async function profileFromLinks(links: ContactLink[]): Promise<Partial<Contact>> {
-  for (const link of links) {
-    if (link.platform === "WhatsApp") continue;
-    try {
-      if (link.platform === "GitHub" && link.handle) {
-        const res = await net.fetch(`https://api.github.com/users/${encodeURIComponent(link.handle)}`, {
-          headers: { "user-agent": "WisprMax", accept: "application/vnd.github+json" },
-          signal: AbortSignal.timeout(4000),
-        });
-        if (!res.ok) continue;
-        const u = (await res.json()) as { name?: string; company?: string; bio?: string };
-        if (u.name) {
-          return {
-            name: u.name,
-            ...(u.company && { company: u.company.replace(/^@/, "") }),
-            ...(u.bio && { notes: `From GitHub: ${u.bio}` }),
-          };
-        }
-        continue;
-      }
-      const res = await net.fetch(link.url, {
-        headers: { "user-agent": BROWSER_UA, "accept-language": "en" },
-        signal: AbortSignal.timeout(4000),
-      });
-      if (!res.ok) continue;
-      const profile = parseProfileMeta((await res.text()).slice(0, 400_000), link.platform);
-      if (profile.name) return profile;
-    } catch {
-      // Blocked, offline or slow: the contact still gets added from what was pasted.
-    }
-  }
-  return {};
 }
 
 // ---------- lifecycle ----------

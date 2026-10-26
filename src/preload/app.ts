@@ -10,6 +10,7 @@ const api: AppApi = {
   addSampleContacts: () => ipcRenderer.invoke("app:add-samples"),
   quickAddContacts: (text) => ipcRenderer.invoke("app:quick-add", text),
   clearHistory: () => ipcRenderer.invoke("app:clear-history"),
+  recordUse: (use) => ipcRenderer.invoke("app:record-use", use),
   compose: (req) => ipcRenderer.invoke("app:compose", req),
   smart: (req) => ipcRenderer.invoke("app:smart", req),
   onComposeText: (cb) => ipcRenderer.on("app:compose-text", (_e, text) => cb(text)),

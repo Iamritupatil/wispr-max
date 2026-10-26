@@ -1,0 +1,25 @@
+import type { Settings } from "./types";
+
+export const DEFAULT_SETTINGS: Settings = {
+  anthropicApiKey: "",
+  model: "claude-opus-5-5",
+  effort: "low",
+  sttProvider: "assemblyai",
+  assemblyaiApiKey: "",
+  groqApiKey: "",
+  openaiApiKey: "",
+  language: "",
+  dictateHotkey: "CommandOrControl+Shift+Space",
+  maxHotkey: "CommandOrControl+Shift+M",
+  polishDictation: true,
+  useSelection: true,
+  keepResultOnClipboard: true,
+  smartIntent: true,
+  sounds: true,
+  showIdleGhost: true,
+  emailDrafts: "gmail",
+  styles: { personal: "casual", work: "casual", email: "formal", other: "formal" },
+  dictionary: [],
+  snippets: [],
+  profile: { name: "", role: "", email: "", signature: "", style: "" },
+};
