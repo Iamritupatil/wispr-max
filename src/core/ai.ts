@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Contact, Effort, FocusContext, Profile, Snippet } from "../shared/types";
+import type { Contact, Effort, FocusContext, Profile, Screenshot, Snippet } from "../shared/types";
 import { type Intent, parseAutoOutput } from "./intent";
 import {
   AUTO_SYSTEM,
@@ -27,6 +27,17 @@ export interface ComposeInput {
   contacts: Contact[];
   snippets: Snippet[];
   options?: ComposeOptions;
+  /** The user's screen when they asked, so Max can read the conversation. */
+  screenshot?: Screenshot;
+}
+
+/** The user turn: the screenshot first (if any), then the text. */
+function userContent(text: string, screenshot?: Screenshot): string | Anthropic.Beta.BetaContentBlockParam[] {
+  if (!screenshot) return text;
+  return [
+    { type: "image", source: { type: "base64", media_type: screenshot.mediaType, data: screenshot.data } },
+    { type: "text", text: `${text}\n\nThe attached image is the user's screen at the moment they asked.` },
+  ];
 }
 
 export interface StreamHandlers {
@@ -41,6 +52,23 @@ export interface AutoHandlers extends StreamHandlers {
 }
 
 export class AiError extends Error {}
+
+/** The model behind the hosted backend: fast enough for one-to-two-second results. */
+export const FAST_MODEL = "claude-haiku-5-5";
+
+// Models that support server-side refusal fallbacks: on a safety decline the API
+// re-runs the request on Anthropic's recommended fallback model. Claude Haiku 5.5
+// has none, so its refusals surface as an error instead.
+const FALLBACK_MODELS = /^claude-(opus-5-5|opus-5|fable-5-1|sonnet-5-5)$/;
+
+function fallbackFor(model: string) {
+  return FALLBACK_MODELS.test(model)
+    ? { betas: ["server-side-fallback-2026-07-01"] as Anthropic.Beta.AnthropicBeta[], fallbacks: "default" as const }
+    : {};
+}
+
+/** What the writing pipeline needs from a writer: Claude directly, or the hosted backend. */
+export type WriterLike = Pick<Writer, "compose" | "auto" | "polish" | "extractContact">;
 
 /** What Max wrote, or the one question it needs answered first. */
 export interface Written {
@@ -92,7 +120,7 @@ export class Writer {
           cache_control: { type: "ephemeral" },
         },
       ],
-      buildComposeUser(input.instruction, input.context, input.options),
+      userContent(buildComposeUser(input.instruction, input.context, input.options), input.screenshot),
       {
         onText: (delta) => {
           if (streaming) return handlers.onText?.(delta);
@@ -136,7 +164,10 @@ export class Writer {
           cache_control: { type: "ephemeral" },
         },
       ],
-      buildAutoUser(input.instruction, input.context, { ...input.options, vocabulary: input.vocabulary }),
+      userContent(
+        buildAutoUser(input.instruction, input.context, { ...input.options, vocabulary: input.vocabulary }),
+        input.screenshot,
+      ),
       {
         onText: (delta) => {
           if (asking) return;
@@ -177,8 +208,7 @@ export class Writer {
           model: this.opts.model,
           max_tokens: 8000,
           output_config: { effort: "low", format: { type: "json_schema", schema: CONTACT_SCHEMA } },
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
+          ...fallbackFor(this.opts.model),
           system: CONTACT_SYSTEM,
           messages: [{ role: "user", content: text }],
         },
@@ -212,7 +242,7 @@ export class Writer {
 
   private async run(
     system: Anthropic.Beta.BetaTextBlockParam[],
-    user: string,
+    user: string | Anthropic.Beta.BetaContentBlockParam[],
     handlers: StreamHandlers,
     signal?: AbortSignal,
     effort: Effort = this.opts.effort,
@@ -223,10 +253,7 @@ export class Writer {
           model: this.opts.model,
           max_tokens: 16000,
           output_config: { effort },
-          // On a safety decline, the API re-runs the request on Anthropic's
-          // recommended fallback model instead of returning a refusal.
-          betas: ["server-side-fallback-2026-07-01"],
-          fallbacks: "default",
+          ...fallbackFor(this.opts.model),
           system,
           messages: [{ role: "user", content: user }],
         },

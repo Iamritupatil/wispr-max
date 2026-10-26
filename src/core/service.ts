@@ -9,7 +9,7 @@ import type {
   StyleCategory,
   StyleId,
 } from "../shared/types";
-import type { StreamHandlers, Writer } from "./ai";
+import type { StreamHandlers, WriterLike } from "./ai";
 import { hasDescription, parseContactInput, parseProfileMeta } from "./contact-input";
 import { newId } from "./contacts";
 import { guessIntent } from "./intent";
@@ -47,7 +47,7 @@ function inputFor(req: WriteRequest) {
 }
 
 /** Max: write what was asked, or come back with one question. */
-export function compose(writer: Writer, req: WriteRequest, stream: StreamHandlers = {}): Promise<Written> {
+export function compose(writer: WriterLike, req: WriteRequest, stream: StreamHandlers = {}): Promise<Written> {
   return writer.compose({ ...inputFor(req), instruction: req.instruction }, stream);
 }
 
@@ -55,7 +55,7 @@ export function compose(writer: Writer, req: WriteRequest, stream: StreamHandler
  * Dictating or asking? Clear phrasing is decided by rules; Claude decides the
  * rest in the same call that writes. Same routing as the Dictate hotkey.
  */
-export async function smart(writer: Writer, req: WriteRequest, stream: StreamHandlers = {}): Promise<SmartResult> {
+export async function smart(writer: WriterLike, req: WriteRequest, stream: StreamHandlers = {}): Promise<SmartResult> {
   const input = inputFor(req);
   const vocabulary = buildVocabulary(req.contacts, req.dictionary, req.profile);
   const guess = guessIntent(req.instruction, req.contacts);
@@ -84,7 +84,7 @@ const BROWSER_UA =
 
 export interface ContactDeps {
   /** Reads descriptions; null when there's no API key (the description becomes notes). */
-  writer: Writer | null;
+  writer: WriterLike | null;
   fetch: FetchLike;
 }
 

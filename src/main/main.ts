@@ -18,7 +18,9 @@ import {
 } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Writer, isAbort } from "../core/ai";
+import { Writer, type WriterLike, isAbort } from "../core/ai";
+import { RemoteWriter } from "../core/remote";
+import { CLOUD_URL } from "../shared/defaults";
 import {
   SAMPLE_CONTACTS,
   findMentionedContacts,
@@ -46,7 +48,7 @@ import type {
   Settings,
 } from "../shared/types";
 import * as store from "./store";
-import { activeApp, insertText, isTerminal, readSelection } from "./system";
+import { activeApp, captureScreen, insertText, isTerminal, readSelection } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
 const isMac = process.platform === "darwin";
@@ -63,6 +65,8 @@ const ASSETS = path.join(__dirname, "..", "assets");
 let settings: Settings;
 let contacts: Contact[];
 let overlay: BrowserWindow;
+/** The Wispr Flow bubble: a small focused box Flow types into. */
+let listenWin: BrowserWindow;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
@@ -85,8 +89,10 @@ interface Session {
 
 let current: Session | null = null;
 
+const flowMode = () => settings.voiceInput === "flow";
+
 function onHotkey(mode: Mode) {
-  if (!current) startSession(mode);
+  if (!current) startSession(flowMode() ? "max" : mode);
   else if (current.phase === "recording") stopRecording(current);
   // While a result is being written, hotkeys are ignored; Esc cancels.
 }
@@ -107,26 +113,39 @@ function startSession(mode: Mode) {
     // Esc is a convenience; the session still works without it.
   }
   showOverlay();
+  if (flowMode()) {
+    // Wispr Flow does the listening: open the bubble once the screen has been
+    // read (so the bubble isn't in the screenshot), and Flow types into it.
+    setOverlay({ phase: "listening", mode, message: "Talk with Wispr Flow" });
+    void s.context.then(() => current === s && s.phase === "recording" && openListen());
+    return;
+  }
   setOverlay({ phase: "listening", mode });
   sendOverlay({ type: "start", mode, sounds: settings.sounds });
 }
 
 /** Learns where the text is going while the user is still talking. */
 async function gatherContext(mode: Mode): Promise<FocusContext> {
-  const [appInfo] = await Promise.all([
+  const [appInfo, screenshot] = await Promise.all([
     activeApp(),
+    mode === "max" && settings.screenContext ? captureScreen() : undefined,
     // Wait for the hotkey's modifiers to be released, or Cmd+C becomes Cmd+Shift+C.
-    sleep(350),
+    sleep(250),
   ]);
   let selection = "";
   // Ctrl+C in a terminal interrupts the running program, so never "copy" there.
   if (mode === "max" && settings.useSelection && !isTerminal(appInfo)) {
     selection = await readSelection();
   }
-  return { ...appInfo, selection: selection || undefined };
+  return { ...appInfo, selection: selection || undefined, screenshot };
 }
 
 function stopRecording(s: Session) {
+  if (flowMode()) {
+    // Pressed again while the bubble is open: send what Flow has typed so far.
+    listenWin.webContents.send("listen:submit-now");
+    return;
+  }
   s.phase = "processing";
   clearTimeout(s.timer);
   setOverlay({ phase: "transcribing", mode: s.mode });
@@ -134,6 +153,7 @@ function stopRecording(s: Session) {
 }
 
 function cancelSession() {
+  closeListen();
   if (!current) return;
   current.abort.abort();
   sendOverlay({ type: "cancel" });
@@ -143,6 +163,7 @@ function cancelSession() {
 function endSession(s: Session, settleMs: number) {
   if (current !== s) return;
   clearTimeout(s.timer);
+  closeListen();
   current = null;
   globalShortcut.unregister("Escape");
   clearTimeout(hideTimer);
@@ -177,8 +198,16 @@ function askUser(s: Session, mode: Mode, instruction: string, question: string, 
   s.phase = "recording";
   clearTimeout(s.timer);
   s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
-  setOverlay({ phase: "listening", mode: "max", question, transcript: instruction });
-  sendOverlay({ type: "start", mode: "max", sounds: settings.sounds });
+  // With Flow, the question shows in the bubble Flow types into; otherwise on the ghost.
+  setOverlay({
+    phase: "listening",
+    mode: "max",
+    question: flowMode() ? undefined : question,
+    transcript: instruction,
+    message: flowMode() ? "Answer with Wispr Flow" : undefined,
+  });
+  if (flowMode()) openListen(question);
+  else sendOverlay({ type: "start", mode: "max", sounds: settings.sounds });
 }
 
 async function handleAudio(s: Session, audio: AudioPayload) {
@@ -201,9 +230,19 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       s.abort.signal,
     );
     if (current !== s) return;
-    const transcript = applyDictionary(raw, settings.dictionary);
-    if (!transcript) return failSession(s, "Didn't catch that. Try again?");
+    await handleTranscript(s, applyDictionary(raw, settings.dictionary));
+  } catch (err) {
+    if (isAbort(err) || current !== s) return;
+    failSession(s, err instanceof Error ? err.message : String(err));
+  }
+}
 
+/** Everything after the words are known, whether from Wispr Flow or the built-in mic. */
+async function handleTranscript(s: Session, transcript: string) {
+  try {
+    if (!transcript) return failSession(s, "Didn't catch that. Try again?");
+    setOverlay({ phase: "thinking", mode: s.mode, transcript });
+    const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
     const context = await s.context;
     if (current !== s) return;
 
@@ -319,10 +358,12 @@ async function writeWithMax(
   };
   setOverlay(base);
   let text = "";
+  const { screenshot, ...textContext } = context;
   const written = await writer().compose(
     {
       instruction,
-      context,
+      context: textContext,
+      screenshot,
       profile: settings.profile,
       contacts,
       snippets: settings.snippets,
@@ -355,10 +396,12 @@ async function smartDictation(
   setOverlay({ phase: "thinking", mode: "dictate", transcript });
   let mode: Mode = "dictate";
   let text = "";
+  const { screenshot, ...textContext } = context;
   const res = await writer().auto(
     {
       instruction: transcript,
-      context,
+      context: textContext,
+      screenshot,
       profile: settings.profile,
       contacts,
       snippets: settings.snippets,
@@ -407,12 +450,60 @@ function recordUse(use: UseRecord) {
   mainWindow?.webContents.send("app:history", { history, stats });
 }
 
-function writer() {
-  return new Writer({
-    apiKey: store.anthropicKey(settings),
-    model: settings.model,
-    effort: settings.effort,
+/** Claude directly with your own key, or the hosted Wispr Max server (no key needed). */
+function writer(): WriterLike {
+  const apiKey = store.anthropicKey(settings);
+  if (!apiKey) return new RemoteWriter(settings.cloudUrl || CLOUD_URL, (url, init) => net.fetch(url, init));
+  return new Writer({ apiKey, model: settings.model, effort: settings.effort });
+}
+
+// ---------- the Wispr Flow bubble ----------
+
+const LISTEN_SIZE = { width: 460, height: 170 };
+
+function createListenWindow() {
+  listenWin = new BrowserWindow({
+    ...LISTEN_SIZE,
+    show: false,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: false,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload-listen.js"),
+      contextIsolation: true,
+      sandbox: true,
+    },
   });
+  listenWin.setAlwaysOnTop(true, "screen-saver");
+  listenWin.loadFile(path.join(__dirname, "renderer", "listen.html"));
+}
+
+/** Opens the bubble just above the ghost (below it near the top of a screen) and focuses it for Flow. */
+function openListen(question?: string) {
+  const anchor = currentAnchor();
+  const { workArea: wa } = screen.getDisplayNearestPoint({ x: Math.round(anchor.x), y: Math.round(anchor.y) });
+  const below = anchor.y - wa.y < LISTEN_SIZE.height + 60;
+  const x = Math.round(Math.min(Math.max(anchor.x - LISTEN_SIZE.width / 2, wa.x), wa.x + wa.width - LISTEN_SIZE.width));
+  const y = Math.round(below ? anchor.y + 30 : anchor.y - 34 - LISTEN_SIZE.height);
+  listenWin.setBounds({ x, y, ...LISTEN_SIZE });
+  listenWin.show();
+  listenWin.focus();
+  listenWin.webContents.send("listen:open", { question, below });
+}
+
+/** Hides the bubble and hands focus back to the app the user was typing in. */
+function closeListen() {
+  if (!listenWin?.isVisible()) return;
+  listenWin.hide();
+  if (isMac) {
+    // On macOS hiding a window doesn't reactivate the previous app; hiding ours does.
+    app.hide();
+    setTimeout(() => overlay.showInactive(), 80);
+  }
 }
 
 // ---------- overlay window ----------
@@ -626,7 +717,8 @@ function registerHotkeys() {
       return false; // Malformed accelerator.
     }
   };
-  hotkeys.dictate = register(settings.dictateHotkey, "dictate");
+  // With Wispr Flow, Flow owns dictation: only Max's hotkey is needed.
+  hotkeys.dictate = flowMode() ? true : register(settings.dictateHotkey, "dictate");
   hotkeys.max = settings.maxHotkey !== settings.dictateHotkey && register(settings.maxHotkey, "max");
   if (current) globalShortcut.register("Escape", cancelSession);
   refreshTrayMenu();
@@ -637,8 +729,9 @@ function status(): AppStatus {
     platform: process.platform,
     accessibilityTrusted: isMac ? systemPreferences.isTrustedAccessibilityClient(false) : true,
     hotkeys: { ...hotkeys },
-    aiReady: Boolean(store.anthropicKey(settings)),
-    sttReady: Boolean(store.sttKey(settings)),
+    // Without a key, Max uses the hosted server; with Wispr Flow, Flow does the listening.
+    aiReady: true,
+    sttReady: flowMode() || Boolean(store.sttKey(settings)),
   };
 }
 
@@ -659,6 +752,18 @@ function registerIpc() {
   ipcMain.on("overlay:audio", (_e, audio: AudioPayload) => {
     if (current?.phase === "processing") void handleAudio(current, audio);
   });
+  // What Wispr Flow typed into the bubble.
+  ipcMain.on("listen:submit", (_e, text: string) => {
+    const s = current;
+    if (!s || s.phase !== "recording") return;
+    closeListen();
+    if (!text.trim()) return cancelSession();
+    s.phase = "processing";
+    clearTimeout(s.timer);
+    void handleTranscript(s, applyDictionary(text.trim(), settings.dictionary));
+  });
+  ipcMain.on("listen:cancel", () => cancelSession());
+
   // Dragging and clicking the ghost.
   let dragFrom: Point | null = null;
   ipcMain.on("overlay:interactive", (_e, on: boolean) => {
@@ -677,7 +782,7 @@ function registerIpc() {
     dragFrom = null;
   });
   // A click on the ghost starts or stops dictation, like pressing the hotkey.
-  ipcMain.on("overlay:click", () => onHotkey("dictate"));
+  ipcMain.on("overlay:click", () => onHotkey(flowMode() ? "max" : "dictate"));
   ipcMain.on("overlay:menu", () => {
     Menu.buildFromTemplate([
       { label: "Open Wispr Max", click: () => openMainWindow() },
@@ -744,7 +849,7 @@ function registerIpc() {
   // One-paste contacts: links, numbers, emails or a sentence; one contact per line.
   ipcMain.handle("app:quick-add", async (_e, text: string) => {
     const added = await service.quickContacts(text, {
-      writer: store.anthropicKey(settings) ? writer() : null,
+      writer: writer(),
       fetch: net.fetch,
     });
     for (const c of added) contacts = mergeContacts(contacts, [c]);
@@ -864,6 +969,7 @@ if (!app.requestSingleInstanceLock()) {
 
     registerIpc();
     createOverlay();
+    createListenWindow();
     createTray();
     registerHotkeys();
     if (!process.argv.includes("--hidden")) openMainWindow();

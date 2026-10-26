@@ -1,0 +1,99 @@
+:root {
+  --ink: #f3f7f6;
+  --muted: rgba(243, 247, 246, 0.6);
+  --glass: rgba(24, 31, 30, 0.96);
+  --line: rgba(255, 255, 255, 0.1);
+  --mint: #cfe3df;
+  --teal: #4b6f6c;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+}
+
+body.below {
+  align-items: flex-start;
+}
+
+.card {
+  width: 100%;
+  padding: 12px 14px 10px;
+  border-radius: 16px;
+  background: var(--glass);
+  border: 1px solid rgba(207, 227, 223, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: rise 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.prompt {
+  font-weight: 700;
+  color: var(--mint);
+}
+
+.card.asking .prompt {
+  color: #14201e;
+  background: #f6faf9;
+  border: 2px solid var(--teal);
+  border-radius: 6px;
+  padding: 6px 10px;
+  align-self: flex-start;
+}
+
+textarea {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  resize: none;
+  outline: none;
+}
+
+textarea:focus {
+  border-color: rgba(207, 227, 223, 0.5);
+}
+
+textarea::placeholder {
+  color: var(--muted);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+kbd {
+  font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 4px;
+}

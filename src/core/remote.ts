@@ -1,0 +1,83 @@
+import type { Written } from "../shared/api";
+import type { Contact, FocusContext } from "../shared/types";
+import { AiError, type AutoHandlers, type ComposeInput, type StreamHandlers, type WriterLike } from "./ai";
+import type { Intent } from "./intent";
+
+// The hosted backend, behind the same interface as calling Claude directly.
+// Used when there's no API key on this machine (and always on the web).
+// The server streams newline-delimited JSON events back.
+
+type ServerEvent =
+  | { t: "text"; d: string }
+  | { t: "reset" }
+  | { t: "decision"; intent: Intent }
+  | { t: "done"; result: unknown }
+  | { t: "error"; message: string };
+
+type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
+
+export class RemoteWriter implements WriterLike {
+  constructor(
+    private baseUrl: string,
+    private fetchFn: FetchLike = (url, init) => fetch(url, init),
+  ) {}
+
+  compose(input: ComposeInput, handlers: StreamHandlers = {}, signal?: AbortSignal): Promise<Written> {
+    return this.call("compose", { input }, handlers, signal) as Promise<Written>;
+  }
+
+  auto(
+    input: ComposeInput & { vocabulary?: string[] },
+    handlers: AutoHandlers = {},
+    signal?: AbortSignal,
+  ): Promise<{ intent: Intent; text: string; question?: string }> {
+    return this.call("auto", { input }, handlers, signal) as Promise<{ intent: Intent; text: string; question?: string }>;
+  }
+
+  polish(transcript: string, context: FocusContext, vocabulary: string[], tone?: string, signal?: AbortSignal) {
+    return this.call("polish", { transcript, context, vocabulary, tone }, {}, signal) as Promise<string>;
+  }
+
+  extractContact(text: string, signal?: AbortSignal): Promise<Partial<Contact>> {
+    return this.call("extract", { text }, {}, signal) as Promise<Partial<Contact>>;
+  }
+
+  private async call(op: string, args: object, handlers: AutoHandlers, signal?: AbortSignal): Promise<unknown> {
+    let res: Response;
+    try {
+      res = await this.fetchFn(`${this.baseUrl}/api/write`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ op, ...args }),
+        signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      throw new AiError("Couldn't reach the Wispr Max server. Check your connection.");
+    }
+    if (!res.ok || !res.body) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new AiError(body.error ?? `The Wispr Max server had a problem (${res.status}).`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffered = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      buffered += decoder.decode(value, { stream: !done });
+      const lines = buffered.split("\n");
+      buffered = done ? "" : (lines.pop() ?? "");
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line) as ServerEvent;
+        if (event.t === "text") handlers.onText?.(event.d);
+        else if (event.t === "reset") handlers.onRestart?.();
+        else if (event.t === "decision") handlers.onDecision?.(event.intent);
+        else if (event.t === "done") return event.result;
+        else if (event.t === "error") throw new AiError(event.message);
+      }
+      if (done) throw new AiError("The Wispr Max server stopped before finishing.");
+    }
+  }
+}

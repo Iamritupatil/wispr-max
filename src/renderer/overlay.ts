@@ -120,7 +120,8 @@ function chime(notes: number[]) {
 const LABELS: Record<Phase, (s: OverlayState) => string> = {
   idle: () => "",
   listening: (s) =>
-    s.question ? "Answer out loud, then press again" : s.mode === "max" ? "Max is listening" : "Listening",
+    s.message ??
+    (s.question ? "Answer out loud, then press again" : s.mode === "max" ? "Max is listening" : "Listening"),
   transcribing: () => "Transcribing",
   thinking: (s) => (s.mode === "max" ? "Max is thinking" : "Polishing"),
   writing: () => "Writing",

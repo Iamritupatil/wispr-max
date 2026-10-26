@@ -1,8 +1,11 @@
 import type { Settings } from "./types";
 
+/** The hosted backend: it holds the API key, so nobody using Wispr Max needs one. */
+export const CLOUD_URL = "https://wispr-max.vercel.app";
+
 export const DEFAULT_SETTINGS: Settings = {
   anthropicApiKey: "",
-  model: "claude-opus-5-5",
+  model: "claude-haiku-5-5",
   effort: "low",
   sttProvider: "assemblyai",
   assemblyaiApiKey: "",
@@ -22,4 +25,8 @@ export const DEFAULT_SETTINGS: Settings = {
   dictionary: [],
   snippets: [],
   profile: { name: "", role: "", email: "", signature: "", style: "" },
+  voiceInput: "flow",
+  screenContext: true,
+  flowHistory: false,
+  cloudUrl: CLOUD_URL,
 };

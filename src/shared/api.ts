@@ -28,6 +28,15 @@ export interface OverlayApi {
   menu(): void;
 }
 
+/** The Wispr Flow bubble (window.listen): Flow types into it, Max takes it from there. */
+export interface ListenApi {
+  onOpen(cb: (opts: { question?: string; below: boolean }) => void): void;
+  /** The hotkey was pressed again: send whatever is in the box now. */
+  onSubmitNow(cb: () => void): void;
+  submit(text: string): void;
+  cancel(): void;
+}
+
 export interface OverlayLayout {
   /** The card opens below the ghost because it's near the top of the screen. */
   flip: boolean;

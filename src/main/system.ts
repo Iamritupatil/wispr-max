@@ -1,7 +1,35 @@
-import { ClipboardItem, clipboard } from "electron";
+import { ClipboardItem, clipboard, desktopCapturer, screen, systemPreferences } from "electron";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
-import type { FocusContext } from "../shared/types";
+import type { FocusContext, Screenshot } from "../shared/types";
+
+/** Longest edge Claude reads an image at without downscaling. */
+const SCREENSHOT_EDGE = 1568;
+
+/**
+ * The screen the user is working on, so Max can read the conversation they're
+ * in. Sent only with the request it belongs to; never stored.
+ */
+export async function captureScreen(): Promise<Screenshot | undefined> {
+  try {
+    if (process.platform === "darwin") {
+      const access = systemPreferences.getMediaAccessStatus("screen");
+      if (access === "denied" || access === "restricted") return undefined;
+    }
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    const { width, height } = display.size;
+    const scale = Math.min(1, SCREENSHOT_EDGE / Math.max(width, height));
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: { width: Math.round(width * scale), height: Math.round(height * scale) },
+    });
+    const source = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
+    if (!source || source.thumbnail.isEmpty()) return undefined;
+    return { data: source.thumbnail.toJPEG(75).toString("base64"), mediaType: "image/jpeg" };
+  } catch {
+    return undefined; // No permission or no capture support: Max still works without it.
+  }
+}
 
 // OS integration without native modules: everything shells out to tools that
 // ship with the OS (osascript, PowerShell) or are one package away (xdotool).

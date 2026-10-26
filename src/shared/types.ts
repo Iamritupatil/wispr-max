@@ -94,6 +94,17 @@ export interface Settings {
   ghostAnchor?: { x: number; y: number };
   /** What closing the main window does, once the user has chosen. */
   closeBehavior?: "background" | "quit";
+  /**
+   * Where your words come from. "flow": Wispr Flow types them into Max's bubble
+   * (no speech key needed). "built-in": Max records and transcribes itself.
+   */
+  voiceInput: "flow" | "built-in";
+  /** Send a screenshot with each request so Max can read the conversation you're in. */
+  screenContext: boolean;
+  /** Experimental: notice requests in your normal Flow dictations and offer to write them. */
+  flowHistory: boolean;
+  /** The hosted Wispr Max server, used when there's no Anthropic key on this computer. */
+  cloudUrl: string;
 }
 
 export interface DayStats {
@@ -185,8 +196,16 @@ export interface AppStatus {
   sttReady: boolean;
 }
 
+/** What was on screen when the user asked: the conversation they're replying in, usually. */
+export interface Screenshot {
+  /** Base64, without a data: prefix. */
+  data: string;
+  mediaType: "image/jpeg" | "image/png";
+}
+
 export interface FocusContext {
   app?: string;
   windowTitle?: string;
   selection?: string;
+  screenshot?: Screenshot;
 }
