@@ -17,6 +17,9 @@
   --shadow: 0 1px 2px rgba(30, 30, 20, 0.04), 0 6px 20px rgba(30, 30, 20, 0.04);
   --btn-strong-bg: #1b2120;
   --btn-strong-ink: #faf9f6;
+  --seg-track: #efede7;
+  --seg-on: #ffffff;
+  --seg-on-line: #e3e0d8;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   color-scheme: light;
 }
@@ -41,6 +44,9 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
     --btn-strong-bg: #2a3231;
     --btn-strong-ink: #e6ecea;
+    --seg-track: #0f1312;
+    --seg-on: #2a3230;
+    --seg-on-line: #36403e;
     color-scheme: dark;
   }
 }
@@ -63,6 +69,9 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   --btn-strong-bg: #2a3231;
   --btn-strong-ink: #e6ecea;
+  --seg-track: #0f1312;
+  --seg-on: #2a3230;
+  --seg-on-line: #36403e;
   color-scheme: dark;
 }
 
@@ -811,33 +820,65 @@ input.hotkey.recording {
 
 /* ---------- playground ---------- */
 
+/* One segmented control for the Style tabs and the theme picker: a track
+   with a raised pill on the selected option. Weight never changes, so the
+   labels don't shift when you switch. */
 .segmented {
   display: inline-flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 2px;
   padding: 3px;
-  border-radius: 10px;
-  background: var(--field);
+  border-radius: 11px;
+  background: var(--seg-track);
   border: 1px solid var(--line);
   align-self: flex-start;
 }
 
-.segmented button {
+.segmented button,
+.segmented label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
   font: inherit;
   font-size: 13px;
   font-weight: 500;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  padding: 5px 12px;
-  border-radius: 7px;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 120ms, color 120ms;
 }
 
-.segmented button.active {
-  background: var(--panel);
+.segmented button:hover,
+.segmented label:hover {
   color: var(--ink);
-  box-shadow: var(--shadow);
+}
+
+.segmented button.active,
+.segmented label:has(input:checked) {
+  background: var(--seg-on);
+  border-color: var(--seg-on-line);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented button:focus-visible,
+.segmented label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ---------- talk to Max ---------- */
@@ -1609,44 +1650,6 @@ input.hotkey.recording {
 }
 
 /* ---------- theme picker ---------- */
-
-.segmented {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  border-radius: 10px;
-  background: var(--field);
-  border: 1px solid var(--line);
-}
-
-.segmented label {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 12px;
-  border-radius: 7px;
-  font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.segmented input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.segmented label:has(input:checked) {
-  background: var(--panel);
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: var(--shadow);
-}
-
-.segmented label:has(input:focus-visible) {
-  outline: 2px solid var(--accent);
-}
 
 .swatch {
   width: 12px;
