@@ -29,6 +29,13 @@ export function pickFlowSchema(tables: Record<string, string[]>): FlowSchema | n
     const text = find(TEXT, columns);
     if (text) return { table, text, app: find(APP, columns) };
   }
+  // Unknown names (a newer Flow): any history-like table with a text column.
+  const named = Object.keys(tables).sort((a, b) => Number(/hist|dictat|transcri/i.test(b)) - Number(/hist|dictat|transcri/i.test(a)));
+  for (const table of named) {
+    if (!/hist|dictat|transcri|entr|record/i.test(table)) continue;
+    const text = tables[table].find((c) => /formatted|edited|final/i.test(c) && /text/i.test(c)) ?? tables[table].find((c) => /text|transcri/i.test(c));
+    if (text) return { table, text, app: find(APP, tables[table]) };
+  }
   return null;
 }
 

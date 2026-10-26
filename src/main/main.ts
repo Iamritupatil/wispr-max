@@ -87,6 +87,8 @@ interface Session {
   spokenMs: number;
   context: Promise<FocusContext>;
   timer?: NodeJS.Timeout;
+  /** Started from a Wispr Flow dictation: no windows, answers come through Flow too. */
+  fromFlow?: boolean;
 }
 
 let current: Session | null = null;
@@ -150,7 +152,16 @@ function syncFlowWatcher() {
 
 /** A new Flow dictation: called Max? Take over. A request? Offer to write it. */
 function onFlowDictation(d: FlowDictation) {
-  // Flow typing into Max's own bubble is already a Max session.
+  // Max asked a question over its head: this dictation is the answer.
+  if (current?.fromFlow && current.asking) {
+    const s = current;
+    void (async () => {
+      await sleep(FLOW_SETTLE_MS);
+      await undoLastEdit().catch(() => undefined);
+      void handleTranscript(s, d.text);
+    })();
+    return;
+  }
   if (current) return;
   const called = calledMax(d.text);
   if (called) {
@@ -193,7 +204,7 @@ const FLOW_SETTLE_MS = 350;
 
 /** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
 async function takeOverFromFlow(instruction: string) {
-  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0 };
+  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0, fromFlow: true };
   current = s;
   showOverlay();
   setOverlay({ phase: "thinking", mode: "max", transcript: instruction });
@@ -282,6 +293,14 @@ function askUser(s: Session, mode: Mode, instruction: string, question: string, 
     return failSession(s, `Max still needs to know: ${question}`);
   }
   s.asking = { mode, instruction, question, clarifications };
+  if (s.fromFlow) {
+    // A little speech bubble over the ghost; the answer comes through Flow like anything else.
+    s.phase = "processing";
+    clearTimeout(s.timer);
+    s.timer = setTimeout(() => current === s && endSession(s, 0), 90_000);
+    setOverlay({ phase: "listening", mode: "max", question, transcript: instruction, message: "Answer with Wispr Flow" });
+    return;
+  }
   s.phase = "recording";
   clearTimeout(s.timer);
   s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
@@ -375,7 +394,11 @@ async function handleTranscript(s: Session, transcript: string) {
       autoDetected: s.mode === "dictate" && mode === "max",
       spokenMs: s.spokenMs,
     });
-    setOverlay({ phase: "done", mode, text: result.output, transcript: instruction, app: context.app, message });
+    setOverlay(
+      s.fromFlow && !message
+        ? { phase: "done", mode } // Typed where you are: nothing else to show.
+        : { phase: "done", mode, text: result.output, transcript: instruction, app: context.app, message },
+    );
     endSession(s, settleMs);
   } catch (err) {
     if (isAbort(err) || current !== s) return;
@@ -401,7 +424,8 @@ async function polishDictation(s: Session, transcript: string, context: FocusCon
 
 /** "Email Priya…" from outside an email app opens a ready-to-send draft instead of typing. */
 function draftRecipient(instruction: string, mentioned: Contact[], context: FocusContext) {
-  return settings.emailDrafts !== "off" && toneFor(settings.styles, context).category !== "email" && !context.selection
+  // With Wispr Flow, Max always types where you are (the LinkedIn box, the email you're in).
+  return settings.emailDrafts !== "off" && !current?.fromFlow && toneFor(settings.styles, context).category !== "email" && !context.selection
     ? emailRecipient(instruction, mentioned)
     : null;
 }
@@ -798,7 +822,7 @@ function registerHotkeys() {
   globalShortcut.unregisterAll();
   // Hold the talk key to talk (release to send), or double-tap it.
   let held: Session | null = null;
-  setTalkKey(settings.talkKey, {
+  setTalkKey(flowMode() ? "off" : settings.talkKey, {
     holdStart: () => {
       if (current) return;
       // One key for everything: Max works out whether you're dictating or asking.
@@ -886,7 +910,10 @@ function registerIpc() {
     dragFrom = null;
   });
   // A click on the ghost starts or stops dictation, like pressing the hotkey.
-  ipcMain.on("overlay:click", () => onHotkey("dictate"));
+  // With Flow, the ghost is just company: Flow's key does everything.
+  ipcMain.on("overlay:click", () => {
+    if (!flowMode()) onHotkey("dictate");
+  });
   ipcMain.on("overlay:menu", () => {
     Menu.buildFromTemplate([
       { label: "Open Wispr Max", click: () => openMainWindow() },
@@ -1075,7 +1102,17 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     registerHotkeys();
     syncFlowWatcher();
-    if (!process.argv.includes("--hidden")) openMainWindow();
+    if (flowMode()) {
+      showOverlay();
+      setOverlay(
+        flowWatch.ok
+          ? { phase: "done", mode: "max", message: "Listening to Wispr Flow. Say “write me…” and I'll take it from there." }
+          : { phase: "error", mode: "max", message: flowWatch.message || "Couldn't find Wispr Flow." },
+      );
+      setTimeout(() => !current && setOverlay({ phase: "idle", mode: "dictate" }), 6000);
+    }
+    // With Flow connected there's nothing to open: just the ghost, listening.
+    if (!process.argv.includes("--hidden") && !(flowMode() && flowWatch.ok)) openMainWindow();
 
     // Look for a new version quietly after start-up, then every six hours.
     setTimeout(() => void checkForUpdates(), 15_000);
