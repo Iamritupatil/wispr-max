@@ -50,6 +50,24 @@ async function download() {
   // The server answers with the installer itself, so the download starts and this page stays.
   location.href = url;
   toast(`Downloading Wispr Max for ${OS_NAME}…`);
+  showInstallHelp();
+}
+
+/** The app isn't code-signed yet, so Windows and macOS warn once. Say how to get past it. */
+function showInstallHelp() {
+  const steps =
+    os === "win"
+      ? "Your browser may ask if you trust the file: choose <b>Keep</b>. Windows may then say <b>“Windows protected your PC”</b> or <b>“Unknown publisher”</b>: click <b>More info → Run anyway</b>. It's only because the app isn't code-signed yet."
+      : os === "mac"
+        ? "macOS may say the app is from an unidentified developer: <b>right-click the app → Open → Open</b> the first time. It's only because the app isn't signed yet."
+        : "Make the AppImage executable (<b>chmod +x</b>) and run it.";
+  document.querySelectorAll<HTMLElement>("[data-download]").forEach((link) => {
+    if (link.nextElementSibling?.classList.contains("install-help")) return;
+    const help = document.createElement("p");
+    help.className = "install-help";
+    help.innerHTML = steps;
+    link.insertAdjacentElement("afterend", help);
+  });
 }
 
 const params = new URLSearchParams(location.search);
