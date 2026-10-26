@@ -195,6 +195,10 @@ const endDrag = (e: PointerEvent) => {
   if (!hovering) window.overlay.setInteractive(false);
 };
 bar.addEventListener("pointerup", endDrag);
+bar.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  window.overlay.menu();
+});
 bar.addEventListener("pointercancel", endDrag);
 
 window.overlay.onLayout(({ flip, offsetX }) => {

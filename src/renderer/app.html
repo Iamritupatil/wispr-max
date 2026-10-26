@@ -298,7 +298,15 @@
               <label class="toggle"><input type="checkbox" name="smartIntent" /><span><b>Smart intent</b> The Dictate hotkey notices when you're asking Max to write ("Can you write an email to Priya…", "Hey Max…") and hands it over. Everything else is typed as you said it.</span></label>
               <label class="toggle"><input type="checkbox" name="keepResultOnClipboard" /><span><b>Keep Max's text on the clipboard</b> So you can paste it again if the cursor wasn't in a text box.</span></label>
               <label class="toggle"><input type="checkbox" name="sounds" /><span><b>Sounds</b> Tiny chimes when listening starts and stops.</span></label>
-              <label class="toggle"><input type="checkbox" name="showIdleGhost" /><span><b>Show the ghost on screen</b> It floats at the bottom of your screen, ready when you are.</span></label>
+              <label class="toggle"><input type="checkbox" name="showIdleGhost" /><span><b>Show the ghost on screen</b> It floats where you leave it, ready when you are. Drag it anywhere; right-click it to hide it or quit.</span></label>
+              <div class="field desktop-only">
+                <label>When you close this window</label>
+                <select name="closeBehavior">
+                  <option value="">Ask me</option>
+                  <option value="background">Keep running in the background</option>
+                  <option value="quit">Quit Wispr Max</option>
+                </select>
+              </div>
             </div>
 
             <div class="row sticky-save"><button class="btn primary" type="submit">Save settings</button></div>

@@ -539,12 +539,7 @@ function openMainWindow(tab?: string) {
   });
   mainWindow.loadFile(path.join(__dirname, "renderer", "app.html"), tab ? { hash: tab } : undefined);
   mainWindow.once("ready-to-show", () => mainWindow?.show());
-  mainWindow.on("close", (e) => {
-    if (!quitting) {
-      e.preventDefault();
-      mainWindow?.hide();
-    }
-  });
+  mainWindow.on("close", (e) => void onMainWindowClose(e));
 }
 
 function createTray() {
@@ -554,6 +549,38 @@ function createTray() {
   tray.setToolTip("Wispr Max");
   refreshTrayMenu();
   tray.on("click", () => !isMac && openMainWindow());
+}
+
+function resetGhostPosition() {
+  settings.ghostAnchor = undefined;
+  store.saveSettings(settings);
+  if (overlay.isVisible()) placeOverlay(currentAnchor());
+}
+
+/** Closing the window: keep running for the ghost and hotkeys, or quit. Asks once. */
+async function onMainWindowClose(e: Electron.Event) {
+  if (quitting || !mainWindow) return;
+  e.preventDefault();
+  let choice = settings.closeBehavior;
+  if (!choice) {
+    const res = await dialog.showMessageBox(mainWindow, {
+      type: "question",
+      buttons: ["Keep running", "Quit Wispr Max"],
+      defaultId: 0,
+      cancelId: 0,
+      message: "Keep Wispr Max running in the background?",
+      detail:
+        "The ghost and your hotkeys keep working in other apps. Quit any time by right-clicking the ghost or the tray icon.",
+      checkboxLabel: "Don't ask again",
+    });
+    choice = res.response === 1 ? "quit" : "background";
+    if (res.checkboxChecked) {
+      settings.closeBehavior = choice;
+      store.saveSettings(settings);
+    }
+  }
+  if (choice === "quit") app.quit();
+  else mainWindow.hide();
 }
 
 function refreshTrayMenu() {
@@ -566,13 +593,15 @@ function refreshTrayMenu() {
       { label: "Contacts", click: () => openMainWindow("contacts") },
       { label: "Settings", click: () => openMainWindow("settings") },
       {
-        label: "Reset ghost position",
+        label: settings.showIdleGhost ? "Hide the ghost" : "Show the ghost",
         click: () => {
-          settings.ghostAnchor = undefined;
+          settings.showIdleGhost = !settings.showIdleGhost;
           store.saveSettings(settings);
-          if (overlay.isVisible()) placeOverlay(currentAnchor());
+          syncIdleGhost();
+          refreshTrayMenu();
         },
       },
+      { label: "Reset ghost position", click: resetGhostPosition },
       { type: "separator" },
       { label: "Quit", click: () => app.quit() },
     ]),
@@ -644,6 +673,22 @@ function registerIpc() {
   });
   // A click on the ghost starts or stops dictation, like pressing the hotkey.
   ipcMain.on("overlay:click", () => onHotkey("dictate"));
+  ipcMain.on("overlay:menu", () => {
+    Menu.buildFromTemplate([
+      { label: "Open Wispr Max", click: () => openMainWindow() },
+      {
+        label: "Hide the ghost",
+        click: () => {
+          settings.showIdleGhost = false;
+          store.saveSettings(settings);
+          syncIdleGhost();
+        },
+      },
+      { label: "Reset position", click: resetGhostPosition },
+      { type: "separator" },
+      { label: "Quit Wispr Max", click: () => app.quit() },
+    ]).popup({ window: overlay });
+  });
 
   ipcMain.on("overlay:error", (_e, message: string) => {
     if (current) failSession(current, message);
@@ -653,6 +698,7 @@ function registerIpc() {
 
   ipcMain.handle("app:save-settings", (_e, patch: Partial<Settings>) => {
     settings = { ...settings, ...patch, profile: { ...settings.profile, ...patch.profile } };
+    if (!settings.closeBehavior) delete settings.closeBehavior; // "Ask me"
     store.saveSettings(settings);
     registerHotkeys();
     syncIdleGhost();

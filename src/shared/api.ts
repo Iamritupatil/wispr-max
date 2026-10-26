@@ -24,6 +24,8 @@ export interface OverlayApi {
   drag(dx: number, dy: number): void;
   dragEnd(): void;
   click(): void;
+  /** Right-click menu on the ghost: open, hide, reset position, quit. */
+  menu(): void;
 }
 
 export interface OverlayLayout {

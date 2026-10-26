@@ -12,6 +12,7 @@ const api: OverlayApi = {
   drag: (dx, dy) => ipcRenderer.send("overlay:drag", dx, dy),
   dragEnd: () => ipcRenderer.send("overlay:drag-end"),
   click: () => ipcRenderer.send("overlay:click"),
+  menu: () => ipcRenderer.send("overlay:menu"),
 };
 
 contextBridge.exposeInMainWorld("overlay", api);

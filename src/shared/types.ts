@@ -92,6 +92,8 @@ export interface Settings {
   profile: Profile;
   /** Where the user dragged the ghost (centre of its bar, screen coordinates). */
   ghostAnchor?: { x: number; y: number };
+  /** What closing the main window does, once the user has chosen. */
+  closeBehavior?: "background" | "quit";
 }
 
 export interface DayStats {
