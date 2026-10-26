@@ -15,6 +15,49 @@ export function streak(days: string[], today = new Date()): number {
   return n;
 }
 
+/** Average typing speed, for "time saved". */
+export const TYPING_WPM = 40;
+
+/** Time you'd have spent typing the same words, minus the time spent talking. */
+export function timeSavedMs(words: number, spokenMs: number): number {
+  return Math.max(0, (words / TYPING_WPM) * 60_000 - spokenMs);
+}
+
+/** "2h 15m", "12m", "45s". */
+export function formatDuration(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
+}
+
+/** Words per day for the last `n` days, oldest first, including empty days. */
+export function lastDays(
+  daily: Record<string, { words: number }>,
+  n: number,
+  today = new Date(),
+): { day: string; words: number }[] {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (n - 1 - i));
+    const day = localDay(d);
+    return { day, words: daily[day]?.words ?? 0 };
+  });
+}
+
+/** Apps by words written, biggest first; the rest fold into "Other". */
+export function topApps(apps: Record<string, number>, n: number): { app: string; words: number }[] {
+  const sorted = Object.entries(apps)
+    .map(([app, words]) => ({ app, words }))
+    .filter((a) => a.words > 0)
+    .sort((a, b) => b.words - a.words);
+  if (sorted.length <= n) return sorted;
+  const rest = sorted.slice(n - 1).reduce((sum, a) => sum + a.words, 0);
+  return [...sorted.slice(0, n - 1), { app: "Other", words: rest }];
+}
+
 /** Words per minute while speaking. */
 export function wpm(words: number, ms: number): number {
   return ms > 0 ? Math.round(words / (ms / 60_000)) : 0;

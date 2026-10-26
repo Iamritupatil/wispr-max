@@ -90,4 +90,6 @@ export interface AppApi {
   openDraft(draft: { to: string; subject: string; body: string }): Promise<void>;
   onHistory(cb: (update: { history: HistoryEntry[]; stats: Stats }) => void): void;
   onNavigate(cb: (tab: string) => void): void;
+  /** Captures part of the window (the usage card) to the clipboard or a PNG file. */
+  captureCard(rect: { x: number; y: number; width: number; height: number }, action: "copy" | "save"): Promise<boolean>;
 }

@@ -1307,3 +1307,223 @@ input.hotkey.recording {
   background: var(--danger);
   color: white;
 }
+
+/* ---------- usage ---------- */
+
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.tile-value {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.tile-label {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tile-note {
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart .axis {
+  fill: var(--faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .bar {
+  fill: var(--accent);
+  transition: opacity 120ms;
+}
+
+.chart:has(.col.active) .col:not(.active) .bar {
+  opacity: 0.45;
+}
+
+.chart .hit {
+  fill: transparent;
+  cursor: default;
+}
+
+.chart-tip {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.chart-tip span {
+  opacity: 0.75;
+}
+
+.table-view summary {
+  font-size: 12px;
+}
+
+.table-view table {
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-view td,
+.table-view th {
+  text-align: left;
+  padding: 4px 24px 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.table-view th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(80px, 130px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.hbar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hbar-track {
+  height: 10px;
+  border-radius: 0 4px 4px 0;
+  background: var(--field);
+  overflow: hidden;
+}
+
+.hbar-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+
+.hbar-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The shareable card is an image: fixed colours in both themes. */
+.usage-card {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  width: 460px;
+  max-width: 100%;
+  padding: 24px 26px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #7f9ba5, #5e7c87);
+  color: #f6faf9;
+}
+
+.usage-card .ghost-slot.uc-ghost {
+  width: 72px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
+}
+
+.uc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.uc-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.uc-big {
+  font-family: var(--serif);
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.uc-big span {
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.uc-row {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.uc-foot {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.talk-actions.left {
+  justify-content: flex-start;
+  padding: 0;
+}

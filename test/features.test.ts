@@ -71,3 +71,23 @@ test("stats: streak, words per minute, word count", () => {
   assert.equal(wpm(300, 120_000), 150);
   assert.equal(countWords("  hello   there world "), 3);
 });
+
+test("usage: time saved, durations, daily series and top apps", async () => {
+  const { formatDuration, lastDays, timeSavedMs, topApps } = await import("../src/core/stats");
+  assert.equal(timeSavedMs(400, 2 * 60_000), 8 * 60_000); // 10 min typing - 2 min talking
+  assert.equal(timeSavedMs(10, 60_000), 0);
+  assert.equal(formatDuration(45_000), "45s");
+  assert.equal(formatDuration(12 * 60_000), "12m");
+  assert.equal(formatDuration(135 * 60_000), "2h 15m");
+  const days = lastDays({ "2026-10-24": { words: 50 }, "2026-10-25": { words: 120 } }, 3, new Date("2026-10-25T10:00:00"));
+  assert.deepEqual(days, [
+    { day: "2026-10-23", words: 0 },
+    { day: "2026-10-24", words: 50 },
+    { day: "2026-10-25", words: 120 },
+  ]);
+  assert.deepEqual(topApps({ Slack: 300, Gmail: 500, Notes: 20, Code: 10 }, 3), [
+    { app: "Gmail", words: 500 },
+    { app: "Slack", words: 300 },
+    { app: "Other", words: 30 },
+  ]);
+});

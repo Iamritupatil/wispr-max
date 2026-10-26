@@ -15,6 +15,7 @@
         </div>
         <nav id="nav" class="nav">
           <button data-tab="home" class="active"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+          <button data-tab="usage"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg>Usage</button>
           <button data-tab="dictionary"><svg viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5zM4 19.5A1.5 1.5 0 0 0 5.5 21H20"/><path d="M9 8h6"/></svg>Dictionary</button>
           <button data-tab="snippets"><svg viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>Snippets</button>
           <button data-tab="style"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>Style</button>
@@ -68,6 +69,55 @@
             <button id="h-clear" class="btn ghost small">Clear</button>
           </div>
           <div id="feed" class="feed"></div>
+        </section>
+
+        <!-- ================= USAGE ================= -->
+        <section id="tab-usage" class="tab">
+          <header class="page-head">
+            <h1>Usage</h1>
+            <p class="muted">Everything you said instead of typed.</p>
+          </header>
+
+          <div id="usage-empty" class="empty hidden">
+            <span class="ghost-slot" data-eyes="center" data-ghost></span>
+            <div>Nothing yet. Talk to Max a few times and your numbers show up here.</div>
+          </div>
+
+          <div id="usage-body" class="usage">
+            <div id="usage-tiles" class="tiles"></div>
+
+            <div class="card">
+              <div class="card-title"><h2 class="serif">Words per day</h2><span class="muted">Last 14 days</span></div>
+              <div id="usage-chart" class="chart" role="img"></div>
+              <details class="table-view">
+                <summary>Show as a table</summary>
+                <table id="usage-table"></table>
+              </details>
+            </div>
+
+            <div class="grid-2">
+              <div class="card">
+                <h2 class="serif">Where you talk</h2>
+                <div id="usage-apps" class="hbars"></div>
+              </div>
+              <div class="card">
+                <h2 class="serif">How you used it</h2>
+                <div id="usage-modes" class="hbars"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <h2 class="serif">Share your stats</h2>
+                <span class="muted">A card for build-in-public posts.</span>
+              </div>
+              <div id="usage-card" class="usage-card"></div>
+              <div class="talk-actions left">
+                <button id="card-copy" class="link-btn">Copy image</button>
+                <button id="card-save" class="link-btn">Save image</button>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- ================= DICTIONARY ================= -->

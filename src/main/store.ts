@@ -2,7 +2,7 @@ import { app, safeStorage } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { localDay } from "../core/stats";
-import type { Contact, HistoryEntry, Settings, Stats } from "../shared/types";
+import type { Contact, HistoryEntry, Mode, Settings, Stats } from "../shared/types";
 
 export const DEFAULT_SETTINGS: Settings = {
   anthropicApiKey: "",
@@ -124,16 +124,39 @@ export function clearHistory() {
 }
 
 export function loadStats(): Stats {
-  return { words: 0, ms: 0, sessions: 0, days: [], ...readJson<Partial<Stats>>("stats.json", {}) };
+  return {
+    words: 0,
+    ms: 0,
+    sessions: 0,
+    days: [],
+    daily: {},
+    apps: {},
+    maxSessions: 0,
+    ...readJson<Partial<Stats>>("stats.json", {}),
+  };
 }
 
-export function recordStats(words: number, ms: number): Stats {
+export function recordStats(words: number, ms: number, session: { mode: Mode; app?: string }): Stats {
   const stats = loadStats();
   const today = localDay(new Date());
+  const isMax = session.mode === "max";
   stats.words += words;
   stats.ms += ms;
   stats.sessions += 1;
+  if (isMax) stats.maxSessions += 1;
   if (!stats.days.includes(today)) stats.days = [...stats.days, today].slice(-400);
+
+  const day = (stats.daily[today] ??= { words: 0, ms: 0, sessions: 0, max: 0 });
+  day.words += words;
+  day.ms += ms;
+  day.sessions += 1;
+  if (isMax) day.max += 1;
+  // Keep a year of daily totals.
+  for (const key of Object.keys(stats.daily).sort().slice(0, -400)) delete stats.daily[key];
+
+  const app = session.app?.trim() || "Other";
+  stats.apps[app] = (stats.apps[app] ?? 0) + words;
+
   writeJson("stats.json", stats);
   return stats;
 }

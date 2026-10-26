@@ -1,7 +1,7 @@
 import { hasDescription, parseContactInput } from "../core/contact-input";
 import { findMentionedContacts } from "../core/contacts";
 import { emailRecipient, parseEmailDraft } from "../core/email";
-import { localDay, streak, wpm } from "../core/stats";
+import { TYPING_WPM, formatDuration, lastDays, localDay, streak, timeSavedMs, topApps, wpm } from "../core/stats";
 import { CATEGORY_LABELS, STYLES } from "../core/style";
 import type { AppApi, AppSnapshot } from "../shared/api";
 import type { Contact, Settings, StyleCategory, StyleId } from "../shared/types";
@@ -61,6 +61,7 @@ function showTab(tab: string) {
     .querySelectorAll<HTMLButtonElement>(".sidebar button[data-tab]")
     .forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelector(".content")!.scrollTop = 0;
+  if (tab === "usage" && state) renderUsage();
 }
 
 document.querySelector(".sidebar")!.addEventListener("click", (e) => {
@@ -236,6 +237,7 @@ api.onHistory(({ history, stats }) => {
   state.stats = stats;
   renderHome();
   renderFeed();
+  renderUsage();
 });
 
 // ---------- talk to Max (Home) ----------
@@ -379,6 +381,166 @@ $("talk-copy").addEventListener("click", async () => {
 $("talk-draft").addEventListener("click", async () => {
   if (talkDraft) await api.openDraft(talkDraft);
 });
+
+// ---------- usage ----------
+
+/** "2026-10-25" → a local date (new Date("2026-10-25") would be UTC midnight). */
+const parseDay = (day: string) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/** A round axis maximum: 120 → 150, 870 → 1000. */
+function niceMax(n: number) {
+  if (n <= 10) return 10;
+  const step = 10 ** Math.floor(Math.log10(n));
+  return [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((k) => k * step).find((v) => v >= n)!;
+}
+
+function renderUsage() {
+  const { stats, settings } = state;
+  const empty = !stats.sessions;
+  $("usage-empty").classList.toggle("hidden", !empty);
+  $("usage-body").classList.toggle("hidden", empty);
+  if (empty) {
+    paintGhosts($("usage-empty"));
+    return;
+  }
+
+  const saved = formatDuration(timeSavedMs(stats.words, stats.ms));
+  const speed = wpm(stats.words, stats.ms);
+  const days = streak(stats.days);
+  const tile = (value: string, label: string, note = "") =>
+    `<div class="tile"><div class="tile-value">${esc(value)}</div><div class="tile-label">${esc(label)}</div>${note ? `<div class="tile-note">${esc(note)}</div>` : ""}</div>`;
+  $("usage-tiles").innerHTML =
+    tile(stats.words.toLocaleString(), "words written") +
+    tile(saved, "time saved", `vs typing at ${TYPING_WPM} wpm`) +
+    tile(String(speed), "words per minute") +
+    tile(String(days), days === 1 ? "day streak" : "day streak") +
+    tile(stats.maxSessions.toLocaleString(), "things Max wrote");
+
+  renderUsageChart();
+
+  const hbars = (rows: { label: string; value: number }[], unit: string) => {
+    const max = Math.max(1, ...rows.map((r) => r.value));
+    return rows.length
+      ? rows
+          .map(
+            (r) => `<div class="hbar"><span class="hbar-label">${esc(r.label)}</span>
+              <span class="hbar-track"><span class="hbar-fill" style="width:${(r.value / max) * 100}%"></span></span>
+              <span class="hbar-value">${r.value.toLocaleString()} ${esc(unit)}</span></div>`,
+          )
+          .join("")
+      : `<p class="muted small">Nothing yet.</p>`;
+  };
+  $("usage-apps").innerHTML = hbars(
+    topApps(stats.apps, 5).map((a) => ({ label: a.app, value: a.words })),
+    "words",
+  );
+  $("usage-modes").innerHTML = hbars(
+    [
+      { label: "Dictation", value: stats.sessions - stats.maxSessions },
+      { label: "Max wrote it", value: stats.maxSessions },
+    ],
+    "times",
+  );
+
+  // The shareable card has fixed colours: it's an image, not part of the theme.
+  const name = settings.profile.name || "I";
+  $("usage-card").innerHTML = `
+    <span class="ghost-slot uc-ghost" data-eyes="happy" data-ghost></span>
+    <div class="uc-body">
+      <div class="uc-kicker">${esc(name === "I" ? "My" : `${name.split(" ")[0]}'s`)} Wispr Max</div>
+      <div class="uc-big">${stats.words.toLocaleString()} <span>words, said not typed</span></div>
+      <div class="uc-row">
+        <span><b>${speed}</b> wpm</span>
+        <span><b>${esc(saved)}</b> saved</span>
+        <span><b>${days}</b>-day streak</span>
+      </div>
+      <div class="uc-foot">#NoHandsChallenge · built by voice</div>
+    </div>`;
+  paintGhosts($("usage-card"));
+}
+
+function renderUsageChart() {
+  const data = lastDays(state.stats.daily ?? {}, 14);
+  const el = $("usage-chart");
+  const width = Math.max(320, el.clientWidth || 720);
+  const height = 210;
+  const m = { top: 12, right: 8, bottom: 26, left: 40 };
+  const innerW = width - m.left - m.right;
+  const innerH = height - m.top - m.bottom;
+  const max = niceMax(Math.max(...data.map((d) => d.words)));
+  const slot = innerW / data.length;
+  const barW = Math.min(28, slot * 0.6);
+  const y = (v: number) => m.top + innerH - (v / max) * innerH;
+  const label = (day: string, i: number) =>
+    i === data.length - 1 ? "Today" : parseDay(day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  const grid = [0, max / 2, max]
+    .map(
+      (v) => `<line class="grid" x1="${m.left}" x2="${width - m.right}" y1="${y(v)}" y2="${y(v)}"/>
+        <text class="axis" x="${m.left - 8}" y="${y(v) + 4}" text-anchor="end">${v.toLocaleString()}</text>`,
+    )
+    .join("");
+  const bars = data
+    .map((d, i) => {
+      const x = m.left + i * slot + (slot - barW) / 2;
+      const h = (d.words / max) * innerH;
+      const r = Math.min(4, h / 2, barW / 2);
+      // Rounded at the data end, square on the baseline.
+      const bar = h > 0
+        ? `<path class="bar" d="M${x},${m.top + innerH} V${y(d.words) + r} Q${x},${y(d.words)} ${x + r},${y(d.words)} H${x + barW - r} Q${x + barW},${y(d.words)} ${x + barW},${y(d.words) + r} V${m.top + innerH} Z"/>`
+        : "";
+      const showLabel = (data.length - 1 - i) % 2 === 0;
+      return `<g class="col" data-i="${i}">
+        ${bar}
+        <rect class="hit" x="${m.left + i * slot}" y="${m.top}" width="${slot}" height="${innerH}"/>
+        ${showLabel ? `<text class="axis" x="${x + barW / 2}" y="${height - 6}" text-anchor="middle">${esc(label(d.day, i))}</text>` : ""}
+      </g>`;
+    })
+    .join("");
+
+  el.setAttribute("aria-label", `Words per day for the last ${data.length} days`);
+  el.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${grid}${bars}</svg><div class="chart-tip" hidden></div>`;
+
+  const tip = el.querySelector<HTMLElement>(".chart-tip")!;
+  el.querySelectorAll<SVGGElement>(".col").forEach((col) => {
+    col.addEventListener("mouseenter", () => {
+      const i = Number(col.dataset.i);
+      const d = data[i];
+      el.querySelectorAll(".col").forEach((c) => c.classList.toggle("active", c === col));
+      tip.innerHTML = `<b>${d.words.toLocaleString()} words</b><span>${esc(parseDay(d.day).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }))}</span>`;
+      tip.hidden = false;
+      const cx = m.left + i * slot + slot / 2;
+      tip.style.left = `${Math.min(Math.max(cx, 70), width - 70)}px`;
+      tip.style.top = `${Math.max(0, y(d.words) - 52)}px`;
+    });
+    col.addEventListener("mouseleave", () => {
+      col.classList.remove("active");
+      tip.hidden = true;
+    });
+  });
+
+  $("usage-table").innerHTML =
+    `<thead><tr><th>Day</th><th>Words</th></tr></thead><tbody>` +
+    data
+      .map((d, i) => `<tr><td>${esc(label(d.day, i))}</td><td>${d.words.toLocaleString()}</td></tr>`)
+      .join("") +
+    `</tbody>`;
+}
+
+window.addEventListener("resize", () => {
+  if (state?.stats.sessions && $("tab-usage").classList.contains("active")) renderUsageChart();
+});
+
+async function captureCard(action: "copy" | "save") {
+  const r = $("usage-card").getBoundingClientRect();
+  const done = await api.captureCard({ x: r.x, y: r.y, width: r.width, height: r.height }, action);
+  if (done) toast(action === "copy" ? "Card copied. Paste it into your post." : "Card saved");
+}
+$("card-copy").addEventListener("click", () => void captureCard("copy"));
+$("card-save").addEventListener("click", () => void captureCard("save"));
 
 // ---------- dictionary ----------
 
@@ -747,6 +909,7 @@ settingsForm.addEventListener("submit", async (e) => {
 function renderAll() {
   renderHome();
   renderFeed();
+  renderUsage();
   renderDictionary();
   renderSnippets();
   renderStyle();

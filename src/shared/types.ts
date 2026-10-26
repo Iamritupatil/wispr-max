@@ -94,6 +94,14 @@ export interface Settings {
   ghostAnchor?: { x: number; y: number };
 }
 
+export interface DayStats {
+  words: number;
+  ms: number;
+  sessions: number;
+  /** Sessions where Max wrote something (not plain dictation). */
+  max: number;
+}
+
 export interface Stats {
   words: number;
   /** Total speaking time. */
@@ -101,6 +109,12 @@ export interface Stats {
   sessions: number;
   /** Days with at least one session, as YYYY-MM-DD. */
   days: string[];
+  /** Per-day totals, keyed YYYY-MM-DD. */
+  daily: Record<string, DayStats>;
+  /** Words written per app. */
+  apps: Record<string, number>;
+  /** Sessions where Max wrote something. */
+  maxSessions: number;
 }
 
 export interface HistoryEntry {

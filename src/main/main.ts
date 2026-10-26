@@ -1,5 +1,6 @@
 import {
   BrowserWindow,
+  ClipboardItem,
   Menu,
   Tray,
   app,
@@ -258,7 +259,10 @@ async function handleAudio(s: Session, audio: AudioPayload) {
       draftTo: result.draftTo,
       autoDetected: s.mode === "dictate" && mode === "max",
     });
-    const stats = store.recordStats(countWords(result.output), s.spokenMs);
+    const stats = store.recordStats(countWords(result.output), s.spokenMs, {
+      mode,
+      app: result.draftTo ? "Email draft" : context.app,
+    });
     mainWindow?.webContents.send("app:history", { history, stats });
     setOverlay({ phase: "done", mode, text: result.output, transcript: instruction, app: context.app, message });
     endSession(s, settleMs);
@@ -785,6 +789,28 @@ function registerIpc() {
   });
 
   ipcMain.handle("app:copy", (_e, text: string) => clipboard.writeText(text));
+
+  ipcMain.handle("app:capture-card", async (e, rect: Electron.Rectangle, action: "copy" | "save") => {
+    const image = await e.sender.capturePage({
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    });
+    const png = image.toPNG();
+    if (action === "copy") {
+      await clipboard.write([new ClipboardItem({ "image/png": new Blob([new Uint8Array(png)], { type: "image/png" }) })]);
+      return true;
+    }
+    const options: Electron.SaveDialogOptions = {
+      defaultPath: "wispr-max-usage.png",
+      filters: [{ name: "PNG image", extensions: ["png"] }],
+    };
+    const res = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+    if (res.canceled || !res.filePath) return false;
+    await fs.writeFile(res.filePath, png);
+    return true;
+  });
 
   ipcMain.handle("app:open-external", (_e, url: string) => {
     if (/^https:\/\//.test(url)) return shell.openExternal(url);

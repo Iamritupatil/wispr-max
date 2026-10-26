@@ -20,6 +20,7 @@ const api: AppApi = {
   openDraft: (draft) => ipcRenderer.invoke("app:open-draft", draft),
   onHistory: (cb) => ipcRenderer.on("app:history", (_e, update) => cb(update)),
   onNavigate: (cb) => ipcRenderer.on("app:navigate", (_e, tab) => cb(tab)),
+  captureCard: (rect, action) => ipcRenderer.invoke("app:capture-card", rect, action),
 };
 
 contextBridge.exposeInMainWorld("wispr", api);
