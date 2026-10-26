@@ -102,6 +102,17 @@ export interface DayStats {
   max: number;
 }
 
+export interface UpdateState {
+  status: "idle" | "checking" | "none" | "available" | "downloading" | "installing" | "error";
+  /** This version (from package.json). */
+  current: string;
+  /** The newer version, or the latest change's title when running from source. */
+  latest?: string;
+  /** Installer from GitHub Releases, a git clone, or neither (a downloaded zip). */
+  kind: "release" | "source" | "none";
+  message?: string;
+}
+
 export interface Stats {
   words: number;
   /** Total speaking time. */

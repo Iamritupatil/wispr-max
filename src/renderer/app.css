@@ -231,6 +231,29 @@ kbd {
   gap: 10px;
 }
 
+.side-update {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  margin: 0 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.side-update::before {
+  content: "↑ ";
+  color: var(--accent);
+}
+
+.update-row {
+  gap: 16px;
+}
+
 .sidebar-status {
   font-size: 12px;
   color: var(--muted);

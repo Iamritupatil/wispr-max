@@ -4,7 +4,7 @@ import { emailRecipient, parseEmailDraft } from "../core/email";
 import { TYPING_WPM, formatDuration, lastDays, localDay, streak, timeSavedMs, topApps, wpm } from "../core/stats";
 import { CATEGORY_LABELS, STYLES } from "../core/style";
 import type { AppApi, AppSnapshot } from "../shared/api";
-import type { Contact, Settings, StyleCategory, StyleId } from "../shared/types";
+import type { Contact, Settings, StyleCategory, StyleId, UpdateState } from "../shared/types";
 import { ghostSvg } from "./ghost";
 import { Recorder } from "./recorder";
 
@@ -904,6 +904,35 @@ settingsForm.addEventListener("submit", async (e) => {
   toast(dictate && max ? "Settings saved" : "Saved, but a hotkey couldn't be registered", !(dictate && max));
 });
 
+// ---------- updates ----------
+
+function renderUpdate(update: UpdateState = state.update) {
+  state.update = update;
+  const working = ["checking", "downloading", "installing"].includes(update.status);
+  $("upd-version").textContent = `Version ${update.current}`;
+  $("upd-message").textContent =
+    update.message ??
+    (update.kind === "source"
+      ? "You're running from a git clone; updates come straight from GitHub."
+      : update.kind === "release"
+        ? "Updates come from GitHub Releases."
+        : "");
+  const button = $<HTMLButtonElement>("upd-button");
+  button.disabled = working;
+  button.classList.toggle("primary", update.status === "available");
+  button.textContent =
+    update.status === "available" ? "Update now"
+    : update.status === "checking" ? "Checking…"
+    : working ? "Updating…"
+    : "Check for updates";
+  $("upd-side").classList.toggle("hidden", update.status !== "available");
+}
+
+$("upd-button").addEventListener("click", async () => {
+  renderUpdate(state.update.status === "available" ? await api.installUpdate() : await api.checkForUpdates());
+});
+api.onUpdate((update) => renderUpdate(update));
+
 // ---------- boot ----------
 
 function renderAll() {
@@ -916,6 +945,7 @@ function renderAll() {
   renderContacts();
   renderProfile();
   renderSettings();
+  renderUpdate();
 }
 
 paintGhosts();

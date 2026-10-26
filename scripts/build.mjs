@@ -11,7 +11,7 @@ const configs = [
     outdir: "dist",
     platform: "node",
     format: "cjs",
-    external: ["electron"],
+    external: ["electron", "electron-updater"],
   },
   {
     ...common,

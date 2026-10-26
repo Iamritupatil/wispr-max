@@ -47,6 +47,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { activeApp, insertText, isTerminal, readSelection } from "./system";
+import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
 const isMac = process.platform === "darwin";
 const OVERLAY_SIZE = { width: 560, height: 320 };
@@ -608,7 +609,14 @@ function status(): AppStatus {
 }
 
 function snapshot(): AppSnapshot {
-  return { settings, contacts, history: store.loadHistory(), stats: store.loadStats(), status: status() };
+  return {
+    settings,
+    contacts,
+    history: store.loadHistory(),
+    stats: store.loadStats(),
+    status: status(),
+    update: updateState(),
+  };
 }
 
 // ---------- IPC ----------
@@ -790,6 +798,10 @@ function registerIpc() {
 
   ipcMain.handle("app:copy", (_e, text: string) => clipboard.writeText(text));
 
+  ipcMain.handle("app:check-updates", () => checkForUpdates());
+  ipcMain.handle("app:install-update", () => installUpdate());
+  onUpdateState((s) => mainWindow?.webContents.send("app:update", s));
+
   ipcMain.handle("app:capture-card", async (e, rect: Electron.Rectangle, action: "copy" | "save") => {
     const image = await e.sender.capturePage({
       x: Math.round(rect.x),
@@ -915,6 +927,10 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     registerHotkeys();
     if (!process.argv.includes("--hidden")) openMainWindow();
+
+    // Look for a new version quietly after start-up, then every six hours.
+    setTimeout(() => void checkForUpdates(), 15_000);
+    setInterval(() => void checkForUpdates(), 6 * 60 * 60_000);
 
     app.on("activate", () => openMainWindow());
   });

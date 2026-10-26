@@ -21,6 +21,9 @@ const api: AppApi = {
   onHistory: (cb) => ipcRenderer.on("app:history", (_e, update) => cb(update)),
   onNavigate: (cb) => ipcRenderer.on("app:navigate", (_e, tab) => cb(tab)),
   captureCard: (rect, action) => ipcRenderer.invoke("app:capture-card", rect, action),
+  checkForUpdates: () => ipcRenderer.invoke("app:check-updates"),
+  installUpdate: () => ipcRenderer.invoke("app:install-update"),
+  onUpdate: (cb) => ipcRenderer.on("app:update", (_e, state) => cb(state)),
 };
 
 contextBridge.exposeInMainWorld("wispr", api);

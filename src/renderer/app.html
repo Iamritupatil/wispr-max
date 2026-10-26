@@ -23,6 +23,7 @@
           <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>About you</button>
         </nav>
         <div class="sidebar-foot">
+          <button id="upd-side" class="side-update hidden" data-tab="settings">Update available</button>
           <div id="sidebar-status" class="sidebar-status"></div>
           <button data-tab="settings" class="nav-settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Settings</button>
         </div>
@@ -206,6 +207,15 @@
             <p class="muted">API keys are encrypted with your OS keychain and only used to call the APIs.</p>
           </header>
           <form id="settings-form" class="form">
+            <div class="card">
+              <div class="card-title"><h2>Updates</h2><span id="upd-version" class="muted small"></span></div>
+              <div class="row update-row">
+                <span id="upd-message" class="muted small"></span>
+                <span class="spacer"></span>
+                <button type="button" id="upd-button" class="btn">Check for updates</button>
+              </div>
+            </div>
+
             <div class="card">
               <h2>Hotkeys</h2>
               <p class="muted small">Click a box and press a shortcut. Press once to start, again to finish, Esc to cancel.</p>

@@ -1,6 +1,6 @@
 {
   "name": "wispr-max",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Wispr Flow, maxed out: voice dictation plus an AI writer that types into any app.",
   "main": "dist/main.js",
   "scripts": {
@@ -12,11 +12,13 @@
     "test": "tsx --test test/*.test.ts",
     "icons": "tsx scripts/icons.mts",
     "dist": "npm run build && electron-builder",
-    "eval": "tsx scripts/eval.mts"
+    "eval": "tsx scripts/eval.mts",
+    "release": "npm run build && electron-builder --publish always"
   },
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.3.0"
+    "@anthropic-ai/sdk": "^1.3.0",
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
@@ -54,6 +56,18 @@
       "icon": "assets/icon.png",
       "target": "AppImage",
       "category": "Utility"
-    }
-  }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Iamritupatil",
+        "repo": "wispr-max"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Iamritupatil/wispr-max.git"
+  },
+  "homepage": "https://github.com/Iamritupatil/wispr-max"
 }

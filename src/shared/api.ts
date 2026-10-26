@@ -7,6 +7,7 @@ import type {
   OverlayState,
   Settings,
   Stats,
+  UpdateState,
 } from "./types";
 
 /** Exposed to the overlay window as `window.overlay`. */
@@ -38,6 +39,7 @@ export interface AppSnapshot {
   history: HistoryEntry[];
   stats: Stats;
   status: AppStatus;
+  update: UpdateState;
 }
 
 export interface ComposeRequest {
@@ -90,6 +92,9 @@ export interface AppApi {
   openDraft(draft: { to: string; subject: string; body: string }): Promise<void>;
   onHistory(cb: (update: { history: HistoryEntry[]; stats: Stats }) => void): void;
   onNavigate(cb: (tab: string) => void): void;
+  checkForUpdates(): Promise<UpdateState>;
+  installUpdate(): Promise<UpdateState>;
+  onUpdate(cb: (state: UpdateState) => void): void;
   /** Captures part of the window (the usage card) to the clipboard or a PNG file. */
   captureCard(rect: { x: number; y: number; width: number; height: number }, action: "copy" | "save"): Promise<boolean>;
 }
