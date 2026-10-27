@@ -200,7 +200,7 @@ async function acceptOffer() {
 }
 
 /** Flow may still be inserting the text when its history updates. */
-const FLOW_SETTLE_MS = 350;
+const FLOW_SETTLE_MS = 200;
 
 /** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
 async function takeOverFromFlow(instruction: string) {
@@ -213,7 +213,7 @@ async function takeOverFromFlow(instruction: string) {
   // If this fails, Flow's words stay and Max's text lands after them: untidy, not lost.
   await undoLastEdit().catch(() => undefined);
   // Read the screen once Flow's text is gone, so Max sees the conversation as it was.
-  s.context = gatherContext("max");
+  s.context = gatherContext("max", true);
   try {
     globalShortcut.register("Escape", cancelSession);
   } catch {
@@ -223,16 +223,18 @@ async function takeOverFromFlow(instruction: string) {
 }
 
 /** Learns where the text is going while the user is still talking. */
-async function gatherContext(mode: Mode): Promise<FocusContext> {
+async function gatherContext(mode: Mode, fromFlow = false): Promise<FocusContext> {
   const [appInfo, screenshot] = await Promise.all([
     activeApp(),
     mode === "max" && settings.screenContext ? captureScreen() : undefined,
     // Wait for the hotkey's modifiers to be released, or Cmd+C becomes Cmd+Shift+C.
-    sleep(250),
+    // (No hotkey with Wispr Flow, so no wait.)
+    fromFlow ? undefined : sleep(250),
   ]);
   let selection = "";
   // Ctrl+C in a terminal interrupts the running program, so never "copy" there.
-  if (mode === "max" && settings.useSelection && !isTerminal(appInfo)) {
+  // With Flow the screen says it all; skipping the copy saves up to half a second.
+  if (!fromFlow && mode === "max" && settings.useSelection && !isTerminal(appInfo)) {
     selection = await readSelection();
   }
   return { ...appInfo, selection: selection || undefined, screenshot };

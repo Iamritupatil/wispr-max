@@ -11,7 +11,7 @@ export interface FlowDictation {
   app?: string;
 }
 
-const POLL_MS = 250;
+const POLL_MS = 150;
 
 export class FlowHistoryWatcher {
   private db?: DatabaseSync;
