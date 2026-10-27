@@ -47,11 +47,11 @@
               <p id="talk-hint" class="muted">Say what you'd type, or ask Max to write anything: a Slack reply, a LinkedIn note, an email, a tweet.</p>
               <input id="talk-input" class="talk-input" placeholder="…or type to Max and press Enter" autocomplete="off" />
               <div class="web-only share-row">
-                <button type="button" class="btn small" data-share-screen>Share a tab</button>
+                <button type="button" class="btn small" data-share-screen data-tour="Replying to a chat? Paste a screenshot of it (Win+Shift+S, then Ctrl+V) or share the tab, and Max reads the conversation first." data-tour-title="Show Max the chat" data-tour-step="2">Share a tab</button>
                 <span class="muted small" data-share-status></span>
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic.</p>
-              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download>Download it</a></p>
+              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
               <p class="muted small desktop-only">In any app: <b>hold <span id="kbd-talk"></span></b> and talk (or double-tap it). Say what to type, or ask Max to write something. That's the only key.</p>
             </div>
           </section>
@@ -66,6 +66,28 @@
             <div class="talk-actions">
               <button id="talk-draft" class="link-btn hidden">Open as email draft</button>
               <button id="talk-copy" class="link-btn">Copy</button>
+            </div>
+          </section>
+
+          <section class="card web-only demo-mail">
+            <div class="card-title">
+              <h2 class="serif">Try it in an email</h2>
+              <span class="muted small">Like the desktop app: talk with Wispr Flow, Max writes right here. New? Click the little scout for a tour.</span>
+              <piix-pal pal="scout" start="auto"></piix-pal>
+            </div>
+            <div class="mail">
+              <label class="mail-row"><span>To</span><input id="demo-to" autocomplete="off" placeholder="vedvyasa@medvora.ai" /></label>
+              <label class="mail-row"><span>Subject</span><input id="demo-subject" autocomplete="off" placeholder="Max fills this in" /></label>
+              <div class="mail-body">
+                <textarea id="demo-body" rows="9" placeholder="Click here, hold your Wispr Flow key and say: “Max, write a follow-up to the recruiter about the Software Engineer role. I haven't heard back in a week.”" data-tour="Click here, hold your Wispr Flow key and say “Max, write me…”. Max swaps your words for the finished email." data-tour-title="Talk with Wispr Flow" data-tour-step="1"></textarea>
+                <div id="demo-ask" class="demo-ask hidden" role="status"><span class="ghost-slot" data-eyes="right" data-ghost></span><p id="demo-q"></p></div>
+              </div>
+              <div class="mail-foot">
+                <span id="demo-status" class="muted small"></span>
+                <span class="spacer"></span>
+                <button type="button" id="demo-clear" class="link-btn">Clear</button>
+                <button type="button" id="demo-copy" class="btn small">Copy email</button>
+              </div>
             </div>
           </section>
 

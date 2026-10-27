@@ -89,3 +89,14 @@ test("a note Claude wrote to itself never reaches the text box", async () => {
   const fine = "Quick update on the launch.\n\nHi team, see below.";
   assert.equal(cleanOutput(fine), fine);
 });
+
+test("placeholders become a question, and the sender's name comes from the profile", async () => {
+  const { placeholderQuestion } = await import("../src/core/prompts");
+  const draft = "Dear [Recipient's Name],\n\nI applied at [Company Name].\n\nKind regards,\n[Your Name]";
+  assert.deepEqual(placeholderQuestion(draft, "Ritu Patil"), {
+    text: "Dear [Recipient's Name],\n\nI applied at [Company Name].\n\nKind regards,\nRitu Patil",
+    question: "What's the recipient's name and company name?",
+  });
+  assert.deepEqual(placeholderQuestion("Thanks!\n[Your Name]", ""), { text: "Thanks!" });
+  assert.deepEqual(placeholderQuestion("All good, see you then.", "Ritu"), { text: "All good, see you then." });
+});

@@ -4,7 +4,7 @@ import { findMentionedContacts, formatContact } from "./contacts";
 /** Above this many contacts, only the ones mentioned in the instruction go in the prompt. */
 const FULL_CONTACT_LIST_LIMIT = 300;
 
-export const COMPOSE_SYSTEM = `You are Wispr Max, an AI writer built into the user's keyboard. The user pressed a hotkey and spoke an instruction. Whatever you output is pasted straight into the text field where their cursor is, so output only the finished text: no preamble, no "Here's your email", no explanations, no surrounding quotes or code fences. Never write notes to yourself or corrections ("Dear X, no, use…"): decide silently, then write the message once.
+export const COMPOSE_SYSTEM = `You are Wispr Max, an AI writer built into the user's keyboard. The user pressed a hotkey and spoke an instruction. Whatever you output is pasted straight into the text field where their cursor is, so output only the finished text: no preamble, no "Here's your email", no explanations, no surrounding quotes or code fences. Never write notes to yourself or corrections ("Dear X, no, use…"): decide silently, then write the message once. Never use placeholders like [Name] or [Company]: if a name or detail the message needs isn't in the instruction, the screen or the contacts, ask for it (see "Asking first"); sign with the user's name from their profile, or with no name if there isn't one.
 
 Writing as the user:
 - Write in the first person as the user, ready to send. Use their profile for their name, role and sign-off.
@@ -233,4 +233,18 @@ export function buildAutoUser(
   const head = lines.slice(0, start);
   if (opts.vocabulary?.length) head.push(`Known names and vocabulary: ${opts.vocabulary.join(", ")}`, "");
   return [...head, "<speech>", speech, "</speech>"].join("\n");
+}
+
+const PLACEHOLDER = /\[([^\]\n]{2,40})\]/g;
+const SENDER = /^(your|my|sender'?s?)\b.*name|^name$/i;
+
+/** Finds "[Recipient's Name]"-style gaps: fills the sender's name, turns the rest into one question. */
+export function placeholderQuestion(text: string, senderName: string): { text: string; question?: string } {
+  let filled = text.replace(PLACEHOLDER, (all, label: string) => (SENDER.test(label.trim()) ? (senderName ? senderName : "\u0000") : all));
+  // No name to sign with: drop the empty signature line.
+  filled = filled.split("\n").filter((line) => line.trim() !== "\u0000").join("\n").replace(/\u0000/g, "").trim();
+  const missing = [...new Set([...filled.matchAll(PLACEHOLDER)].map((m) => m[1].trim().toLowerCase()))];
+  if (!missing.length) return { text: filled };
+  const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+  return { text: filled, question: `What's the ${list}?` };
 }

@@ -11,6 +11,8 @@ import {
   buildProfileAndContacts,
   cleanOutput,
   parseAsk,
+  placeholderQuestion,
+  MAX_QUESTIONS,
   type ComposeOptions,
 } from "./prompts";
 
@@ -139,7 +141,7 @@ export class Writer {
       signal,
     );
     const question = parseAsk(raw);
-    return question ? { text: "", question } : { text: raw };
+    return question ? { text: "", question } : fillPlaceholders(raw, input);
   }
 
   /**
@@ -197,6 +199,7 @@ export class Writer {
     );
     const parsed = parseAutoOutput(raw);
     if (parsed?.question) return { intent: "command", text: "", question: parsed.question };
+    if (parsed?.intent === "command") return { intent: "command", ...fillPlaceholders(cleanOutput(parsed.text), input) };
     return parsed ? { intent: parsed.intent, text: cleanOutput(parsed.text) } : { intent: "dictation", text: raw };
   }
 
@@ -317,4 +320,14 @@ export function isAbort(err: unknown): boolean {
     err instanceof Anthropic.APIUserAbortError ||
     (err instanceof Error && err.name === "AbortError")
   );
+}
+
+/**
+ * "[Recipient's Name]" never gets typed: the sender's own name comes from the
+ * profile, and anything else missing becomes a question instead.
+ */
+function fillPlaceholders(text: string, input: ComposeInput): { text: string; question?: string } {
+  const asked = input.options?.clarifications?.length ?? 0;
+  const { text: filled, question } = placeholderQuestion(text, input.profile.name);
+  return question && asked < MAX_QUESTIONS ? { text: "", question } : { text: filled };
 }

@@ -1710,3 +1710,83 @@ input.hotkey.recording {
 [data-voice] .field {
   margin-top: 12px;
 }
+
+/* ---------- web demo: an email window ---------- */
+
+.demo-mail .card-title {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.mail {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.mail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mail-row span {
+  width: 56px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mail-row input,
+.mail-body textarea {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.mail-body {
+  position: relative;
+}
+
+.mail-body textarea {
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.6;
+  min-height: 190px;
+}
+
+.demo-ask {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  max-width: 300px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: fg-in 160ms ease-out;
+}
+
+.demo-ask p {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  background: var(--field);
+  font-family: var(--serif);
+  font-size: 14px;
+}
+
+.mail-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+
+@keyframes fg-in {
+  from { opacity: 0; translate: 0 4px; }
+}
