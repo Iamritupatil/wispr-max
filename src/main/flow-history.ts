@@ -49,16 +49,32 @@ export class FlowHistoryWatcher {
     }
   }
 
+  /** Rows from before Max started, and rows already handed over. */
+  private handled = new Set<number>();
+  /** What Max last saw, for Settings: proof that it can hear Flow. */
+  last?: { text: string; at: number };
+
   private poll(onDictation: (d: FlowDictation) => void) {
     if (!this.db || !this.schema) return;
     const { table, text, app } = this.schema;
     try {
+      // Flow may add a row when you start talking and fill in the words a
+      // moment later, so recent rows are re-read until their text arrives.
       const rows = this.db
-        .prepare(`SELECT rowid AS id, "${text}" AS text${app ? `, "${app}" AS app` : ""} FROM "${table}" WHERE rowid > ? ORDER BY rowid LIMIT 20`)
+        .prepare(`SELECT rowid AS id, "${text}" AS text${app ? `, "${app}" AS app` : ""} FROM "${table}" WHERE rowid > ? ORDER BY rowid DESC LIMIT 10`)
         .all(this.lastId) as { id: number; text: string | null; app?: string | null }[];
-      for (const row of rows) {
-        this.lastId = row.id;
-        if (row.text?.trim()) onDictation({ text: row.text.trim(), app: row.app ?? undefined });
+      for (const row of rows.reverse()) {
+        const words = typeof row.text === "string" ? row.text.trim() : "";
+        if (!words || this.handled.has(row.id)) continue;
+        this.handled.add(row.id);
+        this.last = { text: words, at: Date.now() };
+        onDictation({ text: words, app: row.app ?? undefined });
+      }
+      // Forget rows that are long done.
+      if (rows.length && this.handled.size > 50) {
+        const keep = Math.max(...this.handled) - 20;
+        for (const id of this.handled) if (id < keep) this.handled.delete(id);
+        this.lastId = Math.max(this.lastId, keep);
       }
     } catch {
       // Flow may be mid-write; try again on the next tick.

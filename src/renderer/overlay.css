@@ -486,7 +486,8 @@ body {
 }
 
 .root[data-minimal="true"] .bar {
-  background: transparent;
+  /* Not fully transparent: Windows lets clicks fall through clear pixels, and the ghost must stay grabbable. */
+  background: rgba(127, 127, 127, 0.01);
   box-shadow: none;
   border-color: transparent;
 }

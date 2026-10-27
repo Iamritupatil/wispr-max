@@ -1,6 +1,6 @@
 {
   "name": "wispr-max",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Wispr Flow, maxed out: voice dictation plus an AI writer that types into any app.",
   "main": "dist/main.js",
   "scripts": {

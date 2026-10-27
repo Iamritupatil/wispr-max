@@ -46,3 +46,23 @@ test("watcher reports new Flow dictations, not old ones, and never writes", asyn
   const after = flow.prepare("SELECT COUNT(*) AS n FROM History").get() as { n: number };
   assert.equal(after.n, 2);
 });
+
+test("watcher catches dictations whose words arrive after the row is created", async () => {
+  const { DatabaseSync } = await import("node:sqlite");
+  const { FlowHistoryWatcher } = await import("../src/main/flow-history");
+  const fs = await import("node:fs");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "flow-")), "flow.sqlite");
+  const flow = new DatabaseSync(file);
+  flow.exec(`CREATE TABLE History (id INTEGER PRIMARY KEY, formattedText TEXT)`);
+  const seen: string[] = [];
+  const watcher = new FlowHistoryWatcher();
+  watcher.start((d) => seen.push(d.text), file);
+  flow.prepare("INSERT INTO History (formattedText) VALUES (NULL)").run();
+  await new Promise((r) => setTimeout(r, 500));
+  flow.prepare("UPDATE History SET formattedText = ? WHERE id = 1").run("Write me an email to Sam");
+  await new Promise((r) => setTimeout(r, 600));
+  watcher.stop();
+  assert.deepEqual(seen, ["Write me an email to Sam"]);
+});

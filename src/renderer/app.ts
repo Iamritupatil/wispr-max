@@ -827,7 +827,7 @@ function renderFlowConnect() {
   } else if (!flow) {
     html = `${dot(true)}<span>Max listens with its own microphone: hold ${TALK_KEY[settings.talkKey]} and talk, or click the ghost. Speech runs on the Wispr Max server, or add your own key under Voice.</span>`;
   } else if (status.flowListen?.ok) {
-    html = `${dot(true)}<span><b>Connected to Wispr Flow.</b> Hold your Flow key in any app and say "Hey Max, …" or "write an email to…". The ghost takes it from there.</span>`;
+    html = `${dot(true)}<span><b>Connected to Wispr Flow.</b> Hold your Flow key in any app and say "write me an email to…". The ghost takes it from there.<br><span class="muted">${esc(status.flowListen.message)}</span></span>`;
   } else if (!settings.listenToFlow) {
     html = `${dot(false)}<span>Max isn't listening along with Flow, so it only hears you through its own bubble (click the ghost).</span><button type="button" class="btn small" data-flow-connect>Connect</button>`;
   } else {

@@ -713,8 +713,8 @@ function showOverlay() {
   if (wasHidden) sendOverlay({ type: "appear" });
 }
 
-/** With Wispr Flow the ghost only shows up when it's needed; otherwise it floats where you leave it. */
-const ghostStaysOut = () => settings.showIdleGhost && !flowMode();
+/** The ghost floats where you leave it (drag it anywhere); Settings can hide it between uses. */
+const ghostStaysOut = () => settings.showIdleGhost;
 
 function setOverlay(state: OverlayState) {
   // With Wispr Flow the ghost stays quiet: only its question bubble ever shows.
@@ -867,7 +867,13 @@ function status(): AppStatus {
     aiReady: true,
     // Without a speech key, the Wispr Max server transcribes.
     sttReady: true,
-    flowListen: settings.listenToFlow ? flowWatch : undefined,
+    flowListen: settings.listenToFlow
+      ? {
+          ...flowWatch,
+          // Proof Max can hear Flow: the last thing it read.
+          message: flowWatcher.last ? `${flowWatch.message} Last heard: “${flowWatcher.last.text.slice(0, 80)}”` : flowWatch.message,
+        }
+      : undefined,
   };
 }
 
