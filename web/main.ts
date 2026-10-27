@@ -4,8 +4,7 @@ import "./web-api";
 import "../src/renderer/app";
 import "./float-ghost";
 import "./demo-mail";
-import "piixpal/core";
-import "piixpal/c/scout";
+import "./onboarding";
 import { toast } from "../src/renderer/app";
 import { install, installed, onInstallable } from "./pwa";
 
