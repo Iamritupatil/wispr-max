@@ -4,7 +4,7 @@ import { findMentionedContacts, formatContact } from "./contacts";
 /** Above this many contacts, only the ones mentioned in the instruction go in the prompt. */
 const FULL_CONTACT_LIST_LIMIT = 300;
 
-export const COMPOSE_SYSTEM = `You are Wispr Max, an AI writer built into the user's keyboard. The user pressed a hotkey and spoke an instruction. Whatever you output is pasted straight into the text field where their cursor is, so output only the finished text: no preamble, no "Here's your email", no explanations, no surrounding quotes or code fences.
+export const COMPOSE_SYSTEM = `You are Wispr Max, an AI writer built into the user's keyboard. The user pressed a hotkey and spoke an instruction. Whatever you output is pasted straight into the text field where their cursor is, so output only the finished text: no preamble, no "Here's your email", no explanations, no surrounding quotes or code fences. Never write notes to yourself or corrections ("Dear X, no, use…"): decide silently, then write the message once.
 
 Writing as the user:
 - Write in the first person as the user, ready to send. Use their profile for their name, role and sign-off.
@@ -186,7 +186,18 @@ export function cleanOutput(text: string): string {
   const fence = t.match(/^```[a-z]*\n([\s\S]*?)\n```$/i);
   if (fence) t = fence[1].trim();
   if (/^"[\s\S]*"$/.test(t) && !t.slice(1, -1).includes('"')) t = t.slice(1, -1).trim();
-  return t;
+  return dropSelfTalk(t);
+}
+
+const GREETING = /^(hi|hello|hey|dear|good (morning|afternoon|evening)|greetings)\b/i;
+const SELF_TALK = /\b(the user|user's|profile|banned|instead|instruction|let me|i'll|i will|use a|neutral greeting|rewrite)\b/i;
+
+/** Drops a note Claude wrote to itself ("Dear X, no. The user banned…") before the real greeting. */
+export function dropSelfTalk(text: string): string {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line, i) => i > 0 && GREETING.test(line.trim()));
+  if (start > 0 && start <= 3 && SELF_TALK.test(lines.slice(0, start).join(" "))) return lines.slice(start).join("\n").trim();
+  return text;
 }
 
 /**
