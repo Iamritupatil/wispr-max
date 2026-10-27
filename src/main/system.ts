@@ -36,7 +36,7 @@ export async function captureScreen(): Promise<Screenshot | undefined> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function run(cmd: string, args: string[], timeout = 4000): Promise<string> {
+function run(cmd: string, args: string[], timeout = 15000): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { timeout, windowsHide: true }, (err, stdout) =>
       err ? reject(err) : resolve(stdout.toString().trim()),
@@ -44,8 +44,20 @@ function run(cmd: string, args: string[], timeout = 4000): Promise<string> {
   });
 }
 
-/** Sends Cmd/Ctrl + key to the focused app. */
+/** Sends Cmd/Ctrl + key to the focused app: natively and instantly, with the OS tools as a fallback. */
 async function chord(key: "c" | "v" | "z") {
+  try {
+    const { uIOhook, UiohookKey } = await import("uiohook-napi");
+    const code = { c: UiohookKey.C, v: UiohookKey.V, z: UiohookKey.Z }[key];
+    uIOhook.keyTap(code, [process.platform === "darwin" ? UiohookKey.Meta : UiohookKey.Ctrl]);
+    await sleep(30);
+    return;
+  } catch {
+    await osChord(key);
+  }
+}
+
+async function osChord(key: "c" | "v" | "z") {
   switch (process.platform) {
     case "darwin":
       await run("osascript", [
