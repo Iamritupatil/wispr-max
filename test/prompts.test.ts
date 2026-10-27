@@ -83,8 +83,8 @@ test("Max's questions are recognised, and answers go back in the prompt", async 
 
 test("a note Claude wrote to itself never reaches the text box", async () => {
   const { cleanOutput } = await import("../src/core/prompts");
-  const leaked = `Dear Vedvyasa, no. The user banned "dear" in profile, so use a neutral greeting.\n\nHi Vedvyasa,\n\nI hope you are doing well.\n\nBest,\nRitu Patil`;
-  assert.equal(cleanOutput(leaked), "Hi Vedvyasa,\n\nI hope you are doing well.\n\nBest,\nRitu Patil");
+  const leaked = `Dear Tejas, no. The user banned "dear" in profile, so use a neutral greeting.\n\nHi Tejas,\n\nI hope you are doing well.\n\nBest,\nRitu Patil`;
+  assert.equal(cleanOutput(leaked), "Hi Tejas,\n\nI hope you are doing well.\n\nBest,\nRitu Patil");
   // A normal message that happens to have a greeting later is left alone.
   const fine = "Quick update on the launch.\n\nHi team, see below.";
   assert.equal(cleanOutput(fine), fine);
