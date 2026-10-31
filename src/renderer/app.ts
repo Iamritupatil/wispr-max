@@ -213,7 +213,7 @@ function renderFeed() {
       <div>${
         isWeb
           ? "Nothing here yet. Click the box above, hold your Wispr Flow key and tell Max what to write."
-          : `Nothing here yet. Hold ${TALK_KEY[state.settings.talkKey]} in any app and start talking.`
+          : "Nothing here yet. Hold your Wispr Flow key in any app and say \u201cHey Max, …\u201d"
       }</div></div>`;
     paintGhosts($("feed"));
     return;

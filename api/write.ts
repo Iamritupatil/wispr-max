@@ -41,10 +41,9 @@ export async function POST(request: Request) {
             if (r.skip) return r;
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
-            const gifQuery = r.gif || r.sound || "reaction";
             const [soundUrl, gifUrl] = await Promise.all([
-              builtin ? instantSound(builtin.slug) : r.clip ? undefined : findSound(r.sound || r.gif || "bruh"),
-              findGif(gifQuery, process.env.GIPHY_API_KEY),
+              builtin ? instantSound(builtin.slug) : r.clip || !r.sound ? undefined : findSound(r.sound),
+              findGif(r.gif, process.env.GIPHY_API_KEY),
             ]);
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };
           });

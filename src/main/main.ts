@@ -190,7 +190,7 @@ function onFlowDictation(d: FlowDictation) {
     phase: "offer",
     mode: "max",
     transcript: guess.instruction,
-    message: `Want me to write that? Click me or double-tap ${TALK_KEY_LABEL[settings.talkKey]}`,
+    message: "Want me to write that? Click me",
   });
 }
 
@@ -997,7 +997,7 @@ async function onMainWindowClose(e: Electron.Event) {
 function refreshTrayMenu() {
   tray?.setContextMenu(
     Menu.buildFromTemplate([
-      { label: `Talk to Max — hold ${TALK_KEY_LABEL[settings.talkKey]}`, click: () => onHotkey("dictate") },
+      { label: "Talk to Max: hold your Wispr Flow key", enabled: false },
       { type: "separator" },
       { label: "Open Wispr Max", click: () => openMainWindow() },
       { label: "Contacts", click: () => openMainWindow("contacts") },

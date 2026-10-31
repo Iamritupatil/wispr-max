@@ -28,8 +28,9 @@ export async function findSound(query: string, fetchFn: FetchLike = fetch): Prom
   try {
     const res = await fetchFn(`${BASE}/api/v1/instants/?format=json&name=${q}&page=1`, { headers: { ...HEADERS, accept: "application/json" }, signal: AbortSignal.timeout(3500) });
     if (res.ok) {
-      const hit = soundsInApi(await res.json())[0];
-      if (hit) return hit;
+      // One of the top three matches, so the same request doesn't always sound the same.
+      const hits = soundsInApi(await res.json()).slice(0, 3);
+      if (hits.length) return hits[Math.floor(Math.random() * hits.length)];
     }
   } catch {
     // fall through to the search page
@@ -44,8 +45,8 @@ export async function findSound(query: string, fetchFn: FetchLike = fetch): Prom
 
 /** Max's built-in reactions: Myinstants sounds for moments everyone has. The more specific one comes first. */
 export const BUILTIN_SOUNDS = [
-  { name: "ye-angrezi-gaali-apne-paas-rakh", slug: "ye-angrezi-gaali-apne-paas-56434", when: "the user cusses or swears at Max in English" },
-  { name: "chilla-mat-chudail", slug: "chilla-mat-chudail-51952", when: "the user sounds angry, shouts at Max or cusses at it (not in English)" },
+  { name: "ye-angrezi-gaali-apne-paas-rakh", slug: "ye-angrezi-gaali-apne-paas-56434", when: "ONLY when the user directly abuses Max with English swear words aimed at it, like 'f*** you Max' or 'Max you b****'. Not for criticism ('worst product ever') or casual swearing" },
+  { name: "chilla-mat-chudail", slug: "chilla-mat-chudail-51952", when: "ONLY when the user is yelling at Max in anger or abusing it in Hindi" },
 ] as const;
 
 /** One Myinstants instant, by its slug: the API's detail first, then its page. */
