@@ -69,3 +69,15 @@ export async function instantSound(slug: string, fetchFn: FetchLike = fetch): Pr
     return undefined;
   }
 }
+
+/** Top matches with their names (for picking good built-ins). */
+export async function searchSounds(query: string, fetchFn: FetchLike = fetch): Promise<{ name: string; slug: string; url: string }[]> {
+  try {
+    const res = await fetchFn(`${BASE}/api/v1/instants/?format=json&name=${encodeURIComponent(query)}&page=1`, { headers: { ...HEADERS, accept: "application/json" }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const { results = [] } = (await res.json()) as { results?: Record<string, unknown>[] };
+    return results.slice(0, 10).map((r) => ({ name: String(r.name ?? ""), slug: String(r.slug ?? ""), url: soundsInApi({ results: [r] })[0] ?? "" }));
+  } catch {
+    return [];
+  }
+}
