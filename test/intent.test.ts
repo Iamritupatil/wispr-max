@@ -137,3 +137,10 @@ test("Max remembers and forgets what you tell it to", () => {
   assert.deepEqual(memoryCommand("forget about my seat preference"), { kind: "forget", about: "my seat preference" });
   assert.equal(memoryCommand("How do I remember passwords in Chrome?"), null);
 });
+
+test("cringe flexes get a reaction, being stuck still gets help", () => {
+  assert.equal(routeCall("I'm the best coder alive").kind, "chat");
+  assert.equal(routeCall("I'm literally a genius").kind, "chat");
+  assert.equal(routeCall("I'm stuck, what do I click next").kind, "guide");
+  assert.equal(routeCall("I'm not sure what this error means").kind, "guide");
+});

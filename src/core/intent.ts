@@ -171,7 +171,7 @@ const VENT =
 
 // Banter, not a task: "do you know I became the CEO of Google?", "are you there?". Max just talks back.
 const CHAT =
-  /^(?:(?:do|did) you know\b|guess what|you know what|are you (?:there|awake|alive|real|ok|mad|serious)|(?:hey|hi|hello|yo|sup|wassup|what'?s up)\b|how are you|i (?:just |finally )?(?:became|got|won|bought|made|am the|did it)\b|you(?:'re| are| r) (?:so |the |my )|lol|haha|bro\b)/i;
+  /^(?:(?:do|did) you know\b|guess what|you know what|are you (?:there|awake|alive|real|ok|mad|serious)|(?:hey|hi|hello|yo|sup|wassup|what'?s up)\b|how are you|i (?:just |finally )?(?:became|got|won|bought|made|am the|did it)\b|i'?m (?:the|so|a|an|literally|basically|better|smarter|built)\b|you(?:'re| are| r) (?:so |the |my )|lol|haha|bro\b)/i;
 
 const ENGLISH_ABUSE = /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|motherf\w*|b[i!1*]tch\w*|bastard|asshole|dickhead|son of a)|b[i!1*]tch/i;
 const HINDI_ABUSE = /\b(?:chutiy\w*|bsdk|madarchod|bhenchod|bc|mc|saa?la|kamina|harami)\b|चूतिया|साला|कमीना|भेनचोद|मादरचोद|हरामी/i;
