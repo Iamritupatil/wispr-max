@@ -33,7 +33,14 @@ const THIS = String.raw`(?:this|that|it|the (?:above|selection|selected text|tex
 const WAKE = new RegExp(String.raw`^\s*(?:hey|hi|okay|ok|yo)[,.]?\s+max\b[\s,.:!?-]*`, "i");
 // "Max, reply to…": a bare name only counts with a pause after it, so dictating
 // "Max will join the call" isn't mistaken for calling Max.
-const CALL = new RegExp(String.raw`^\s*(?:(?:hey|hi|hello|okay|ok|yo)[,.]?\s+max\b|max\s*[,:!])[\s,.:!?-]*`, "i");
+const CALL = new RegExp(
+  String.raw`^\s*(?:(?:so|okay|ok|um+|uh+|oh|hey|hi|hello|yo|arre|acha)[,.!]?\s+)*max\b` +
+    // "Max, …" / "Max. …" / "Hey Max …": any pause after the name, or a greeting before it…
+    String.raw`(?:\s*[,.:!?-]+|(?<=(?:hey|hi|hello|okay|ok|yo|so|arre|acha)[,.!]?\s+max)\b` +
+    // …or straight into a request: "Max can you…", "Max write…", "Max research…".
+    String.raw`|(?=\s+(?:can you|could you|would you|please|write|draft|reply|tell|ask|research|look up|find|search|how|what|where|why|who|explain|help|show|make|give|play|open|send|summari[sz]e|translate)\b))[\s,.:!?-]*`,
+  "i",
+);
 
 /**
  * Did the user call Max by name ("Hey Max, …", "Max, …") at the start of a

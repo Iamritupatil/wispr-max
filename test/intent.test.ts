@@ -85,3 +85,15 @@ test("research goes to the user's agent, not the screen guide", () => {
   assert.equal(routeCall("look up the latest Wispr Flow pricing").kind, "agent");
   assert.equal(routeCall("How do I export this?").kind, "guide");
 });
+
+test("Max hears its name the way Flow actually types it", () => {
+  assert.equal(calledMax("Max can you do research about Farza"), "Can you do research about Farza");
+  assert.equal(calledMax("So Max, write a reply saying yes"), "Write a reply saying yes");
+  assert.equal(calledMax("Max. How do I export this?"), "How do I export this?");
+  assert.equal(calledMax("Hey Max how do I export this"), "How do I export this");
+  assert.equal(calledMax("Okay Max tell Claude to fix the tests"), "Tell Claude to fix the tests");
+  // Still just dictation:
+  assert.equal(calledMax("Max will join the call at five."), null);
+  assert.equal(calledMax("Max is stuck in traffic"), null);
+  assert.equal(calledMax("Max can't make it today"), null);
+});
