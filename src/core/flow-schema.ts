@@ -5,11 +5,16 @@
 
 const TABLES = ["History", "history", "Dictations", "dictations", "Transcripts", "transcripts"];
 const TEXT = ["formattedText", "formatted_text", "editedText", "edited_text", "finalText", "final_text", "text", "asrText", "asr_text", "transcript"];
+// What the user actually said, before Flow touched it (Command Mode replaces the
+// formatted text with its own AI reply, and then "Max" is gone).
+const RAW = ["asrText", "asr_text", "rawText", "raw_text", "transcript"];
 const APP = ["app", "appName", "app_name", "application", "appBundleId", "bundleId"];
 
 export interface FlowSchema {
   table: string;
   text: string;
+  /** The raw spoken words, read first when present. */
+  raw?: string;
   app?: string;
 }
 
@@ -27,7 +32,10 @@ export function pickFlowSchema(tables: Record<string, string[]>): FlowSchema | n
     const columns = tables[table];
     if (!columns) continue;
     const text = find(TEXT, columns);
-    if (text) return { table, text, app: find(APP, columns) };
+    if (text) {
+      const raw = find(RAW, columns);
+      return { table, text, ...(raw && raw !== text ? { raw } : {}), app: find(APP, columns) };
+    }
   }
   // Unknown names (a newer Flow): any history-like table with a text column.
   const named = Object.keys(tables).sort((a, b) => Number(/hist|dictat|transcri/i.test(b)) - Number(/hist|dictat|transcri/i.test(a)));

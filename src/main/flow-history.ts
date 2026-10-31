@@ -56,12 +56,13 @@ export class FlowHistoryWatcher {
 
   private poll(onDictation: (d: FlowDictation) => void) {
     if (!this.db || !this.schema) return;
-    const { table, text, app } = this.schema;
+    const { table, text, raw, app } = this.schema;
+    const words = raw ? `COALESCE(NULLIF(TRIM("${raw}"), ''), "${text}")` : `"${text}"`;
     try {
       // Flow may add a row when you start talking and fill in the words a
       // moment later, so recent rows are re-read until their text arrives.
       const rows = this.db
-        .prepare(`SELECT rowid AS id, "${text}" AS text${app ? `, "${app}" AS app` : ""} FROM "${table}" WHERE rowid > ? ORDER BY rowid DESC LIMIT 10`)
+        .prepare(`SELECT rowid AS id, ${words} AS text${app ? `, "${app}" AS app` : ""} FROM "${table}" WHERE rowid > ? ORDER BY rowid DESC LIMIT 10`)
         .all(this.lastId) as { id: number; text: string | null; app?: string | null }[];
       for (const row of rows.reverse()) {
         const words = typeof row.text === "string" ? row.text.trim() : "";

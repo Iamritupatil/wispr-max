@@ -66,3 +66,12 @@ test("watcher catches dictations whose words arrive after the row is created", a
   watcher.stop();
   assert.deepEqual(seen, ["Write me an email to Sam"]);
 });
+
+test("Max reads what you actually said, not Flow's Command Mode reply", () => {
+  assert.deepEqual(pickFlowSchema({ History: ["id", "app", "formattedText", "asrText"] }), {
+    table: "History",
+    text: "formattedText",
+    raw: "asrText",
+    app: "app",
+  });
+});
