@@ -9,6 +9,10 @@ name: Release
 on:
   push:
     tags: ["v*"]
+    # Or push main to the release branch: the release (and its v<version> tag)
+    # is created from package.json's version.
+    branches: [release]
+  workflow_dispatch:
 
 permissions:
   contents: write

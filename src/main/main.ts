@@ -250,7 +250,7 @@ function ghostSays(s: Session, text: string, point?: Point) {
   if (current !== s) return;
   if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
   setOverlay({ phase: "done", mode: "max", question: text });
-  if (settings.talkBack) sendOverlay({ type: "say", text, desi: genz() });
+  if (settings.talkBack) void speak(text);
   // Long enough to read (or hear) it, then back home.
   endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
 }
@@ -276,7 +276,7 @@ async function agentFromFlow(agent: AgentName, task: string) {
   const s = flowSession();
   const name = AGENT_LABEL[agent];
   setOverlay({ phase: "listening", mode: "max", question: `${name} is on it…` });
-  if (settings.talkBack) sendOverlay({ type: "say", text: `On it. I'll tell you when ${name} is done.` });
+  if (settings.talkBack) void speak(`On it. I'll tell you when ${name} is done.`);
   const run = runAgent(agent, task, settings.agentFolder);
   s.abort.signal.addEventListener("abort", () => run.cancel());
   clearTimeout(s.timer); // agents take as long as they take
@@ -327,7 +327,7 @@ function showReaction(say: string, clip: Clip | undefined, gifUrl: string | unde
   // While Max is busy with a task, the bubble is the task's; the reaction is the clip.
   if (idle && say.trim()) setOverlay({ phase: "done", mode: "max", question: say });
   // Your clip does the talking; Max only speaks for itself when there's no clip.
-  if (!clip && settings.talkBack && say.trim()) sendOverlay({ type: "say", text: say, desi: true });
+  if (!clip && settings.talkBack && say.trim()) void speak(say);
   if (song.trim()) void shell.openExternal(`https://open.spotify.com/search/${encodeURIComponent(song)}`);
   clearTimeout(reactionTimer);
   reactionTimer = setTimeout(() => {
@@ -348,6 +348,24 @@ function syncPeeks() {
     if (!current) void react("peek", "", true);
     syncPeeks();
   }, minutes * 60_000 * (0.6 + Math.random() * 0.8));
+}
+
+/** Max talks: a natural voice from the server (ElevenLabs) when it has one, otherwise the system voice. */
+async function speak(text: string) {
+  try {
+    const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/voice`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: text.slice(0, 400) }),
+    });
+    if (res.ok) {
+      const audio = Buffer.from(await res.arrayBuffer()).toString("base64");
+      return sendOverlay({ type: "clip", url: `data:audio/mpeg;base64,${audio}`, kind: "audio" });
+    }
+  } catch {
+    // offline or no voice set up: the system voice below
+  }
+  sendOverlay({ type: "say", text });
 }
 
 /** A quick ping now and then, so the server never starts cold in the middle of a request. */

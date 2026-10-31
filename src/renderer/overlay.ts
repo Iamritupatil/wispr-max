@@ -233,8 +233,9 @@ window.overlay.onCommand(async (cmd) => {
     } else if (cmd.type === "say") {
       const u = new SpeechSynthesisUtterance(cmd.text);
       u.rate = 1.05;
-      // Gen Z Max speaks Hinglish: an Indian English voice reads it best.
-      if (cmd.desi) u.voice = speechSynthesis.getVoices().find((v) => v.lang === "en-IN") ?? null;
+      // English, in the most natural English voice the system has.
+      const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
+      u.voice = voices.find((v) => /natural|neural|online/i.test(v.name)) ?? voices[0] ?? null;
       speechSynthesis.speak(u);
     } else if (cmd.type === "gif") {
       const gif = document.getElementById("gif") as HTMLImageElement;
