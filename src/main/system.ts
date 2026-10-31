@@ -25,7 +25,8 @@ export async function captureScreen(): Promise<Screenshot | undefined> {
     });
     const source = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
     if (!source || source.thumbnail.isEmpty()) return undefined;
-    return { data: source.thumbnail.toJPEG(65).toString("base64"), mediaType: "image/jpeg" };
+    const size = source.thumbnail.getSize();
+    return { data: source.thumbnail.toJPEG(65).toString("base64"), mediaType: "image/jpeg", width: size.width, height: size.height };
   } catch {
     return undefined; // No permission or no capture support: Max still works without it.
   }

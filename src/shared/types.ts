@@ -234,6 +234,9 @@ export interface Screenshot {
   /** Base64, without a data: prefix. */
   data: string;
   mediaType: "image/jpeg" | "image/png";
+  /** Pixel size, so Claude can point at exact spots. */
+  width?: number;
+  height?: number;
 }
 
 export interface FocusContext {

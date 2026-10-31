@@ -60,6 +60,9 @@ export interface AutoHandlers extends StreamHandlers {
 
 export class AiError extends Error {}
 
+/** Pointing at buttons needs sharper eyes than writing: a stronger model for the screen guide. */
+const GUIDE_MODEL = (typeof process !== "undefined" && process.env?.WISPR_MAX_GUIDE_MODEL) || "claude-sonnet-5-5";
+
 /** The model behind the hosted backend: fast enough for one-to-two-second results. */
 export const FAST_MODEL = "claude-haiku-5-5";
 
@@ -267,15 +270,15 @@ export class Writer {
     try {
       const res = await this.client.beta.messages.create(
         {
-          model: this.opts.model,
+          model: GUIDE_MODEL,
           max_tokens: 4000,
           output_config: { effort: "low", format: { type: "json_schema", schema: GUIDE_SCHEMA } },
-          ...fallbackFor(this.opts.model),
+          ...fallbackFor(GUIDE_MODEL),
           system: genz ? GUIDE_SYSTEM + GUIDE_GENZ : GUIDE_SYSTEM,
           messages: [
             {
               role: "user",
-              content: userContent(`<goal>${question}</goal>${steps.length ? `\n<steps_so_far>\n${steps.join("\n")}\n</steps_so_far>` : ""}`, screenshot),
+              content: userContent(`<image_size>${screenshot?.width ?? "unknown"}x${screenshot?.height ?? "unknown"}</image_size>\n<goal>${question}</goal>${steps.length ? `\n<steps_so_far>\n${steps.join("\n")}\n</steps_so_far>` : ""}`, screenshot),
             },
           ],
         },
@@ -284,8 +287,13 @@ export class Writer {
       if (res.stop_reason === "refusal") return { say: "I can't help with that one." };
       const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
       const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean; gif?: string; sound?: string };
+      // Pixels in, fractions out (older callers without a size get fractions straight through).
+      const w = screenshot?.width;
+      const h = screenshot?.height;
+      const fx = w && typeof out.x === "number" && out.x > 1 ? out.x / w : out.x;
+      const fy = h && typeof out.y === "number" && out.y > 1 ? out.y / h : out.y;
       const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
-      const point = out.has_point && inside(out.x) && inside(out.y) ? { x: out.x!, y: out.y! } : undefined;
+      const point = out.has_point && inside(fx) && inside(fy) ? { x: fx!, y: fy! } : undefined;
       const meme = genz ? { gif: out.gif ?? "", sound: out.sound ?? "" } : {};
       return { say: out.say, done: Boolean(out.done) || !point, ...(point && { point }), ...meme };
     } catch (err) {

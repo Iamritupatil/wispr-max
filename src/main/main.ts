@@ -257,7 +257,8 @@ function ghostSays(s: Session, text: string, point?: Point) {
 
 /** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
 function showStep(text: string, point?: Point) {
-  if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
+  // The ghost lands right beside the button, its bubble pointing at it.
+  if (point) flyTo({ x: point.x + 26, y: point.y + 6 });
   setOverlay({ phase: "done", mode: "max", question: text });
   if (settings.talkBack) void speak(text);
 }
