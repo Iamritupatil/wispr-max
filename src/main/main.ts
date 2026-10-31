@@ -179,19 +179,8 @@ function onFlowDictation(d: FlowDictation) {
     if (route.kind === "guide") return void guideFromFlow(route.question);
     return void takeOverFromFlow(route.instruction);
   }
-  const guess = guessIntent(d.text, contacts);
-  if (guess.intent !== "command") return;
-  // "Write me an email to…" in any app: the ghost pops up and does it.
-  if (settings.flowRequests !== "ask") return void takeOverFromFlow(guess.instruction);
-  if (offer) clearTimeout(offer.timer);
-  offer = { text: guess.instruction, timer: setTimeout(clearOffer, 9000) };
-  showOverlay();
-  setOverlay({
-    phase: "offer",
-    mode: "max",
-    transcript: guess.instruction,
-    message: "Want me to write that? Click me",
-  });
+  // Anything not addressed to Max is the user's own dictation: Flow typed it,
+  // and it stays exactly as it is. Max only acts when called by name.
 }
 
 function clearOffer() {
