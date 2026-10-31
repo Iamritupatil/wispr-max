@@ -241,7 +241,11 @@ function playAudio(url: string): Promise<void> {
   });
 }
 
+let background: HTMLAudioElement | null = null;
+
 function clearQueue() {
+  background?.pause();
+  background = null;
   generation++;
   queue = Promise.resolve();
   playing?.pause();
@@ -299,6 +303,11 @@ window.overlay.onCommand(async (cmd) => {
         vid.classList.add("show");
         void vid.play().catch(() => undefined);
       }
+    } else if (cmd.type === "bg") {
+      background?.pause();
+      background = new Audio(cmd.url);
+      background.volume = cmd.volume ?? 0.45;
+      void background.play().catch(() => undefined);
     } else if (cmd.type === "cancel") {
       clearQueue();
       await recorder.cancel();

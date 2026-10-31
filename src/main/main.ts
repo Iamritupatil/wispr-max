@@ -205,6 +205,7 @@ function answerMax(text: string, typed: boolean) {
   if (mem) return rememberOrForget(mem, typed);
   // "Max, roast me": always a meme sound, a GIF and a roast of whatever's on your screen.
   if (/\broast (?:me|this|my)\b/i.test(text)) return void roastMe(text, typed);
+  if (/\bbest (?:coder|programmer|developer|engineer)\b/i.test(text)) return void bestCoderAlive(typed);
   const route = routeCall(text, contacts);
   const said = withHistory(text);
   conversation.open = true;
@@ -236,6 +237,28 @@ async function rememberOrForget(mem: NonNullable<ReturnType<typeof memoryCommand
   }
   store.saveSettings(settings);
   ghostSays(s, mem.kind === "remember" ? "Got it, I'll remember that." : facts.length === settings.memory.length ? "I didn't have anything about that." : "Done, forgotten.");
+}
+
+/**
+ * "Am I the best coder alive?": the side-eye dog, a bruh, and Max saying it back
+ * deadpan while the chicken on the tree screams underneath.
+ */
+async function bestCoderAlive(typed: boolean) {
+  const s = flowSession();
+  if (typed) await takeBack();
+  if (current !== s) return;
+  const line = "Best coder alive. Sure, bro. Sure.";
+  const gif = await serverMeme("gif", "side eye dog");
+  if (current !== s) return;
+  showOverlay();
+  if (gif) sendOverlay({ type: "gif", url: gif });
+  sendOverlay({ type: "clip", url: "https://www.myinstants.com/media/sounds/wshh-vine-bruh-sound-effect.mp3", kind: "audio" });
+  setTimeout(() => sendOverlay({ type: "bg", url: "https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3", volume: 0.4 }), 900);
+  setOverlay({ phase: "done", mode: "max", question: line });
+  conversation.turns.push(`Max: ${line}`);
+  void speak(line);
+  setTimeout(() => sendOverlay({ type: "gif", url: null }), 8000);
+  endSession(s, 8000);
 }
 
 async function roastMe(text: string, typed: boolean) {

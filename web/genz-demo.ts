@@ -26,7 +26,29 @@ function heard(text: string) {
   return text + hint + history;
 }
 
+/** "Am I the best coder alive?": side-eye dog, bruh, and the chicken on the tree screaming. */
+async function bestCoderAlive() {
+  ghost.dataset.eyes = "left";
+  say.classList.remove("hidden");
+  say.textContent = "Best coder alive. Sure, bro. Sure.";
+  const res = await fetch("/api/gif?q=side%20eye%20dog").catch(() => undefined);
+  const url = res?.ok ? ((await res.json()) as { url?: string }).url : undefined;
+  if (url) {
+    gif.src = url;
+    gif.classList.remove("hidden");
+  }
+  audio?.pause();
+  audio = new Audio("https://www.myinstants.com/media/sounds/wshh-vine-bruh-sound-effect.mp3");
+  void audio.play().catch(() => undefined);
+  setTimeout(() => {
+    const chicken = new Audio("https://www.myinstants.com/media/sounds/chicken-on-tree-screaming.mp3");
+    chicken.volume = 0.4;
+    void chicken.play().catch(() => undefined);
+  }, 900);
+}
+
 async function react(text: string) {
+  if (/\bbest (?:coder|programmer|developer|engineer)\b/i.test(text)) return void bestCoderAlive();
   if (busy) return;
   busy = true;
   ghost.dataset.eyes = "left";

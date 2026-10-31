@@ -218,7 +218,9 @@ export type OverlayCommand =
   /** Show a reaction GIF over the ghost for a while (null hides it). */
   | { type: "gif"; url: string | null }
   /** Play one of the user's meme clips (audio out loud; images and videos over the ghost). */
-  | { type: "clip"; url: string; kind: "audio" | "image" | "video" };
+  | { type: "clip"; url: string; kind: "audio" | "image" | "video" }
+  /** A sound under everything else (not queued), quieter. */
+  | { type: "bg"; url: string; volume?: number };
 
 export interface AudioPayload {
   data: Uint8Array;
