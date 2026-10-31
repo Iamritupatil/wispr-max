@@ -97,3 +97,9 @@ test("Max hears its name the way Flow actually types it", () => {
   assert.equal(calledMax("Max is stuck in traffic"), null);
   assert.equal(calledMax("Max can't make it today"), null);
 });
+
+test("help requests go to the screen guide wherever the question is", () => {
+  assert.equal(routeCall("I want to submit my project to WeMakeDevs. Can you just tell me how I do that? I don't know what to do.").kind, "guide");
+  assert.equal(routeCall("I'm stuck on this page, show me how to edit it").kind, "guide");
+  assert.equal(routeCall("Write a reply to Tejas saying I'll send it tomorrow").kind, "write");
+});

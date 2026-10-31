@@ -161,6 +161,9 @@ export type CallRoute =
 
 const AGENT = /^(?:please\s+)?(?:(?:tell|ask|have|get|let)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)(?:\s+to)?|(?:run|launch|start|open|use)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)\s+(?:and|to)|(?:claude|codex)[,:])\s+(.+)$/is;
 const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|more)|search (?:for|about|the web)|google|dig into|investigate|find (?:me )?(?:info|information|details) (?:on|about))\b/i;
+// "…can you just tell me how I do that?", "…I don't know what to do": help, wherever it's asked.
+const HOW =
+  /\b(?:how (?:do|can|should|would|to) (?:i|we|you)\b|how to\b|tell me how|show me how|walk me through|what (?:do|should) i (?:do|click|press)|where (?:do|can|should) i|help me (?:with|to|find|do|figure)|i(?:'m| am) (?:stuck|lost|confused)|i don'?t know (?:how|what|where))/i;
 const GUIDE =
   /^(?:how|what|where|which|why|when|who|is (?:this|it|that)|are (?:these|they)|can you (?:help|show|explain|tell me|teach)|could you (?:help|show|explain|tell me)|help me|show me|explain|teach me|walk me through|i(?:'m| am) (?:stuck|lost|confused|not sure)|i don'?t (?:know|understand))\b/i;
 
@@ -179,6 +182,6 @@ export function routeCall(instruction: string, contacts: Contact[] = []): CallRo
   if (RESEARCH.test(text)) return { kind: "agent", agent: "claude", task: text };
   // "Can you write an email…" is writing, even though it starts like a question.
   if (guessIntent(text, contacts).intent === "command") return { kind: "write", instruction: text };
-  if (GUIDE.test(text) || /\?\s*$/.test(text)) return { kind: "guide", question: text };
+  if (GUIDE.test(text) || HOW.test(text) || /\?\s*$/.test(text)) return { kind: "guide", question: text };
   return { kind: "write", instruction: text };
 }
