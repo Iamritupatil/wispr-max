@@ -41,3 +41,30 @@ export async function findSound(query: string, fetchFn: FetchLike = fetch): Prom
     return undefined;
   }
 }
+
+/** Max's built-in reactions: Myinstants sounds for moments everyone has. The more specific one comes first. */
+export const BUILTIN_SOUNDS = [
+  { name: "ye-angrezi-gaali-apne-paas-rakh", slug: "ye-angrezi-gaali-apne-paas-56434", when: "the user cusses or swears at Max in English" },
+  { name: "chilla-mat-chudail", slug: "chilla-mat-chudail-51952", when: "the user sounds angry, shouts at Max or cusses at it (not in English)" },
+] as const;
+
+/** One Myinstants instant, by its slug: the API's detail first, then its page. */
+export async function instantSound(slug: string, fetchFn: FetchLike = fetch): Promise<string | undefined> {
+  try {
+    const res = await fetchFn(`${BASE}/api/v1/instants/${encodeURIComponent(slug)}/?format=json`, { headers: { ...HEADERS, accept: "application/json" }, signal: AbortSignal.timeout(3500) });
+    if (res.ok) {
+      const hit = soundsInApi({ results: [await res.json()] })[0];
+      if (hit) return hit;
+    }
+  } catch {
+    // fall through to the page
+  }
+  try {
+    const res = await fetchFn(`${BASE}/en/instant/${encodeURIComponent(slug)}/`, { headers: HEADERS, signal: AbortSignal.timeout(3500) });
+    if (!res.ok) return undefined;
+    const html = await res.text();
+    return soundsInPage(html)[0] ?? html.match(/\/media\/sounds\/[^"'\s]+\.mp3/)?.[0]?.replace(/^/, BASE);
+  } catch {
+    return undefined;
+  }
+}
