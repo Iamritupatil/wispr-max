@@ -183,11 +183,12 @@ function onFlowDictation(d: FlowDictation) {
   const called = calledMax(d.text);
   if (called) {
     clearOffer();
-    // Gen Z Max has opinions about how you talk to it.
-    void react("command", called);
+    // Gen Z Max has opinions about how you talk to it (venting gets its own reaction).
+    if (routeCall(called, contacts).kind !== "vent") void react("command", called);
     // "Hey Max, …": run your agent, help with what's on screen, or write.
     const route = routeCall(called, contacts);
     if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
+    if (route.kind === "vent") return void ventFromFlow(route.text);
     if (route.kind === "guide") return void guideFromFlow(route.question);
     return void takeOverFromFlow(route.instruction);
   }
@@ -195,6 +196,7 @@ function onFlowDictation(d: FlowDictation) {
   if (Date.now() < conversation.until) {
     const route = routeCall(d.text, contacts);
     if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
+    if (route.kind === "vent") return void ventFromFlow(route.text);
     if (route.kind === "write") {
       const write = guessIntent(d.text, contacts).intent === "command";
       if (write) return void takeOverFromFlow(route.instruction);
@@ -267,6 +269,21 @@ function ghostSays(s: Session, text: string, point?: Point) {
   showStep(text, point);
   // Long enough to read (or hear) it, then back home.
   endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
+}
+
+/** Swearing at Max: take back what Flow typed and react (a meme in Gen Z mode). Never types anything. */
+async function ventFromFlow(text: string) {
+  const s = flowSession();
+  await sleep(FLOW_SETTLE_MS);
+  await undoLastEdit().catch(() => undefined);
+  if (current !== s) return;
+  if (genz()) {
+    endSession(s, 0);
+    // The reaction owns the ghost here: meme sound, GIF and a comeback.
+    await react("command", text, false, true);
+    return;
+  }
+  ghostSays(s, "Fair, that one's on me. Tell me what you need and I'll fix it.");
 }
 
 /** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
@@ -351,7 +368,7 @@ let peekTimer: NodeJS.Timeout | undefined;
 let reactionTimer: NodeJS.Timeout | undefined;
 
 /** Gen Z Max reacts: a GIF over its head, a filmy line out loud, maybe a meme song. */
-async function react(event: ReactEvent, text = "", withScreen = false) {
+async function react(event: ReactEvent, text = "", withScreen = false, ownsGhost = event !== "command") {
   if (!genz()) return;
   try {
     const shot = withScreen ? await captureScreen() : undefined;
@@ -363,7 +380,7 @@ async function react(event: ReactEvent, text = "", withScreen = false) {
     // No clip of yours fits: a meme sound from Myinstants, found by the server.
     const sound: Clip | undefined = !clip && r.soundUrl ? { name: r.sound, url: r.soundUrl, kind: "audio" } : undefined;
     if (r.skip || (!clip && !sound && !r.say.trim())) return;
-    showReaction(r.say, clip ?? sound, gif, r.song, event !== "command");
+    showReaction(r.say, clip ?? sound, gif, r.song, ownsGhost);
   } catch {
     // A missed joke is fine.
   }

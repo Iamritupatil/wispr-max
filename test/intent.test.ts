@@ -103,3 +103,10 @@ test("help requests go to the screen guide wherever the question is", () => {
   assert.equal(routeCall("I'm stuck on this page, show me how to edit it").kind, "guide");
   assert.equal(routeCall("Write a reply to Tejas saying I'll send it tomorrow").kind, "write");
 });
+
+test("swearing at Max is venting, chat is answered, only writing requests get typed", () => {
+  assert.equal(routeCall("why the fuxk is it still there").kind, "vent");
+  assert.equal(routeCall("you are so useless bro").kind, "vent");
+  assert.equal(routeCall("I don't know, I can't see you").kind, "guide");
+  assert.equal(routeCall("reply saying Thursday works").kind, "write");
+});

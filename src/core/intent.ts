@@ -157,10 +157,16 @@ export function parseAutoOutput(raw: string): { intent: Intent; text: string; qu
 export type CallRoute =
   | { kind: "agent"; agent: "claude" | "codex"; task: string }
   | { kind: "guide"; question: string }
-  | { kind: "write"; instruction: string };
+  | { kind: "write"; instruction: string }
+  | { kind: "vent"; text: string };
 
 const AGENT = /^(?:please\s+)?(?:(?:tell|ask|have|get|let)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)(?:\s+to)?|(?:run|launch|start|open|use)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)\s+(?:and|to)|(?:claude|codex)[,:])\s+(.+)$/is;
 const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|more)|search (?:for|about|the web)|google|dig into|investigate|find (?:me )?(?:info|information|details) (?:on|about))\b/i;
+// Max only types into the box when asked to write something.
+const WRITE_HINT = /\b(?:write|draft|compose|reply|respond|e-?mail|message|dm|text (?:him|her|them)|tweet|post|caption|letter|rephrase|rewrite|reword|translate|summari[sz]e|make (?:this|it) (?:more|less|sound))\b/i;
+// Swearing aimed at Max (Flow sometimes softens it: "fuxk", "f***").
+const VENT = /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|wtf|shit\w*|bitch\w*|bastard|asshole|dumbass|idiot|stupid|useless|chutiy\w*|bsdk|madarchod|bhenchod|\bbc\b|\bmc\b)/i;
+
 // "…can you just tell me how I do that?", "…I don't know what to do": help, wherever it's asked.
 const HOW =
   /\b(?:how (?:do|can|should|would|to) (?:i|we|you)\b|how to\b|tell me how|show me how|walk me through|what (?:do|should) i (?:do|click|press)|where (?:do|can|should) i|help me (?:with|to|find|do|figure)|i(?:'m| am) (?:stuck|lost|confused)|i don'?t know (?:how|what|where))/i;
@@ -180,8 +186,13 @@ export function routeCall(instruction: string, contacts: Contact[] = []): CallRo
   }
   // "Research the founder of…", "look up…": real work on the web, for the user's agent.
   if (RESEARCH.test(text)) return { kind: "agent", agent: "claude", task: text };
+  // Swearing at Max is venting: Max reacts, it never types anything.
+  if (VENT.test(text)) return { kind: "vent", text };
   // "Can you write an email…" is writing, even though it starts like a question.
   if (guessIntent(text, contacts).intent === "command") return { kind: "write", instruction: text };
-  if (GUIDE.test(text) || HOW.test(text) || /\?\s*$/.test(text)) return { kind: "guide", question: text };
-  return { kind: "write", instruction: text };
+  // A question ("is this tweet real?") is a question, even if it mentions a tweet or a message.
+  if (GUIDE.test(text) || HOW.test(text)) return { kind: "guide", question: text };
+  if (WRITE_HINT.test(text)) return { kind: "write", instruction: text };
+  // Everything else said to Max (questions, chat, complaints) is answered, not typed.
+  return { kind: "guide", question: text };
 }
