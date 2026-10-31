@@ -1828,11 +1828,14 @@ input.hotkey.recording {
 
 /* ---------- web: hero and the test playground ---------- */
 
+body.web .home-head {
+  display: none;
+}
 .hero {
-  margin: 4px 0 22px;
+  padding: 8px 0 28px;
 }
 .hero-kicker {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1841,26 +1844,31 @@ input.hotkey.recording {
 }
 .hero-title {
   margin: 0 0 10px;
-  font-size: clamp(26px, 4vw, 38px);
-  line-height: 1.15;
-  max-width: 22ch;
+  font-size: clamp(28px, 4.2vw, 44px);
+  line-height: 1.1;
+  max-width: 18ch;
 }
 .hero-sub {
-  margin: 0 0 12px;
-  max-width: 62ch;
+  margin: 0 0 16px;
+  font-size: 16px;
 }
-.hero-points {
-  margin: 0 0 14px;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  max-width: 70ch;
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.hero-tags span {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.3));
+  font-size: 13px;
 }
 .hero-cta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 .genz-tries {
   display: flex;
