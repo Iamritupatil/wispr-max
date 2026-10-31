@@ -79,3 +79,9 @@ test("after Hey Max: run an agent, guide on screen, or write", () => {
   assert.equal(routeCall("Can you write an email to Priya asking about the deadline?").kind, "write");
   assert.equal(calledMax("Hello Max, how do I export this?"), "How do I export this?");
 });
+
+test("research goes to the user's agent, not the screen guide", () => {
+  assert.deepEqual(routeCall("Can you do research about Farza, the founder of Hey Clicky?"), { kind: "agent", agent: "claude", task: "Can you do research about Farza, the founder of Hey Clicky?" });
+  assert.equal(routeCall("look up the latest Wispr Flow pricing").kind, "agent");
+  assert.equal(routeCall("How do I export this?").kind, "guide");
+});

@@ -153,6 +153,7 @@ export type CallRoute =
   | { kind: "write"; instruction: string };
 
 const AGENT = /^(?:please\s+)?(?:(?:tell|ask|have|get|let)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)(?:\s+to)?|(?:run|launch|start|open|use)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)\s+(?:and|to)|(?:claude|codex)[,:])\s+(.+)$/is;
+const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|more)|search (?:for|about|the web)|google|dig into|investigate|find (?:me )?(?:info|information|details) (?:on|about))\b/i;
 const GUIDE =
   /^(?:how|what|where|which|why|when|who|is (?:this|it|that)|are (?:these|they)|can you (?:help|show|explain|tell me|teach)|could you (?:help|show|explain|tell me)|help me|show me|explain|teach me|walk me through|i(?:'m| am) (?:stuck|lost|confused|not sure)|i don'?t (?:know|understand))\b/i;
 
@@ -167,6 +168,8 @@ export function routeCall(instruction: string, contacts: Contact[] = []): CallRo
     const name = (agent[1] ?? agent[2] ?? text.split(/[\s,:]/)[0]).toLowerCase();
     return { kind: "agent", agent: /codex|chat ?gpt/.test(name) ? "codex" : "claude", task: agent[3].trim() };
   }
+  // "Research the founder of…", "look up…": real work on the web, for the user's agent.
+  if (RESEARCH.test(text)) return { kind: "agent", agent: "claude", task: text };
   // "Can you write an email…" is writing, even though it starts like a question.
   if (guessIntent(text, contacts).intent === "command") return { kind: "write", instruction: text };
   if (GUIDE.test(text) || /\?\s*$/.test(text)) return { kind: "guide", question: text };
