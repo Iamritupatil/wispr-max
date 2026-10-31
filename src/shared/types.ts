@@ -120,7 +120,7 @@ export interface Settings {
   memeFolder: string;
   /** Hold to talk, double-tap for hands-free. */
   talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
-  /** The key Wispr Flow listens on: Max holds it for you while you hold Alt. */
+  /** Unused: Max no longer presses Flow keys (Ctrl+Win+Alt is Flow's Command Mode). */
   flowKey: "ctrl-win" | "caps" | "self";
   /** Set once Gen Z mode was switched on by default (so a later choice of Formal sticks). */
   vibeSet?: boolean;

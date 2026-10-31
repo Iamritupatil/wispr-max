@@ -50,7 +50,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
-import { holdFlowKey, hookError, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
+import { hookError, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
@@ -170,40 +170,21 @@ function heardBefore(text: string) {
   return repeat;
 }
 
-/** A new Flow dictation: called Max (or already talking with it)? Max answers. Anything else stays as typed. */
+/**
+ * A new Flow dictation. Plain Flow (Caps Lock, "Hey Max" or not) is just dictation:
+ * Max never touches it. Only after you tap Alt twice does the next dictation go to Max.
+ */
 function onFlowDictation(d: FlowDictation) {
   if (heardBefore(d.text)) return;
-  if (current?.heldKey) {
-    // Holding Alt, but Flow typed somewhere else (Max's box didn't get focus): take it back and answer.
-    const s = current;
-    setTimeout(() => {
-      if (current !== s) return;
-      closeListen();
-      current = null;
-      answerMax(calledMax(d.text) ?? d.text, true);
-    }, 900);
-    return;
-  }
-  // Max asked a question over its head: this dictation is the answer.
-  if (current?.fromFlow && current.asking) {
-    const s = current;
-    void (async () => {
-      await takeBack();
-      void handleTranscript(s, d.text);
-    })();
-    return;
-  }
-  // Mid-walkthrough and you say something new: Max drops the old thing and follows you.
-  if (current?.fromFlow && current.interruptible) dropCurrent();
-  if (current) return;
-  const called = calledMax(d.text);
-  if (called) {
-    clearOffer();
-    return answerMax(called, true);
-  }
-  // Once you've talked to Max, it's a conversation until you press Esc: no "Max" needed.
-  if (conversation.open) return answerMax(d.text, true);
-  // Anything else is the user's own dictation: Flow typed it, and it stays exactly as it is.
+  if (!current?.heldKey) return;
+  // Armed, but Flow typed somewhere else (Max's box lost focus): take it back and answer.
+  const s = current;
+  setTimeout(() => {
+    if (current !== s) return;
+    closeListen();
+    current = null;
+    answerMax(calledMax(d.text) ?? d.text, true);
+  }, 900);
 }
 
 /** You talking with Max: everything said stays as context until Esc. */
@@ -256,11 +237,17 @@ async function takeBack() {
   await undoLastEdit().catch(() => undefined);
 }
 
-// ---------- Hold Alt: Max listens through Wispr Flow ----------
+// ---------- Tap Alt twice: Max listens, through Wispr Flow ----------
 
-/** Alt down: the ghost listens, Max holds your Flow key, and Flow types into Max's hidden box, never yours. */
+/**
+ * Alt, Alt: the ghost listens and Max's invisible box takes focus. Hold your
+ * Flow key as usual: Flow types into Max's box, never into your app. Max never
+ * presses Flow's keys itself (Ctrl+Win+Alt is Flow's Command Mode).
+ */
 function listenThroughFlow() {
-  // Alt always wins: whatever Max was doing (or stuck on) makes way, except an agent still working.
+  // Tapping Alt twice again while listening: never mind.
+  if (current?.heldKey) return cancelSession();
+  // Max makes way for you, except an agent that's still working.
   if (current && current.fromFlow && current.interruptible === false && !current.asking) return;
   const asking = current?.asking;
   dropCurrent();
@@ -270,23 +257,9 @@ function listenThroughFlow() {
   s.heldKey = true;
   s.asking = asking;
   sendOverlay({ type: "cancel" }); // Max stops talking, or Flow would type Max's voice
-  setOverlay({ phase: "listening", mode: "max", question: "Listening…" });
+  setOverlay({ phase: "listening", mode: "max", question: "Listening… hold your Wispr Flow key and talk" });
   openListen(undefined, true);
-  setTimeout(() => current === s && holdFlowKey(settings.flowKey, true), 120);
-  s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 120_000);
-}
-
-/** Alt up: let go of the Flow key; Flow types its words into Max's box a moment later. */
-function flowKeyReleased() {
-  const s = current;
-  if (!s?.heldKey || s.phase !== "recording") return;
-  holdFlowKey(settings.flowKey, false);
-  setOverlay({ phase: "thinking", mode: "max" });
-  clearTimeout(s.timer);
-  s.timer = setTimeout(
-    () => current === s && s.phase === "recording" && failSession(s, "Didn't hear anything from Wispr Flow. Is it running, and is its key set in Max's settings?"),
-    10_000,
-  );
+  s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 30_000);
 }
 
 function clearOffer() {
@@ -695,7 +668,7 @@ function askUser(s: Session, mode: Mode, instruction: string, question: string, 
     s.phase = "processing";
     clearTimeout(s.timer);
     s.timer = setTimeout(() => current === s && endSession(s, 0), 90_000);
-    setOverlay({ phase: "listening", mode: "max", question, transcript: instruction, message: "Answer with Wispr Flow" });
+    setOverlay({ phase: "listening", mode: "max", question, transcript: instruction, message: "Tap Alt twice and answer" });
     return;
   }
   s.phase = "recording";
@@ -1241,19 +1214,20 @@ function registerHotkeys() {
   });
   setTalkKey(settings.talkKey === "off" ? "alt" : settings.talkKey, {
     holdStart: () => {
-      if (flowMode()) return listenThroughFlow();
+      if (flowMode()) return;
       if (current) return;
       // One key for everything: Max works out whether you're dictating or asking.
       startSession("dictate");
       held = current;
     },
     holdEnd: () => {
-      if (flowMode()) return flowKeyReleased();
+      if (flowMode()) return;
       if (current && current === held && current.phase === "recording") stopRecording(current);
       held = null;
     },
     doubleTap: () => {
-      if (!flowMode()) onHotkey("dictate");
+      if (flowMode()) listenThroughFlow();
+      else onHotkey("dictate");
     },
   });
   if (!hookRunning() && !hookWarned) {
@@ -1325,7 +1299,7 @@ function registerIpc() {
     closeListen();
     if (!text.trim()) return cancelSession();
     if (s.heldKey) {
-      // Said while holding Alt: always to Max, no "Max" needed, nothing typed anywhere.
+      // Said after Alt, Alt: always to Max, no "Max" needed, nothing typed anywhere.
       clearTimeout(s.timer);
       current = null;
       heardBefore(text); // Flow's history gets the same words: answer once
