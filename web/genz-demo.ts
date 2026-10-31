@@ -13,6 +13,7 @@ const say = $("genz-say");
 const ghost = $("genz-ghost");
 let audio: HTMLAudioElement | null = null;
 let busy = false;
+const recent: string[] = []; // so Max doesn't play the same meme twice in a row
 
 async function react(text: string) {
   if (busy) return;
@@ -22,7 +23,9 @@ async function react(text: string) {
   say.textContent = "…";
   gif.classList.add("hidden");
   try {
-    const r = await writer.react("command", text, undefined, []);
+    const r = await writer.react("command", text, undefined, [], undefined, recent);
+    for (const n of [r.clip || r.sound, r.gif]) if (n?.trim()) recent.unshift(n.trim());
+    recent.splice(8);
     ghost.dataset.eyes = "happy";
     say.textContent = r.skip || !r.say.trim() ? "Hmm. Thoda aur attitude dikhao, phir baat karte hain." : r.say;
     if (r.gifUrl) {

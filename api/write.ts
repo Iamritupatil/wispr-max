@@ -1,6 +1,6 @@
 import type { ComposeInput, ReactEvent } from "../src/core/ai";
 import { findGif } from "../src/core/gif";
-import { BUILTIN_SOUNDS, findSound, instantSound } from "../src/core/sound";
+import { BUILTIN_SOUNDS, builtinSound, findSound } from "../src/core/sound";
 import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
 
@@ -9,7 +9,7 @@ type Body =
   | { op: "polish"; transcript: string; context: FocusContext; vocabulary: string[]; tone?: string }
   | { op: "extract"; text: string }
   | { op: "guide"; question: string; screenshot?: Screenshot }
-  | { op: "react"; event: ReactEvent; text: string; screenshot?: Screenshot; clips?: string[] };
+  | { op: "react"; event: ReactEvent; text: string; screenshot?: Screenshot; clips?: string[]; recent?: string[] };
 
 /** Everything Max writes goes through here: compose, dictate-or-ask, polish, read a contact. */
 export async function POST(request: Request) {
@@ -36,13 +36,13 @@ export async function POST(request: Request) {
       case "react":
         // The user's own clips, plus Max's built-in reactions ("chilla mat chudail"…).
         return writer
-          .react(body.event, body.text, body.screenshot, [...(body.clips ?? []).slice(0, 200), ...BUILTIN_SOUNDS.map((b) => `${b.name} (${b.when})`)], request.signal)
+          .react(body.event, body.text, body.screenshot, [...(body.clips ?? []).slice(0, 200), ...BUILTIN_SOUNDS.map((b) => `${b.name} (${b.when})`)], request.signal, (body.recent ?? []).slice(0, 8))
           .then(async (r) => {
             if (r.skip) return r;
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
             const [soundUrl, gifUrl] = await Promise.all([
-              builtin ? instantSound(builtin.slug) : r.clip || !r.sound ? undefined : findSound(r.sound),
+              builtin ? builtinSound(builtin) : r.clip || !r.sound ? undefined : findSound(r.sound),
               findGif(r.gif, process.env.GIPHY_API_KEY),
             ]);
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };

@@ -279,7 +279,7 @@ export class Writer {
   }
 
   /** Gen Z mode: reacts to what the user said, or to a peek at their screen. */
-  async react(event: ReactEvent, text: string, screenshot: Screenshot | undefined, clips: string[] = [], signal?: AbortSignal): Promise<Reaction> {
+  async react(event: ReactEvent, text: string, screenshot: Screenshot | undefined, clips: string[] = [], signal?: AbortSignal, recent: string[] = []): Promise<Reaction> {
     try {
       const res = await this.client.beta.messages.create(
         {
@@ -288,7 +288,7 @@ export class Writer {
           output_config: { effort: "low", format: { type: "json_schema", schema: REACT_SCHEMA } },
           ...fallbackFor(this.opts.model),
           system: GENZ_SYSTEM,
-          messages: [{ role: "user", content: userContent(`<event>${event}</event>\n<said>${text}</said>${clips.length ? `\n<clips>\n${clips.join("\n")}\n</clips>` : ""}`, screenshot) }],
+          messages: [{ role: "user", content: userContent(`<event>${event}</event>\n<said>${text}</said>${clips.length ? `\n<clips>\n${clips.join("\n")}\n</clips>` : ""}${recent.length ? `\n<recent>\n${recent.join("\n")}\n</recent>` : ""}`, screenshot) }],
         },
         { signal },
       );

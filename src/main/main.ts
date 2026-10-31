@@ -307,7 +307,8 @@ async function react(event: ReactEvent, text = "", withScreen = false) {
   try {
     const shot = withScreen ? await captureScreen() : undefined;
     const clips = listClips(memeFolder());
-    const r = await writer().react(event, text, shot, clips.map((c) => c.name));
+    const r = await writer().react(event, text, shot, clips.map((c) => c.name), undefined, recentReactions);
+    remember(r.clip || r.sound, r.gif);
     const clip = findClip(clips, r.clip);
     const gif = clip ? undefined : (r.gifUrl ?? (await findGif(r.gif, process.env.GIPHY_API_KEY)));
     // No clip of yours fits: a meme sound from Myinstants, found by the server.
@@ -317,6 +318,13 @@ async function react(event: ReactEvent, text = "", withScreen = false) {
   } catch {
     // A missed joke is fine.
   }
+}
+
+/** Max's last few reactions, so it doesn't play the same meme twice in a row. */
+const recentReactions: string[] = [];
+function remember(...names: string[]) {
+  for (const n of names) if (n.trim()) recentReactions.unshift(n.trim());
+  recentReactions.splice(8);
 }
 
 const memeFolder = () => settings.memeFolder || defaultMemeFolder();

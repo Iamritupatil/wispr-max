@@ -105,3 +105,9 @@ test("Myinstants API: finds the sound file in the results", async () => {
   assert.deepEqual(soundsInApi(body), ["https://www.myinstants.com/media/sounds/faaah.mp3"]);
   assert.deepEqual(soundsInApi({ results: [] }), []);
 });
+
+test("explicit meme sounds are never played, even under innocent titles", async () => {
+  const { isClean } = await import("../src/core/sound");
+  assert.equal(isClean({ name: "baas land kara de bhai", url: "https://www.myinstants.com/media/sounds/main-madarchod-hun.mp3" }), false);
+  assert.equal(isClean({ name: "Moye moye", url: "https://www.myinstants.com/media/sounds/moye-moye.mp3" }), true);
+});
