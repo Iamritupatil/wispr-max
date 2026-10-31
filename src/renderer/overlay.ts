@@ -214,6 +214,41 @@ window.overlay.onLayout(({ flip, offsetX }) => {
 animateEyes("idle");
 window.overlay.onState(render);
 
+// ---------- one voice at a time ----------
+// Meme sounds, Max's voice and the system voice all wait their turn, so two
+// things are never said over each other.
+
+let queue: Promise<void> = Promise.resolve();
+let playing: HTMLAudioElement | null = null;
+let generation = 0;
+
+function enqueue(play: () => Promise<void>) {
+  const mine = generation;
+  queue = queue.then(() => (mine === generation ? play() : undefined)).catch(() => undefined);
+}
+
+function playAudio(url: string): Promise<void> {
+  return new Promise((done) => {
+    const audio = new Audio(url);
+    playing = audio;
+    const finish = () => {
+      if (playing === audio) playing = null;
+      done();
+    };
+    audio.onended = audio.onerror = finish;
+    setTimeout(finish, 20_000); // never let a stuck clip block what comes next
+    void audio.play().catch(finish);
+  });
+}
+
+function clearQueue() {
+  generation++;
+  queue = Promise.resolve();
+  playing?.pause();
+  playing = null;
+  speechSynthesis.cancel();
+}
+
 window.overlay.onCommand(async (cmd) => {
   try {
     if (cmd.type === "start") {
@@ -231,12 +266,17 @@ window.overlay.onCommand(async (cmd) => {
       bar.classList.add("poof");
       setTimeout(() => bar.classList.remove("poof"), 1100);
     } else if (cmd.type === "say") {
-      const u = new SpeechSynthesisUtterance(cmd.text);
-      u.rate = 1.05;
-      // English, in the most natural English voice the system has.
-      const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
-      u.voice = voices.find((v) => /natural|neural|online/i.test(v.name)) ?? voices[0] ?? null;
-      speechSynthesis.speak(u);
+      enqueue(() => {
+        const u = new SpeechSynthesisUtterance(cmd.text);
+        u.rate = 1.05;
+        // English, in the most natural English voice the system has.
+        const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
+        u.voice = voices.find((v) => /natural|neural|online/i.test(v.name)) ?? voices[0] ?? null;
+        return new Promise<void>((done) => {
+          u.onend = u.onerror = () => done();
+          speechSynthesis.speak(u);
+        });
+      });
     } else if (cmd.type === "gif") {
       const gif = document.getElementById("gif") as HTMLImageElement;
       const vid = document.getElementById("vid") as HTMLVideoElement;
@@ -247,8 +287,7 @@ window.overlay.onCommand(async (cmd) => {
         vid.classList.remove("show");
       }
     } else if (cmd.type === "clip") {
-      speechSynthesis.cancel(); // the clip is the punchline
-      if (cmd.kind === "audio") void new Audio(cmd.url).play().catch(() => undefined);
+      if (cmd.kind === "audio") enqueue(() => playAudio(cmd.url));
       else if (cmd.kind === "image") {
         const gif = document.getElementById("gif") as HTMLImageElement;
         gif.src = cmd.url;
@@ -260,7 +299,7 @@ window.overlay.onCommand(async (cmd) => {
         void vid.play().catch(() => undefined);
       }
     } else if (cmd.type === "cancel") {
-      speechSynthesis.cancel();
+      clearQueue();
       await recorder.cancel();
       render({ phase: "idle", mode: "dictate" });
     }

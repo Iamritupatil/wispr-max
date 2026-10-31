@@ -4,7 +4,7 @@ import { json, rateLimited, readBody } from "./_lib";
 // (ELEVENLABS_API_KEY, and optionally ELEVENLABS_VOICE_ID). Without one the
 // app falls back to the computer's own voice.
 
-const DEFAULT_VOICE = "TxGEqnHWrfWFTfGW9XjX"; // "Josh": young, upbeat, English
+const DEFAULT_VOICE = "TX3LPaxmHKxFdv7VOQHJ"; // "Liam": young, energetic, English
 
 /** GET /api/voice: checks the voice works (says nothing secret, just whether ElevenLabs answered). */
 export async function GET() {
@@ -21,7 +21,8 @@ function speakWith(key: string, text: string) {
   return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": key, "content-type": "application/json", accept: "audio/mpeg" },
-    body: JSON.stringify({ text, model_id: "eleven_flash_v2_5" }),
+    // Lower stability and some style: expressive and a bit dramatic, not a newsreader.
+    body: JSON.stringify({ text, model_id: "eleven_flash_v2_5", voice_settings: { stability: 0.35, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true } }),
   });
 }
 
