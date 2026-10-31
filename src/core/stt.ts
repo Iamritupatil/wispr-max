@@ -81,7 +81,7 @@ async function whisperCompatible(audio: Uint8Array, mime: string, opts: SttOptio
 // ---------- AssemblyAI (upload → transcript → poll) ----------
 
 const ASSEMBLY = "https://api.assemblyai.com/v2";
-const POLL_MS = 250;
+const POLL_MS = 120;
 const POLL_TIMEOUT_MS = 60_000;
 
 const sleep = (ms: number, signal?: AbortSignal) =>

@@ -5,6 +5,22 @@ import { BUILTIN_SOUNDS, builtinSound, findSound } from "../src/core/sound";
 // When the model names no meme sound, one of these: every Gen Z answer makes a noise.
 const FALLBACK_SOUNDS = ["bruh", "vine boom", "emotional damage", "oh no no no", "faaah", "wow anime"];
 const anySound = () => FALLBACK_SOUNDS[Math.floor(Math.random() * FALLBACK_SOUNDS.length)];
+
+// Memes never hold up Max's answer: whatever isn't found in time is skipped.
+const MEME_MS = 1500;
+const within = <T>(p: Promise<T>): Promise<T | undefined> => Promise.race([p, new Promise<undefined>((r) => setTimeout(r, MEME_MS))]);
+// Found once, reused while this server is warm.
+const memo = new Map<string, Promise<string | undefined>>();
+const cached = (key: string, find: () => Promise<string | undefined>) => {
+  if (!memo.has(key)) {
+    const p = find().then((url) => (url ? url : (memo.delete(key), undefined)));
+    memo.set(key, p);
+    if (memo.size > 300) memo.delete(memo.keys().next().value!);
+  }
+  return within(memo.get(key)!);
+};
+const gifFor = (q: string) => cached(`g:${q.toLowerCase()}`, () => findGif(q, process.env.GIPHY_API_KEY));
+const soundFor = (q: string) => cached(`s:${q.toLowerCase()}`, () => findSound(q));
 import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
 
@@ -16,6 +32,11 @@ type Body =
   | { op: "react"; event: ReactEvent; text: string; screenshot?: Screenshot; clips?: string[]; recent?: string[] };
 
 /** Everything Max writes goes through here: compose, dictate-or-ask, polish, read a contact. */
+/** A warm-up ping from the app, so the first real answer doesn't wait for a cold start. */
+export function GET() {
+  return json({ ok: true });
+}
+
 export async function POST(request: Request) {
   if (!hasKey()) return json({ error: "The Wispr Max server isn't set up yet (no API key)." }, 503);
   const limited = rateLimited(request, "write", 120);
@@ -48,9 +69,9 @@ export async function POST(request: Request) {
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
             const [soundUrl, gifUrl] = await Promise.all([
-              builtin ? builtinSound(builtin) : r.clip ? undefined : findSound(r.sound?.trim() || anySound()),
+              builtin ? within(builtinSound(builtin)) : r.clip ? undefined : soundFor(r.sound?.trim() || anySound()),
               // No GIF named? Max's own line finds one: every reaction gets a GIF.
-              findGif(r.gif?.trim() || r.say || "reaction", process.env.GIPHY_API_KEY),
+              gifFor(r.gif?.trim() || r.say || "reaction"),
             ]);
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };
           });
@@ -58,7 +79,7 @@ export async function POST(request: Request) {
         return writer.guide(body.question, body.screenshot, request.signal, (body.steps ?? []).slice(0, 10), Boolean(body.genz)).then(async (g) => {
           if (!body.genz) return g;
           // Gen Z Max: every answer gets a GIF (from Max's own line if none was named), a meme sound for roasts.
-          const [gifUrl, soundUrl] = await Promise.all([findGif(g.gif?.trim() || g.say, process.env.GIPHY_API_KEY), findSound(g.sound?.trim() || anySound())]);
+          const [gifUrl, soundUrl] = await Promise.all([gifFor(g.gif?.trim() || g.say), soundFor(g.sound?.trim() || anySound())]);
           return { ...g, gifUrl, soundUrl };
         });
       case "extract":

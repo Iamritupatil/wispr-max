@@ -7,7 +7,9 @@ import { json, rateLimited, readBody } from "./_lib";
 const DEFAULT_VOICE = "TX3LPaxmHKxFdv7VOQHJ"; // "Liam": young, energetic, English
 
 /** GET /api/voice: checks the voice works (says nothing secret, just whether ElevenLabs answered). */
-export async function GET() {
+export async function GET(request: Request) {
+  // The app's warm-up ping: wake the function, spend no voice credits.
+  if (new URL(request.url).searchParams.has("warm")) return json({ ok: true });
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) return json({ ok: false, error: "ELEVENLABS_API_KEY isn't set on this deployment (add it, then redeploy)." });
   const res = await speakWith(key, "Hey, it's Max.");

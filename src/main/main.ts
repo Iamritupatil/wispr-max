@@ -305,10 +305,16 @@ function listenWithOwnMic() {
   const s = flowSession();
   s.phase = "recording";
   s.ownMic = true;
-  setOverlay({ phase: "listening", mode: "max", question: "Listening…" });
   sendOverlay({ type: "start", mode: "max", sounds: false }); // also stops Max talking, or the mic hears Max
+  // Read the screen while you talk (before the bubble shows, so it isn't in the shot).
+  const shot = Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
+  readAhead = { at: Date.now(), shot };
+  void shot.finally(() => current === s && s.phase === "recording" && setOverlay({ phase: "listening", mode: "max", question: "Listening…" }));
   s.timer = setTimeout(() => current === s && s.phase === "recording" && ownMicReleased(), MAX_RECORDING_MS);
 }
+
+/** The screen as it was while you were talking: the first look of a walkthrough, if it's fresh. */
+let readAhead: { at: number; shot: Promise<[Awaited<ReturnType<typeof captureScreen>>, { app?: string; windowTitle?: string }]> } | null = null;
 
 /** Alt up: stop recording; the words come back through overlay:audio. */
 function ownMicReleased() {
@@ -447,18 +453,21 @@ async function guideFromFlow(question: string, typed = false) {
       setOverlay({ phase: "thinking", mode: "max", transcript: question });
       const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
       // The screen, plus which app and window it is: Max reads both.
-      const [shot, where] = await Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
+      const early = i === 0 && readAhead && Date.now() - readAhead.at < 20_000 ? readAhead.shot : undefined;
+      readAhead = null;
+      const [shot, where] = await (early ?? Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]));
       if (current !== s) return;
       const now = new Date().toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
       const context = where.app ? `\n<context>${where.app}${where.windowTitle ? `: ${where.windowTitle}` : ""}</context>` : "";
       const res = await writer().guide(`${question}\n(It's ${now} on the user's computer.)${context}${aboutUser()}`, shot, s.abort.signal, steps, genz());
       if (current !== s) return;
-      if (genz()) {
-        // Every Gen Z answer: a GIF and a meme sound, from the server if the answer didn't bring them.
-        const [g, snd] = await Promise.all([res.gifUrl ?? serverMeme("gif", res.gif || res.say), res.soundUrl ?? serverMeme("sound", res.sound || anySound())]);
-        res.gifUrl = g;
-        res.soundUrl = snd;
-        if (current !== s) return;
+      if (genz() && !res.gifUrl) {
+        // No GIF with the answer: fetch one on the side, never holding up the answer.
+        void serverMeme("gif", res.gif || res.say).then((url) => {
+          if (!url || current !== s) return;
+          sendOverlay({ type: "gif", url });
+          setTimeout(() => sendOverlay({ type: "gif", url: null }), 7000);
+        });
       }
       // Gen Z mode and an obvious question: the roast comes with a meme (sound first, then Max).
       if (res.soundUrl) sendOverlay({ type: "clip", url: res.soundUrl, kind: "audio" });
@@ -569,7 +578,7 @@ const anySound = () => MEME_SOUNDS[Math.floor(Math.random() * MEME_SOUNDS.length
 async function serverMeme(kind: "gif" | "sound", query: string): Promise<string | undefined> {
   if (!query.trim()) return undefined;
   try {
-    const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/${kind}?q=${encodeURIComponent(query.slice(0, 80))}`);
+    const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/${kind}?q=${encodeURIComponent(query.slice(0, 80))}`, { signal: AbortSignal.timeout(1800) });
     return res.ok ? ((await res.json()) as { url?: string }).url : undefined;
   } catch {
     return undefined;
@@ -695,8 +704,8 @@ function saveAgentResult(name: string, task: string, out: string): string | unde
 /** A quick ping now and then, so the server never starts cold in the middle of a request. */
 function keepServerWarm() {
   const ping = () => {
-    if (store.anthropicKey(settings)) return; // writing locally: no server involved
-    void net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/health`).catch(() => undefined);
+    // Every function Max uses for an answer: transcription, the answer itself, and the voice.
+    for (const path of ["write", "transcribe", "voice?warm=1"]) void net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/${path}`).catch(() => undefined);
   };
   ping();
   setInterval(ping, 4 * 60_000);

@@ -7,6 +7,11 @@ import { assemblyKey, json, rateLimited, readBody } from "./_lib";
 
 type Body = { audio: string; mime: string; language?: string; vocabulary?: string[] };
 
+/** A warm-up ping from the app. */
+export function GET() {
+  return json({ ok: true });
+}
+
 export async function POST(request: Request) {
   if (!assemblyKey()) return json({ error: "Voice on the Wispr Max server isn't set up yet. Use Wispr Flow, or add your own speech key in Settings." }, 503);
   const limited = rateLimited(request, "transcribe", 60);
