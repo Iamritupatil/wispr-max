@@ -43,15 +43,16 @@ export async function POST(request: Request) {
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
             const [soundUrl, gifUrl] = await Promise.all([
               builtin ? builtinSound(builtin) : r.clip || !r.sound ? undefined : findSound(r.sound),
-              findGif(r.gif, process.env.GIPHY_API_KEY),
+              // No GIF named? Max's own line finds one: every reaction gets a GIF.
+              findGif(r.gif?.trim() || r.say || "reaction", process.env.GIPHY_API_KEY),
             ]);
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };
           });
       case "guide":
         return writer.guide(body.question, body.screenshot, request.signal, (body.steps ?? []).slice(0, 10), Boolean(body.genz)).then(async (g) => {
-          if (!g.gif && !g.sound) return g;
-          // The roast's meme, looked up side by side.
-          const [gifUrl, soundUrl] = await Promise.all([findGif(g.gif ?? "", process.env.GIPHY_API_KEY), g.sound ? findSound(g.sound) : undefined]);
+          if (!body.genz) return g;
+          // Gen Z Max: every answer gets a GIF (from Max's own line if none was named), a meme sound for roasts.
+          const [gifUrl, soundUrl] = await Promise.all([findGif(g.gif?.trim() || g.say, process.env.GIPHY_API_KEY), g.sound ? findSound(g.sound) : undefined]);
           return { ...g, gifUrl, soundUrl };
         });
       case "extract":
