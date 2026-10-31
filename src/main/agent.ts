@@ -12,7 +12,12 @@ export const AGENT_LABEL: Record<AgentName, string> = { claude: "Claude", codex:
 
 const COMMANDS: Record<AgentName, { cmd: string; args: string[]; install: string }> = {
   // Edits files in the work folder; anything riskier still needs the user's OK in Claude Code.
-  claude: { cmd: "claude", args: ["-p", "--permission-mode", "acceptEdits"], install: "npm install -g @anthropic-ai/claude-code, then run claude once to sign in" },
+  claude: {
+    cmd: "claude",
+    // Research needs the web; file edits stay inside the work folder.
+    args: ["-p", "--permission-mode", "acceptEdits", "--allowedTools", "WebSearch,WebFetch,Read,Glob,Grep,Edit,Write"],
+    install: "npm install -g @anthropic-ai/claude-code, then run claude once to sign in",
+  },
   codex: { cmd: "codex", args: ["exec", "--full-auto", "-"], install: "npm install -g @openai/codex, then run codex once to sign in" },
 };
 

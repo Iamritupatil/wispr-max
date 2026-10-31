@@ -17,6 +17,7 @@ import {
   systemPreferences,
 } from "electron";
 import fs from "node:fs/promises";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { Writer, type WriterLike, isAbort } from "../core/ai";
 import { RemoteWriter, remoteTranscribe } from "../core/remote";
@@ -282,7 +283,10 @@ async function agentFromFlow(agent: AgentName, task: string) {
   clearTimeout(s.timer); // agents take as long as they take
   try {
     const out = await run.done;
-    ghostSays(s, `${name} is done. ${spokenSummary(out)}`.trim());
+    // The whole answer, on screen: Max only says the gist.
+    const file = saveAgentResult(name, task, out);
+    if (file) void shell.openPath(file);
+    ghostSays(s, `${name} is done${file ? ", I opened the full answer for you" : ""}. ${spokenSummary(out)}`.trim());
     recordUse({ mode: "max", transcript: task, output: out, app: name, spokenMs: 0 });
   } catch (err) {
     if (current !== s) return;
@@ -366,6 +370,20 @@ async function speak(text: string) {
     // offline or no voice set up: the system voice below
   }
   sendOverlay({ type: "say", text });
+}
+
+/** Saves an agent's full answer as a note in Documents/Wispr Max, so it can be opened and kept. */
+function saveAgentResult(name: string, task: string, out: string): string | undefined {
+  try {
+    const dir = path.join(app.getPath("documents"), "Wispr Max", "Agent results");
+    mkdirSync(dir, { recursive: true });
+    const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50).replace(/^-|-$/g, "") || "task";
+    const file = path.join(dir, `${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")} ${slug}.md`);
+    writeFileSync(file, `# ${task}\n\n_${name}, ${new Date().toLocaleString()}_\n\n${out}\n`);
+    return file;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A quick ping now and then, so the server never starts cold in the middle of a request. */
