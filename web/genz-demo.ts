@@ -1,3 +1,4 @@
+import { abuseKind } from "../src/core/intent";
 import { RemoteWriter } from "../src/core/remote";
 import { watchFlowInput } from "../src/renderer/flow-input";
 import { toast } from "../src/renderer/app";
@@ -14,6 +15,16 @@ const ghost = $("genz-ghost");
 let audio: HTMLAudioElement | null = null;
 let busy = false;
 const recent: string[] = []; // so Max doesn't play the same meme twice in a row
+const turns: string[] = []; // the conversation so far: Max stays on topic, like on the desktop
+const CLIP = { english: "ye-angrezi-gaali-apne-paas-rakh", hindi: "gaali-mat-do-bhai", yell: "chilla-mat-chudail" } as const;
+
+/** What Max hears: your words, the right gaali clip when you swear, and what you two said before. */
+function heard(text: string) {
+  const kind = abuseKind(text);
+  const hint = kind ? `\n\n(Play the clip "${CLIP[kind]}" for this, and caption it with a short comeback.)` : "";
+  const history = turns.length ? `\n\n(Our conversation so far, oldest first:\n${turns.slice(-10).join("\n")})` : "";
+  return text + hint + history;
+}
 
 async function react(text: string) {
   if (busy) return;
@@ -23,7 +34,9 @@ async function react(text: string) {
   say.textContent = "…";
   gif.classList.add("hidden");
   try {
-    const r = await writer.react("command", text, undefined, [], undefined, recent);
+    const r = await writer.react("command", heard(text), undefined, [], undefined, recent);
+    turns.push(`You: ${text}`);
+    if (r.say.trim()) turns.push(`Max: ${r.say}`);
     for (const n of [r.clip || r.sound, r.gif]) if (n?.trim()) recent.unshift(n.trim());
     recent.splice(8);
     ghost.dataset.eyes = "happy";
@@ -47,3 +60,14 @@ async function react(text: string) {
 }
 
 watchFlowInput(input, (text) => void react(text));
+
+for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>("[data-try]"))) {
+  b.addEventListener("click", () => {
+    input.value = b.dataset.try ?? "";
+    void react(input.value);
+  });
+}
+
+// Max talks first, like on the desktop (no server call until you answer).
+say.textContent = "Yo, I'm Max. Roast me, brag to me, or swear at me. I dare you.";
+say.classList.remove("hidden");

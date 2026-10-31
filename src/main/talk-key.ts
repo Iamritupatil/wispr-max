@@ -46,6 +46,9 @@ export function onFlowKey(cb: () => void) {
   onFlow = cb;
 }
 
+/** Why the keyboard hook couldn't start (empty when it runs). */
+export let hookError = "";
+
 /** True once the keyboard hook runs (then Esc is watched without a global shortcut). */
 export const hookRunning = () => started || hooked;
 
@@ -119,8 +122,10 @@ export function setTalkKey(name: TalkKeyName, h: TalkKeyHandlers) {
   });
   try {
     uIOhook.start();
-  } catch {
-    started = false; // No permission (macOS Accessibility): the regular hotkeys still work.
+    hookError = "";
+  } catch (err) {
+    started = false; // No permission (macOS Accessibility)
+    hookError = err instanceof Error ? err.message : String(err);
   }
 }
 

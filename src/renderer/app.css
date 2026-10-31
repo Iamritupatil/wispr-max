@@ -1824,3 +1824,59 @@ input.hotkey.recording {
   font-family: var(--serif);
   font-size: 15px;
 }
+
+/* ---------- web: hero and the test playground ---------- */
+
+.hero {
+  margin: 4px 0 22px;
+}
+.hero-kicker {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+.hero-title {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 4vw, 38px);
+  line-height: 1.15;
+  max-width: 22ch;
+}
+.hero-sub {
+  margin: 0 0 12px;
+  max-width: 62ch;
+}
+.hero-points {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  max-width: 70ch;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.genz-tries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.genz-tries .chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.genz-tries .chip:hover {
+  background: var(--field);
+}

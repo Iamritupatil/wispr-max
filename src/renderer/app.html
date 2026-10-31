@@ -37,6 +37,19 @@
             <div id="stats" class="stats"></div>
           </header>
 
+          <section class="hero web-only">
+            <p class="hero-kicker">Wispr Max · built on Wispr Flow</p>
+            <h1 class="serif hero-title">A little AI buddy on your desktop that teaches you how to do the work.</h1>
+            <p class="hero-sub">Max floats over every app. Ask it anything out loud and it shows you, step by step, pointing at the exact button. It talks first, roasts you with memes and slang, and gets to know you.</p>
+            <ul class="hero-points">
+              <li><b>Teaches, doesn't just answer.</b> "How do I edit my submission?" Max flies to the button, says what to click, and waits for you.</li>
+              <li><b>Speaks first.</b> It says hi, notices a rejection email or a 3am error, and reacts before you ask.</li>
+              <li><b>Memes, slang, Bollywood sounds.</b> Roast it and it roasts back. Swear at it and you get <i>"ye angrezi gaali apne paas rakho"</i>.</li>
+              <li><b>Yours.</b> It remembers the conversation until you press Esc, understands Hindi and Hinglish, and writes in your style.</li>
+            </ul>
+            <p class="hero-cta"><a class="btn" href="/api/download" data-download>Download for desktop</a> <span class="muted small">Then hold <b>Alt</b> and talk. Wispr Flow listens, nothing gets typed. <b>Esc</b> stops Max.</span></p>
+          </section>
+
           <section class="talk">
             <button id="talk-ghost" class="talk-ghost" data-state="idle" title="Click and talk to Max">
               <span id="talk-ghost-art" class="ghost-slot huge" data-eyes="center" data-ghost></span>
@@ -51,7 +64,7 @@
                 <span class="muted small" data-share-status></span>
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key.</p>
-              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
+              <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>On the desktop, Max lives on top of every app</b>: hold Alt and ask, and it reads your screen and shows you where to click. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
               <p class="muted small desktop-only">In any app: hold <b>Alt</b> and talk to Max (Wispr Flow listens, nothing gets typed). Or use Flow as usual and start with "Hey Max". <b>Esc</b> ends the chat. <span id="kbd-talk" class="hidden"></span></p>
             </div>
           </section>
@@ -92,8 +105,8 @@
 
           <section class="card web-only genz-demo">
             <div class="card-title">
-              <h2 class="serif">Meet Gen Z Max</h2>
-              <span class="muted small">Your desi bestie mode. Say something to Max and see how it reacts (sound on).</span>
+              <h2 class="serif">Test Max: talk to it</h2>
+              <span class="muted small">Gen Z mode, live on the same server as the app. Sound on. It remembers what you said.</span>
             </div>
             <div class="genz-stage">
               <span id="genz-ghost" class="ghost-slot big" data-eyes="center" data-ghost></span>
@@ -102,7 +115,14 @@
                 <p id="genz-say" class="genz-say hidden"></p>
               </div>
             </div>
-            <input id="genz-input" class="talk-input" placeholder="Try: “Max, do my work NOW” or “Max you're useless”, then Enter" autocomplete="off" />
+            <div class="genz-tries">
+              <button type="button" class="chip" data-try="Max you are a b!tch">Swear at it</button>
+              <button type="button" class="chip" data-try="Max, do you know I became the CEO of Google?">Brag</button>
+              <button type="button" class="chip" data-try="MAX WHY ARE YOU NOT WORKING">Yell</button>
+              <button type="button" class="chip" data-try="Max you're the worst product ever">Roast it</button>
+              <button type="button" class="chip" data-try="Max I got the job!!">Good news</button>
+            </div>
+            <input id="genz-input" class="talk-input" placeholder="Or say anything with Wispr Flow (or type it), then Enter" autocomplete="off" />
           </section>
 
           <div id="setup" class="card setup"></div>

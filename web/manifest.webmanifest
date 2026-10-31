@@ -1,7 +1,7 @@
 {
   "name": "Wispr Max",
   "short_name": "Wispr Max",
-  "description": "Wispr Flow, maxed out: talk, and Max writes the message for you.",
+  "description": "A little AI buddy on your desktop that teaches you how to do the work, with memes and slang.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

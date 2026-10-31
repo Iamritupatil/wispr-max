@@ -50,7 +50,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
-import { holdFlowKey, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
+import { holdFlowKey, hookError, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
@@ -261,7 +261,8 @@ async function takeBack() {
 
 /** Alt down: the ghost listens, Max holds your Flow key, and Flow types into Max's hidden box, never yours. */
 function listenThroughFlow() {
-  if (current && !(current.fromFlow && (current.interruptible || current.asking))) return;
+  // Alt always wins: whatever Max was doing (or stuck on) makes way, except an agent still working.
+  if (current && current.fromFlow && current.interruptible === false && !current.asking) return;
   const asking = current?.asking;
   dropCurrent();
   clearOffer();
@@ -330,7 +331,7 @@ async function takeOverFromFlow(instruction: string, typed = true) {
 
 /** A Max session started by a Flow dictation, with the ghost up and Esc to cancel. */
 function flowSession(): Session {
-  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0, fromFlow: true };
+  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0, fromFlow: true, interruptible: true };
   current = s;
   showOverlay();
   try {
@@ -421,6 +422,7 @@ async function guideFromFlow(question: string, typed = false) {
 /** "Hey Max, tell Claude to…": runs it on the agent signed in on this computer. */
 async function agentFromFlow(agent: AgentName, task: string, typed = false) {
   const s = flowSession();
+  s.interruptible = false; // agents take minutes; talking to Max doesn't kill them
   if (typed) void takeBack();
   const name = AGENT_LABEL[agent];
   setOverlay({ phase: "listening", mode: "max", question: `${name} is on it…` });
@@ -1218,6 +1220,7 @@ function pretty(accelerator: string) {
   return accelerator.replace("CommandOrControl", isMac ? "Cmd" : "Ctrl");
 }
 
+let hookWarned = false;
 function registerHotkeys() {
   globalShortcut.unregisterAll();
   // Hold the talk key to talk (release to send), or double-tap it.
@@ -1244,6 +1247,18 @@ function registerHotkeys() {
       if (!flowMode()) onHotkey("dictate");
     },
   });
+  if (!hookRunning() && !hookWarned) {
+    // Without the keyboard hook Alt can't work: say so instead of silently doing nothing.
+    hookWarned = true;
+    showOverlay();
+    setOverlay({
+      phase: "error",
+      mode: "max",
+      message: isMac
+        ? "Max can't see the Alt key. Allow Wispr Max in System Settings → Privacy & Security → Accessibility and Input Monitoring, then restart it."
+        : `Max can't see the Alt key (${hookError || "keyboard hook didn't start"}). Restart Wispr Max; if it keeps happening, run it once as administrator.`,
+    });
+  }
   const register = (accelerator: string, mode: Mode) => {
     try {
       return globalShortcut.register(accelerator, () => onHotkey(mode));
