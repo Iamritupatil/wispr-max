@@ -112,6 +112,12 @@ export interface Settings {
   agentFolder: string;
   /** The ghost speaks its answers out loud. */
   talkBack: boolean;
+  /** Formal Max, or Gen Z Max: memes, GIFs and attitude. */
+  vibe: "formal" | "genz";
+  /** Gen Z mode: how often Max peeks at the screen and says something first. */
+  chaos: "off" | "chill" | "normal" | "unhinged";
+  /** Where Gen Z Max finds the user's meme clips (empty: Documents/Wispr Max memes). */
+  memeFolder: string;
   /** Hold to talk, double-tap for hands-free. */
   talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
   /** A request heard in a Flow dictation (without "Hey Max"): write it at once, or offer first. */
@@ -201,7 +207,11 @@ export type OverlayCommand =
   /** Appear in a puff of smoke. */
   | { type: "appear" }
   /** Say it out loud. */
-  | { type: "say"; text: string };
+  | { type: "say"; text: string; desi?: boolean }
+  /** Show a reaction GIF over the ghost for a while (null hides it). */
+  | { type: "gif"; url: string | null }
+  /** Play one of the user's meme clips (audio out loud; images and videos over the ghost). */
+  | { type: "clip"; url: string; kind: "audio" | "image" | "video" };
 
 export interface AudioPayload {
   data: Uint8Array;

@@ -1,4 +1,5 @@
-import type { ComposeInput } from "../src/core/ai";
+import type { ComposeInput, ReactEvent } from "../src/core/ai";
+import { findGif } from "../src/core/gif";
 import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
 
@@ -6,7 +7,8 @@ type Body =
   | { op: "compose" | "auto"; input: ComposeInput & { vocabulary?: string[] } }
   | { op: "polish"; transcript: string; context: FocusContext; vocabulary: string[]; tone?: string }
   | { op: "extract"; text: string }
-  | { op: "guide"; question: string; screenshot?: Screenshot };
+  | { op: "guide"; question: string; screenshot?: Screenshot }
+  | { op: "react"; event: ReactEvent; text: string; screenshot?: Screenshot; clips?: string[] };
 
 /** Everything Max writes goes through here: compose, dictate-or-ask, polish, read a contact. */
 export async function POST(request: Request) {
@@ -30,6 +32,12 @@ export async function POST(request: Request) {
         return writer.auto(body.input, handlers, request.signal);
       case "polish":
         return writer.polish(body.transcript, body.context, body.vocabulary, body.tone, request.signal);
+      case "react":
+        return writer.react(body.event, body.text, body.screenshot, (body.clips ?? []).slice(0, 200), request.signal).then(async (r) => ({
+          ...r,
+          // The user's own clip comes first; GIPHY only when no clip was picked.
+          gifUrl: r.skip || r.clip ? undefined : await findGif(r.gif, process.env.GIPHY_API_KEY),
+        }));
       case "guide":
         return writer.guide(body.question, body.screenshot, request.signal);
       case "extract":

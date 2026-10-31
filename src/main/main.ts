@@ -51,6 +51,9 @@ import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
 import { setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
+import { findGif } from "../core/gif";
+import { type Clip, defaultMemeFolder, ensureMemeFolder, findClip, listClips } from "./memes";
+import type { ReactEvent } from "../core/ai";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
@@ -167,6 +170,8 @@ function onFlowDictation(d: FlowDictation) {
   const called = calledMax(d.text);
   if (called) {
     clearOffer();
+    // Gen Z Max has opinions about how you talk to it.
+    void react("command", called);
     // "Hey Max, …": run your agent, help with what's on screen, or write.
     const route = routeCall(called, contacts);
     if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
@@ -245,7 +250,7 @@ function ghostSays(s: Session, text: string, point?: Point) {
   if (current !== s) return;
   if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
   setOverlay({ phase: "done", mode: "max", question: text });
-  if (settings.talkBack) sendOverlay({ type: "say", text });
+  if (settings.talkBack) sendOverlay({ type: "say", text, desi: genz() });
   // Long enough to read (or hear) it, then back home.
   endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
 }
@@ -283,6 +288,63 @@ async function agentFromFlow(agent: AgentName, task: string) {
     if (current !== s) return;
     ghostSays(s, err instanceof Error ? err.message : String(err));
   }
+}
+
+// ---------- Gen Z Max: memes, GIFs, attitude, and talking first ----------
+
+const genz = () => settings.vibe === "genz";
+const PEEK_MINUTES = { off: 0, chill: 20, normal: 7, unhinged: 2.5 } as const;
+let peekTimer: NodeJS.Timeout | undefined;
+let reactionTimer: NodeJS.Timeout | undefined;
+
+/** Gen Z Max reacts: a GIF over its head, a filmy line out loud, maybe a meme song. */
+async function react(event: ReactEvent, text = "", withScreen = false) {
+  if (!genz()) return;
+  try {
+    const shot = withScreen ? await captureScreen() : undefined;
+    const clips = listClips(memeFolder());
+    const r = await writer().react(event, text, shot, clips.map((c) => c.name));
+    const clip = findClip(clips, r.clip);
+    if (r.skip || (!clip && !r.say.trim())) return;
+    const gif = clip ? undefined : (r.gifUrl ?? (await findGif(r.gif, process.env.GIPHY_API_KEY)));
+    showReaction(r.say, clip, gif, r.song, event !== "command");
+  } catch {
+    // A missed joke is fine.
+  }
+}
+
+const memeFolder = () => settings.memeFolder || defaultMemeFolder();
+
+/** `ownsGhost`: Max spoke up by itself (hello, a peek), so the bubble is the reaction's; for a command, it belongs to the task. */
+function showReaction(say: string, clip: Clip | undefined, gifUrl: string | undefined, song: string, ownsGhost: boolean) {
+  const idle = ownsGhost && !current;
+  showOverlay();
+  if (clip) sendOverlay({ type: "clip", url: clip.url, kind: clip.kind });
+  else if (gifUrl) sendOverlay({ type: "gif", url: gifUrl });
+  // While Max is busy with a task, the bubble is the task's; the reaction is the clip.
+  if (idle && say.trim()) setOverlay({ phase: "done", mode: "max", question: say });
+  // Your clip does the talking; Max only speaks for itself when there's no clip.
+  if (!clip && settings.talkBack && say.trim()) sendOverlay({ type: "say", text: say, desi: true });
+  if (song.trim()) void shell.openExternal(`https://open.spotify.com/search/${encodeURIComponent(song)}`);
+  clearTimeout(reactionTimer);
+  reactionTimer = setTimeout(() => {
+    sendOverlay({ type: "gif", url: null });
+    if (!idle || current) return;
+    placeOverlay(currentAnchor());
+    setOverlay({ phase: "idle", mode: "dictate" });
+    if (!ghostStaysOut()) overlay.hide();
+  }, Math.max(6000, say.split(/\s+/).length * 450));
+}
+
+/** Every so often (a little randomly, so it feels alive), Max peeks at the screen and may say something. */
+function syncPeeks() {
+  clearTimeout(peekTimer);
+  const minutes = genz() ? PEEK_MINUTES[settings.chaos] : 0;
+  if (!minutes) return;
+  peekTimer = setTimeout(() => {
+    if (!current) void react("peek", "", true);
+    syncPeeks();
+  }, minutes * 60_000 * (0.6 + Math.random() * 0.8));
 }
 
 let liveAnchor: Point | null = null;
@@ -1041,6 +1103,8 @@ function registerIpc() {
     registerHotkeys();
     syncIdleGhost();
     syncFlowWatcher();
+    syncPeeks();
+    if (genz()) ensureMemeFolder(memeFolder());
     return snapshot();
   });
 
@@ -1198,7 +1262,12 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     registerHotkeys();
     syncFlowWatcher();
-    if (flowMode()) {
+    syncPeeks();
+    if (genz()) {
+      ensureMemeFolder(memeFolder());
+      setTimeout(() => void react("hello"), 2500);
+    }
+    if (flowMode() && !genz()) {
       showOverlay();
       setOverlay(
         flowWatch.ok

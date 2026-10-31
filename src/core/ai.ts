@@ -14,6 +14,8 @@ import {
   placeholderQuestion,
   GUIDE_SYSTEM,
   GUIDE_SCHEMA,
+  GENZ_SYSTEM,
+  REACT_SCHEMA,
   MAX_QUESTIONS,
   type ComposeOptions,
 } from "./prompts";
@@ -72,7 +74,21 @@ function fallbackFor(model: string) {
 }
 
 /** What the writing pipeline needs from a writer: Claude directly, or the hosted backend. */
-export type WriterLike = Pick<Writer, "compose" | "auto" | "polish" | "extractContact" | "guide">;
+export type WriterLike = Pick<Writer, "compose" | "auto" | "polish" | "extractContact" | "guide" | "react">;
+
+export type ReactEvent = "command" | "peek" | "hello";
+
+/** Gen Z Max's reaction: stay quiet, or a line, a GIF and maybe a song. */
+export interface Reaction {
+  skip: boolean;
+  /** Name of one of the user's meme clips to play, or "". */
+  clip: string;
+  say: string;
+  gif: string;
+  song: string;
+  /** Filled in by the server when it has a GIPHY key. */
+  gifUrl?: string;
+}
 
 /** A spoken answer about the screen, and where on it to look (fractions of the screenshot). */
 export interface Guidance {
@@ -253,6 +269,27 @@ export class Writer {
       const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean };
       const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
       return out.has_point && inside(out.x) && inside(out.y) ? { say: out.say, point: { x: out.x!, y: out.y! } } : { say: out.say };
+    } catch (err) {
+      throw toAiError(err);
+    }
+  }
+
+  /** Gen Z mode: reacts to what the user said, or to a peek at their screen. */
+  async react(event: ReactEvent, text: string, screenshot: Screenshot | undefined, clips: string[] = [], signal?: AbortSignal): Promise<Reaction> {
+    try {
+      const res = await this.client.beta.messages.create(
+        {
+          model: this.opts.model,
+          max_tokens: 2000,
+          output_config: { effort: "low", format: { type: "json_schema", schema: REACT_SCHEMA } },
+          ...fallbackFor(this.opts.model),
+          system: GENZ_SYSTEM,
+          messages: [{ role: "user", content: userContent(`<event>${event}</event>\n<said>${text}</said>${clips.length ? `\n<clips>\n${clips.join("\n")}\n</clips>` : ""}`, screenshot) }],
+        },
+        { signal },
+      );
+      if (res.stop_reason === "refusal") return { skip: true, clip: "", say: "", gif: "", song: "" };
+      return JSON.parse(res.content.map((b) => (b.type === "text" ? b.text : "")).join("")) as Reaction;
     } catch (err) {
       throw toAiError(err);
     }

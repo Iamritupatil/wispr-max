@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: file: https://*.giphy.com; media-src file:" />
     <link rel="stylesheet" href="overlay.css" />
   </head>
   <body>
@@ -17,6 +17,8 @@
         <div id="text" class="text"></div>
       </section>
 
+      <img id="gif" class="gif" alt="" />
+      <video id="vid" class="gif" playsinline></video>
       <div id="ask" class="ask" role="status"><span id="ask-q"></span></div>
 
       <div id="bar" class="bar" title="">

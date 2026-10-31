@@ -1,6 +1,6 @@
 import type { Written } from "../shared/api";
 import type { Contact, FocusContext, Screenshot } from "../shared/types";
-import type { AutoHandlers, ComposeInput, Guidance, StreamHandlers, WriterLike } from "./ai";
+import type { AutoHandlers, ComposeInput, Guidance, Reaction, ReactEvent, StreamHandlers, WriterLike } from "./ai";
 import type { Intent } from "./intent";
 
 // The hosted backend, behind the same interface as calling Claude directly.
@@ -39,6 +39,10 @@ export class RemoteWriter implements WriterLike {
 
   polish(transcript: string, context: FocusContext, vocabulary: string[], tone?: string, signal?: AbortSignal) {
     return this.call("polish", { transcript, context, vocabulary, tone }, {}, signal) as Promise<string>;
+  }
+
+  react(event: ReactEvent, text: string, screenshot: Screenshot | undefined, clips: string[] = [], signal?: AbortSignal): Promise<Reaction> {
+    return this.call("react", { event, text, screenshot, clips }, {}, signal) as Promise<Reaction>;
   }
 
   guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal): Promise<Guidance> {

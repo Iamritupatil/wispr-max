@@ -231,10 +231,33 @@ window.overlay.onCommand(async (cmd) => {
       bar.classList.add("poof");
       setTimeout(() => bar.classList.remove("poof"), 1100);
     } else if (cmd.type === "say") {
-      speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(cmd.text);
       u.rate = 1.05;
+      // Gen Z Max speaks Hinglish: an Indian English voice reads it best.
+      if (cmd.desi) u.voice = speechSynthesis.getVoices().find((v) => v.lang === "en-IN") ?? null;
       speechSynthesis.speak(u);
+    } else if (cmd.type === "gif") {
+      const gif = document.getElementById("gif") as HTMLImageElement;
+      const vid = document.getElementById("vid") as HTMLVideoElement;
+      if (cmd.url) gif.src = cmd.url;
+      gif.classList.toggle("show", Boolean(cmd.url));
+      if (!cmd.url) {
+        vid.pause();
+        vid.classList.remove("show");
+      }
+    } else if (cmd.type === "clip") {
+      speechSynthesis.cancel(); // the clip is the punchline
+      if (cmd.kind === "audio") void new Audio(cmd.url).play().catch(() => undefined);
+      else if (cmd.kind === "image") {
+        const gif = document.getElementById("gif") as HTMLImageElement;
+        gif.src = cmd.url;
+        gif.classList.add("show");
+      } else {
+        const vid = document.getElementById("vid") as HTMLVideoElement;
+        vid.src = cmd.url;
+        vid.classList.add("show");
+        void vid.play().catch(() => undefined);
+      }
     } else if (cmd.type === "cancel") {
       speechSynthesis.cancel();
       await recorder.cancel();
