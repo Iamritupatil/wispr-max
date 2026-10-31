@@ -191,9 +191,23 @@ function onFlowDictation(d: FlowDictation) {
     if (route.kind === "guide") return void guideFromFlow(route.question);
     return void takeOverFromFlow(route.instruction);
   }
-  // Anything not addressed to Max is the user's own dictation: Flow typed it,
-  // and it stays exactly as it is. Max only acts when called by name.
+  // Right after Max spoke, the user is talking back to it: no "Max" needed.
+  if (Date.now() < conversation.until) {
+    const route = routeCall(d.text, contacts);
+    if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
+    if (route.kind === "write") {
+      const write = guessIntent(d.text, contacts).intent === "command";
+      if (write) return void takeOverFromFlow(route.instruction);
+    }
+    return void guideFromFlow(`(Replying to what you just said: "${conversation.said}") ${d.text}`);
+  }
+  // Anything else is the user's own dictation: Flow typed it, and it stays
+  // exactly as it is. Max only acts when called by name.
 }
+
+/** After Max talks, a short window where the user can answer without saying "Max". */
+const CONVERSATION_MS = 30_000;
+const conversation = { until: 0, said: "" };
 
 function clearOffer() {
   if (!offer) return;
@@ -257,6 +271,8 @@ function ghostSays(s: Session, text: string, point?: Point) {
 
 /** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
 function showStep(text: string, point?: Point) {
+  conversation.until = Date.now() + CONVERSATION_MS;
+  conversation.said = text;
   // The ghost lands right beside the button, its bubble pointing at it.
   if (point) flyTo({ x: point.x + 26, y: point.y + 6 });
   setOverlay({ phase: "done", mode: "max", question: text });
@@ -279,7 +295,8 @@ async function guideFromFlow(question: string) {
       const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
       const shot = await captureScreen();
       if (current !== s) return;
-      const res = await writer().guide(question, shot, s.abort.signal, steps, genz());
+      const now = new Date().toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
+      const res = await writer().guide(`${question}\n(It's ${now} on the user's computer.)`, shot, s.abort.signal, steps, genz());
       if (current !== s) return;
       // Gen Z mode and an obvious question: the roast comes with a meme (sound first, then Max).
       if (res.soundUrl) sendOverlay({ type: "clip", url: res.soundUrl, kind: "audio" });
