@@ -52,7 +52,7 @@ import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
 import { setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { findGif } from "../core/gif";
-import { type Clip, defaultMemeFolder, ensureMemeFolder, findClip, listClips } from "./memes";
+import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
 import type { ReactEvent } from "../core/ai";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
@@ -1107,7 +1107,6 @@ function registerIpc() {
     syncIdleGhost();
     syncFlowWatcher();
     syncPeeks();
-    if (genz()) ensureMemeFolder(memeFolder());
     return snapshot();
   });
 
@@ -1266,10 +1265,7 @@ if (!app.requestSingleInstanceLock()) {
     registerHotkeys();
     syncFlowWatcher();
     syncPeeks();
-    if (genz()) {
-      ensureMemeFolder(memeFolder());
-      setTimeout(() => void react("hello"), 2500);
-    }
+    if (genz()) setTimeout(() => void react("hello"), 2500);
     if (flowMode() && !genz()) {
       showOverlay();
       setOverlay(

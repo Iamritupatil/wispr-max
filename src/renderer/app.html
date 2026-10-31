@@ -50,7 +50,7 @@
                 <button type="button" class="btn small" data-share-screen data-tour="Replying to a chat? Paste a screenshot of it (Win+Shift+S, then Ctrl+V) or share the tab, and Max reads the conversation first." data-tour-title="Show Max the chat" data-tour-step="2">Share a tab</button>
                 <span class="muted small" data-share-status></span>
               </div>
-              <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key. No Flow? Click the ghost to use your mic.</p>
+              <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key.</p>
               <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
               <p class="muted small desktop-only">In any app: <b>hold <span id="kbd-talk"></span></b> and talk (or double-tap it). Say what to type, or ask Max to write something. That's the only key.</p>
             </div>
@@ -274,8 +274,8 @@
 
             <div class="card" id="flow-card">
               <h2>Wispr Flow</h2>
-              <p class="muted small">Wispr Max is a layer on <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a>: Flow turns your voice into text, Max works out what you want and writes it. Rather not use Flow? Max can listen on its own.</p>
-              <div class="row">
+              <p class="muted small">Wispr Max is a layer on <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a>: Flow turns your voice into text, Max works out what you want and writes it.</p>
+              <div class="row hidden">
                 <div class="segmented" role="radiogroup" aria-label="How you talk to Max">
                   <label><input type="radio" name="voiceInput" value="flow" />With Wispr Flow</label>
                   <label><input type="radio" name="voiceInput" value="built-in" />On its own</label>
@@ -303,10 +303,10 @@
                   <label><input type="radio" name="vibe" value="genz" />Gen Z</label>
                 </div>
               </div>
-              <p class="muted small">Gen Z Max is your desi bestie: filmy lines, reaction GIFs and the odd meme song on Spotify. Boss it around and it'll sass you back (then still help).</p>
+              <p class="muted small">Gen Z Max is your desi bestie: meme sounds, reaction GIFs and the odd meme song on Spotify, straight from the internet, nothing to set up. Boss it around and it'll sass you back (then still help).</p>
               <div class="field">
-                <label>Meme folder <span class="muted">(audio, GIFs and videos, named after what they are)</span></label>
-                <input name="memeFolder" placeholder="Documents\Wispr Max memes" autocomplete="off" />
+                <label>Your own clips <span class="muted">(optional: a folder of audio, GIFs or videos, named after what they are)</span></label>
+                <input name="memeFolder" placeholder="Not needed: Max already has unlimited memes from Myinstants and GIPHY" autocomplete="off" />
               </div>
               <div class="field">
                 <label>How often Max says something first</label>
@@ -329,7 +329,7 @@
               <label class="toggle"><input type="checkbox" name="talkBack" /><span><b>Talk back</b> Max says its answers out loud.</span></label>
             </div>
 
-            <div class="card desktop-only">
+            <div class="card hidden">
               <h2>Your key</h2>
               <div class="field">
                 <label>Talk key: hold it to talk, or double-tap it</label>
@@ -378,7 +378,7 @@
               </div>
             </div>
 
-            <div class="card desktop-only">
+            <div class="card hidden">
               <h2>Voice</h2>
               <div class="grid-2">
                 <div class="field">

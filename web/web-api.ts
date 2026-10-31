@@ -42,6 +42,7 @@ let settings: Settings = {
   ...stored,
   profile: { ...DEFAULT_SETTINGS.profile, ...stored.profile },
   styles: { ...DEFAULT_SETTINGS.styles, ...stored.styles },
+  voiceInput: "flow", // Max always listens through Wispr Flow
 };
 let contacts = load<Contact[]>(KEYS.contacts, []);
 let history = load<HistoryEntry[]>(KEYS.history, []);

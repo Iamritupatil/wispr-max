@@ -52,6 +52,7 @@ export function loadSettings(): Settings {
     profile: { ...DEFAULT_SETTINGS.profile, ...raw.profile },
     styles: { ...DEFAULT_SETTINGS.styles, ...raw.styles },
   };
+  s.voiceInput = "flow"; // Max always listens through Wispr Flow
   if (!Array.isArray(s.dictionary)) s.dictionary = [];
   if (!Array.isArray(s.snippets)) s.snippets = [];
   for (const k of SECRET_KEYS) s[k] = unseal(s[k]);
