@@ -55,7 +55,7 @@ import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
 import type { ReactEvent } from "../core/ai";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
-import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
+import { checkForUpdates, installUpdate, onUpdateState, updateState, updateQuietly } from "./updater";
 
 const isMac = process.platform === "darwin";
 const OVERLAY_SIZE = { width: 560, height: 320 };
@@ -875,7 +875,10 @@ const ghostStaysOut = () => settings.showIdleGhost;
 
 function setOverlay(state: OverlayState) {
   // With Wispr Flow the ghost stays quiet: only its question bubble ever shows.
-  if (flowMode() && (!current || current.fromFlow) && state.phase !== "error") state = { ...state, minimal: true };
+  if (flowMode() && (!current || current.fromFlow)) {
+    state = { ...state, minimal: true };
+    if (state.phase === "error" && state.message) state = { ...state, question: state.message };
+  }
   overlay.webContents.send("overlay:state", state);
 }
 
@@ -1294,8 +1297,8 @@ if (!app.requestSingleInstanceLock()) {
     if (!process.argv.includes("--hidden") && !(flowMode() && flowWatch.ok)) openMainWindow();
 
     // Look for a new version quietly after start-up, then every six hours.
-    setTimeout(() => void checkForUpdates(), 15_000);
-    setInterval(() => void checkForUpdates(), 6 * 60 * 60_000);
+    setTimeout(() => void updateQuietly(), 15_000);
+    setInterval(() => void updateQuietly(), 3 * 60 * 60_000);
 
     app.on("activate", () => openMainWindow());
   });

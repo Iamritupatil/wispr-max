@@ -141,7 +141,7 @@ function render(s: OverlayState) {
   root.dataset.minimal = String(Boolean(s.minimal));
   root.dataset.mode = s.mode;
   const offering = s.phase === "offer";
-  root.dataset.asking = String(offering || (Boolean(s.question) && (s.phase === "listening" || s.phase === "done")));
+  root.dataset.asking = String(offering || (Boolean(s.question) && (s.phase === "listening" || s.phase === "done" || s.phase === "error")));
   $("ask-q").textContent = offering ? `Sounds like a request: “${s.transcript ?? ""}”` : (s.question ?? "");
   $("label").textContent = LABELS[s.phase](s);
   $("to").textContent = s.contacts?.length ? `To: ${s.contacts.join(", ")}` : "";

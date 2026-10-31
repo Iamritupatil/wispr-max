@@ -80,6 +80,24 @@ export async function checkForUpdates(): Promise<UpdateState> {
   }
 }
 
+/**
+ * Installed apps update themselves: a new release downloads quietly in the
+ * background and is installed the next time Wispr Max quits or restarts.
+ */
+export async function updateQuietly() {
+  if (state.kind !== "release") return void checkForUpdates();
+  const checked = await checkForUpdates();
+  if (checked.status !== "available") return;
+  try {
+    autoUpdater.autoInstallOnAppQuit = true;
+    set({ status: "downloading", message: `Getting version ${checked.latest} in the background…` });
+    await autoUpdater.downloadUpdate();
+    set({ status: "none", message: `Version ${checked.latest} is ready. It installs the next time Wispr Max restarts.` });
+  } catch (err) {
+    set({ status: "error", message: `Couldn't download the update: ${(err as Error).message.split("\n")[0]}` });
+  }
+}
+
 export async function installUpdate(): Promise<UpdateState> {
   if (state.status !== "available") return state;
   try {

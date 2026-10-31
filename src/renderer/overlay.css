@@ -512,3 +512,29 @@ body {
 @keyframes pop-in {
   from { transform: translateX(var(--offset-x, 0px)) scale(0.4); opacity: 0; }
 }
+
+/* With Wispr Flow, Max has no pill of its own (Flow already shows one while you
+   talk): just the ghost, with three little thinking dots over its head. */
+.ghost-wrap {
+  position: relative;
+}
+
+.root[data-minimal="true"][data-phase="thinking"] .ghost-wrap::before,
+.root[data-minimal="true"][data-phase="writing"] .ghost-wrap::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: -8px 0 0 var(--mint), 8px 0 0 var(--mint);
+  animation: think 1s ease-in-out infinite;
+}
+
+@keyframes think {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}

@@ -1,6 +1,6 @@
 {
   "name": "wispr-max",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Wispr Flow, maxed out: voice dictation plus an AI writer that types into any app.",
   "main": "dist/main.js",
   "scripts": {
@@ -72,7 +72,8 @@
       {
         "provider": "github",
         "owner": "Iamritupatil",
-        "repo": "wispr-max"
+        "repo": "wispr-max",
+        "releaseType": "release"
       }
     ],
     "nsis": {
