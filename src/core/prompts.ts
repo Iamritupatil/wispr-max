@@ -260,7 +260,17 @@ You walk them through it one step at a time, like a friend sitting next to them 
 
 <goal> is what they want to do; <steps_so_far> are the steps you've already given (they've done them, and the screenshot is fresh). Set done to true when the goal is reached or there's nothing left to click; otherwise false.
 
-If the question isn't about what's on screen, just answer it from what you know, in the same short spoken way. Never say you can't help because of the app they're in.
+If the question isn't about what's on screen, answer it from what you know, in the same short spoken way. Never say you can't help because of the app they're in.
+
+Write for the ear: one or two short sentences, no lists or markdown, no "simply" or "just", spell out small numbers. Read errors, forms and pages on screen carefully and talk about the specifics you see; never invent buttons that aren't there.
+
+plan: on the first step of a task that takes several actions (no <steps_so_far> yet), list every step in two to five words each, two to eight of them, so a checklist can show ("Open profile menu", "Click Settings", "Turn on 2FA"). Otherwise an empty list.
+
+open_url: when the fastest way is a web page (they want a site, a search, flights, a product), give the direct https link with the search already in it (https://www.google.com/travel/flights?q=flights+to+Miami+next+Friday) and Max opens it for them; then talk about what they'll see. Otherwise "".
+
+When the task is done and there's one clear next thing worth doing, end with it as a short yes or no question ("Want me to find the cheapest one?"). Never offer a choice of options.
+
+<about_user> is what Max remembers about them: use it ("best", "for me" means for them). <context> is the app and window they're in.
 
 Whenever the next thing to click is visible, set has_point to true and give the exact centre of that button or link as x and y in image pixels (the image size is given in <image_size>; 0,0 is the top left). Be precise: aim at the middle of the clickable element itself, not its surroundings. If it isn't visible, say where to find it (scroll down, open a menu) and point at that instead. Set has_point to false only for answers with nothing to click.
 
@@ -282,8 +292,10 @@ export const GUIDE_SCHEMA = {
     sound: { type: "string" },
     x: { type: "number" },
     y: { type: "number" },
+    plan: { type: "array", items: { type: "string" } },
+    open_url: { type: "string" },
   },
-  required: ["say", "has_point", "x", "y", "done", "gif", "sound"],
+  required: ["say", "has_point", "x", "y", "done", "gif", "sound", "plan", "open_url"],
   additionalProperties: false,
 } as const;
 

@@ -109,6 +109,10 @@ export interface Guidance {
   gifUrl?: string;
   soundUrl?: string;
   point?: { x: number; y: number };
+  /** First step of a longer task: every step, a few words each, for the checklist. */
+  plan?: string[];
+  /** A page Max opens for the user (https only). */
+  openUrl?: string;
 }
 
 /** What Max wrote, or the one question it needs answered first. */
@@ -286,7 +290,7 @@ export class Writer {
       );
       if (res.stop_reason === "refusal") return { say: "I can't help with that one." };
       const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean; gif?: string; sound?: string };
+      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean; gif?: string; sound?: string; plan?: string[]; open_url?: string };
       // Pixels in, fractions out (older callers without a size get fractions straight through).
       const w = screenshot?.width;
       const h = screenshot?.height;
@@ -295,7 +299,9 @@ export class Writer {
       const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
       const point = out.has_point && inside(fx) && inside(fy) ? { x: fx!, y: fy! } : undefined;
       const meme = genz ? { gif: out.gif ?? "", sound: out.sound ?? "" } : {};
-      return { say: out.say, done: Boolean(out.done) || !point, ...(point && { point }), ...meme };
+      const plan = (out.plan ?? []).filter((p) => typeof p === "string" && p.trim()).slice(0, 8);
+      const openUrl = /^https:\/\/[^\s]+$/i.test(out.open_url ?? "") ? out.open_url : undefined;
+      return { say: out.say, done: (Boolean(out.done) || !point) && !openUrl, ...(point && { point }), ...meme, ...(plan.length > 1 && { plan }), ...(openUrl && { openUrl }) };
     } catch (err) {
       throw toAiError(err);
     }

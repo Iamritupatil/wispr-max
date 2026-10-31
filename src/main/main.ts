@@ -30,7 +30,7 @@ import {
   parseContactsFile,
 } from "../core/contacts";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
-import { abuseKind, calledMax, guessIntent, routeCall } from "../core/intent";
+import { abuseKind, calledMax, guessIntent, memoryCommand, routeCall } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
@@ -200,6 +200,8 @@ function withHistory(text: string) {
  * `typed`: Flow typed it into the user's box, so take that back first.
  */
 function answerMax(text: string, typed: boolean) {
+  const mem = memoryCommand(text);
+  if (mem) return rememberOrForget(mem, typed);
   const route = routeCall(text, contacts);
   const said = withHistory(text);
   conversation.open = true;
@@ -216,6 +218,27 @@ function answerMax(text: string, typed: boolean) {
     return void takeOverFromFlow(route.instruction, typed);
   }
   void guideFromFlow(said, typed);
+}
+
+/** "Remember I prefer aisle seats" / "forget my seat thing": kept on this computer, used in every answer. */
+async function rememberOrForget(mem: NonNullable<ReturnType<typeof memoryCommand>>, typed: boolean) {
+  const s = flowSession();
+  if (typed) await takeBack();
+  const facts = settings.memory ?? [];
+  if (mem.kind === "remember") {
+    settings.memory = [...facts.filter((f) => f.toLowerCase() !== mem.fact.toLowerCase()), mem.fact].slice(-50);
+  } else {
+    const words = mem.about.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+    settings.memory = facts.filter((f) => !words.some((w) => f.toLowerCase().includes(w)));
+  }
+  store.saveSettings(settings);
+  ghostSays(s, mem.kind === "remember" ? "Got it, I'll remember that." : facts.length === settings.memory.length ? "I didn't have anything about that." : "Done, forgotten.");
+}
+
+/** What Max knows about you, for the model. */
+function aboutUser() {
+  const facts = settings.memory ?? [];
+  return facts.length ? `\n<about_user>\n${facts.join("\n")}\n</about_user>` : "";
 }
 
 /** A new request while Max is mid-walkthrough: drop the old one quietly. */
@@ -345,7 +368,7 @@ function showStep(text: string, point?: Point, voice = true) {
   // The ghost lands right beside the button, its bubble pointing at it.
   if (point) flyTo({ x: point.x + 26, y: point.y + 6 });
   setOverlay({ phase: "done", mode: "max", question: text });
-  if (settings.talkBack && voice) void speak(text);
+  if (settings.talkBack && voice) void speak(text.replace(/^\d+\/\d+ · /, ""));
 }
 
 const GUIDE_STEPS = 6;
@@ -360,14 +383,17 @@ async function guideFromFlow(question: string, typed = false) {
   s.interruptible = true;
   if (typed) await takeBack();
   const steps: string[] = [];
+  let plan: string[] = [];
   try {
     for (let i = 0; i < GUIDE_STEPS; i++) {
       setOverlay({ phase: "thinking", mode: "max", transcript: question });
       const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-      const shot = await captureScreen();
+      // The screen, plus which app and window it is: Max reads both.
+      const [shot, where] = await Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
       if (current !== s) return;
       const now = new Date().toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
-      const res = await writer().guide(`${question}\n(It's ${now} on the user's computer.)`, shot, s.abort.signal, steps, genz());
+      const context = where.app ? `\n<context>${where.app}${where.windowTitle ? `: ${where.windowTitle}` : ""}</context>` : "";
+      const res = await writer().guide(`${question}\n(It's ${now} on the user's computer.)${context}${aboutUser()}`, shot, s.abort.signal, steps, genz());
       if (current !== s) return;
       // Gen Z mode and an obvious question: the roast comes with a meme (sound first, then Max).
       if (res.soundUrl) sendOverlay({ type: "clip", url: res.soundUrl, kind: "audio" });
@@ -379,15 +405,28 @@ async function guideFromFlow(question: string, typed = false) {
       const point = res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height };
       // One voice at a time: when a meme sound plays, Max's line is in the bubble only.
       const voice = !res.soundUrl;
-      if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, res.say, point, voice);
-      showStep(res.say, point, voice);
+      if (res.plan && !plan.length) plan = res.plan;
+      // "Step 2 of 4" in the bubble; Max only says the step itself.
+      const label = (say: string) => (plan.length > 1 ? `${Math.min(i + 1, plan.length)}/${plan.length} · ${say}` : say);
+      if (res.openUrl) {
+        // Faster than explaining where to type: Max opens it, then looks again.
+        void shell.openExternal(res.openUrl);
+        showStep(label(res.say), undefined, voice);
+        steps.push(`${res.say} (Max opened ${res.openUrl})`);
+        await sleep(3500);
+        if (current !== s) return;
+        continue;
+      }
+      if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, label(res.say), point, voice);
+      showStep(label(res.say), point, voice);
       steps.push(res.say);
-      // Wait for the click, then give the page a moment to change.
+      // Wait for the click (or Enter), then give the page a moment to change.
       const clicked = await nextClick(90_000);
       if (current !== s) return;
       if (!clicked) return endSession(s, 0);
       await sleep(1200);
     }
+    endSession(s, 8000);
   } catch (err) {
     if (isAbort(err) || current !== s) return;
     failSession(s, err instanceof Error ? err.message : String(err));
@@ -431,7 +470,7 @@ async function react(event: ReactEvent, text = "", withScreen = false, ownsGhost
   try {
     const shot = withScreen ? await captureScreen() : undefined;
     const clips = listClips(memeFolder());
-    const r = await writer().react(event, text, shot, clips.map((c) => c.name), undefined, recentReactions);
+    const r = await writer().react(event, text + aboutUser(), shot, clips.map((c) => c.name), undefined, recentReactions);
     remember(r.clip || r.sound, r.gif);
     const clip = findClip(clips, r.clip);
     const gif = clip ? undefined : (r.gifUrl ?? (await findGif(r.gif, process.env.GIPHY_API_KEY)));
@@ -523,11 +562,17 @@ function stopEverything() {
   globalShortcut.unregister("Escape");
 }
 
-/** One short sentence (at most 18 words): what fits in the bubble and is worth saying out loud. */
+/** A sentence or two (about 24 words): what fits in the bubble and is worth saying out loud. */
 function short(text: string) {
-  const first = text.trim().match(/^.+?[.!?](?=\s|$)/)?.[0] ?? text.trim();
-  const words = first.split(/\s+/);
-  return words.length > 18 ? `${words.slice(0, 18).join(" ")}…` : first;
+  const sentences = text.trim().match(/[^.!?]+[.!?]*(?=\s|$)/g) ?? [text.trim()];
+  let out = "";
+  for (const sentence of sentences) {
+    const next = `${out} ${sentence.trim()}`.trim();
+    if (out && next.split(/\s+/).length > 24) break;
+    out = next;
+  }
+  const words = out.split(/\s+/);
+  return words.length > 24 ? `${words.slice(0, 24).join(" ")}…` : out;
 }
 
 /** Max talks: a natural voice from the server (ElevenLabs) when it has one, otherwise the system voice. */

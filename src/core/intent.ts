@@ -191,6 +191,15 @@ const HOW =
 const GUIDE =
   /^(?:how|what|where|which|why|when|who|is (?:this|it|that)|are (?:these|they)|can you (?:help|show|explain|tell me|teach)|could you (?:help|show|explain|tell me)|help me|show me|explain|teach me|walk me through|i(?:'m| am) (?:stuck|lost|confused|not sure)|i don'?t (?:know|understand))\b/i;
 
+/** "Max, remember I prefer aisle seats" / "forget my seat preference": what Max knows about you. */
+export function memoryCommand(text: string): { kind: "remember"; fact: string } | { kind: "forget"; about: string } | null {
+  const t = text.trim().replace(/[.!]+$/, "");
+  const r = t.match(/^(?:please\s+)?(?:remember|don'?t forget)(?:\s+that)?\s+(.{3,})$/i);
+  if (r) return { kind: "remember", fact: r[1].trim() };
+  const f = t.match(/^(?:please\s+)?forget(?:\s+(?:about|that))?\s+(.{2,})$/i);
+  return f ? { kind: "forget", about: f[1].trim() } : null;
+}
+
 /**
  * After "Hey Max": hand a task to the user's own agent ("tell Claude to…"),
  * answer a question about the screen ("how do I…?"), or write something.

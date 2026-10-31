@@ -124,6 +124,8 @@ export interface Settings {
   flowKey: "ctrl-win" | "caps" | "self";
   /** Set once Gen Z mode was switched on by default (so a later choice of Formal sticks). */
   vibeSet?: boolean;
+  /** What Max remembers about you ("remember I prefer aisle seats"), one fact each. */
+  memory?: string[];
   /** A request heard in a Flow dictation (without "Hey Max"): write it at once, or offer first. */
   flowRequests: "auto" | "ask";
   /** The hosted Wispr Max server, used when there's no Anthropic key on this computer. */

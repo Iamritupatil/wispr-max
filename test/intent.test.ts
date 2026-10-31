@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { abuseKind, calledMax, guessIntent, parseAutoOutput, routeCall } from "../src/core/intent";
+import { abuseKind, calledMax, memoryCommand, guessIntent, parseAutoOutput, routeCall } from "../src/core/intent";
 import cases from "./fixtures/intents.json";
 
 const contacts = [
@@ -130,4 +130,10 @@ test("swears get the right meme: English gaali, Hindi gaali, or yelling", () => 
   assert.equal(abuseKind("tu chutiya hai"), "hindi");
   assert.equal(abuseKind("WHY ARE YOU NOT WORKING"), "yell");
   assert.equal(abuseKind("you're the worst product ever"), null);
+});
+
+test("Max remembers and forgets what you tell it to", () => {
+  assert.deepEqual(memoryCommand("Remember that I prefer aisle seats."), { kind: "remember", fact: "I prefer aisle seats" });
+  assert.deepEqual(memoryCommand("forget about my seat preference"), { kind: "forget", about: "my seat preference" });
+  assert.equal(memoryCommand("How do I remember passwords in Chrome?"), null);
 });

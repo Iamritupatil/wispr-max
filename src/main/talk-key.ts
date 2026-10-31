@@ -141,18 +141,21 @@ function ensureHook() {
   return true;
 }
 
-/** Resolves true on the user's next mouse click (false after the timeout, or without permission). */
+/** Resolves true on the user's next mouse click or Enter (false after the timeout, or without permission). */
 export function nextClick(timeoutMs: number): Promise<boolean> {
   if (!ensureHook()) return new Promise((r) => setTimeout(() => r(false), Math.min(timeoutMs, 8000)));
   return new Promise((resolve) => {
     const onClick = () => finish(true);
+    const onKey = (e: { keycode: number }) => e.keycode === UiohookKey.Enter && finish(true);
     const timer = setTimeout(() => finish(false), timeoutMs);
     function finish(clicked: boolean) {
       clearTimeout(timer);
       uIOhook.off("mousedown", onClick);
+      uIOhook.off("keydown", onKey);
       resolve(clicked);
     }
     uIOhook.on("mousedown", onClick);
+    uIOhook.on("keydown", onKey);
   });
 }
 
