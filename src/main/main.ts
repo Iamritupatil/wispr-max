@@ -266,8 +266,14 @@ async function guideFromFlow(question: string) {
       const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
       const shot = await captureScreen();
       if (current !== s) return;
-      const res = await writer().guide(question, shot, s.abort.signal, steps);
+      const res = await writer().guide(question, shot, s.abort.signal, steps, genz());
       if (current !== s) return;
+      // Gen Z mode and an obvious question: the roast comes with a meme (sound first, then Max).
+      if (res.soundUrl) sendOverlay({ type: "clip", url: res.soundUrl, kind: "audio" });
+      if (res.gifUrl) {
+        sendOverlay({ type: "gif", url: res.gifUrl });
+        setTimeout(() => sendOverlay({ type: "gif", url: null }), 7000);
+      }
       const b = display.bounds;
       const point = res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height };
       if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, res.say, point);

@@ -45,8 +45,8 @@ export class RemoteWriter implements WriterLike {
     return this.call("react", { event, text, screenshot, clips, recent }, {}, signal) as Promise<Reaction>;
   }
 
-  guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal, steps: string[] = []): Promise<Guidance> {
-    return this.call("guide", { question, screenshot, steps }, {}, signal) as Promise<Guidance>;
+  guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal, steps: string[] = [], genz = false): Promise<Guidance> {
+    return this.call("guide", { question, screenshot, steps, genz }, {}, signal) as Promise<Guidance>;
   }
 
   extractContact(text: string, signal?: AbortSignal): Promise<Partial<Contact>> {

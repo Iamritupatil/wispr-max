@@ -13,6 +13,7 @@ import {
   parseAsk,
   placeholderQuestion,
   GUIDE_SYSTEM,
+  GUIDE_GENZ,
   GUIDE_SCHEMA,
   GENZ_SYSTEM,
   REACT_SCHEMA,
@@ -99,6 +100,11 @@ export interface Guidance {
   say: string;
   /** The goal is reached (or there's nothing to click): stop guiding. */
   done?: boolean;
+  /** Gen Z mode, obvious question: a meme to go with the roast (searches, and the server's finds). */
+  gif?: string;
+  sound?: string;
+  gifUrl?: string;
+  soundUrl?: string;
   point?: { x: number; y: number };
 }
 
@@ -257,7 +263,7 @@ export class Writer {
   }
 
   /** "How do I…?" about what's on screen: a short spoken answer, and where to click. */
-  async guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal, steps: string[] = []): Promise<Guidance> {
+  async guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal, steps: string[] = [], genz = false): Promise<Guidance> {
     try {
       const res = await this.client.beta.messages.create(
         {
@@ -265,7 +271,7 @@ export class Writer {
           max_tokens: 4000,
           output_config: { effort: "low", format: { type: "json_schema", schema: GUIDE_SCHEMA } },
           ...fallbackFor(this.opts.model),
-          system: GUIDE_SYSTEM,
+          system: genz ? GUIDE_SYSTEM + GUIDE_GENZ : GUIDE_SYSTEM,
           messages: [
             {
               role: "user",
@@ -277,10 +283,11 @@ export class Writer {
       );
       if (res.stop_reason === "refusal") return { say: "I can't help with that one." };
       const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean };
+      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean; gif?: string; sound?: string };
       const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
       const point = out.has_point && inside(out.x) && inside(out.y) ? { x: out.x!, y: out.y! } : undefined;
-      return { say: out.say, done: Boolean(out.done) || !point, ...(point && { point }) };
+      const meme = genz ? { gif: out.gif ?? "", sound: out.sound ?? "" } : {};
+      return { say: out.say, done: Boolean(out.done) || !point, ...(point && { point }), ...meme };
     } catch (err) {
       throw toAiError(err);
     }
