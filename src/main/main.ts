@@ -30,7 +30,7 @@ import {
   parseContactsFile,
 } from "../core/contacts";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
-import { calledMax, guessIntent, routeCall } from "../core/intent";
+import { abuseKind, calledMax, guessIntent, routeCall } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
@@ -50,7 +50,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
-import { nextClick, setTalkKey, stopTalkKey } from "./talk-key";
+import { holdFlowKey, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
@@ -94,6 +94,10 @@ interface Session {
   timer?: NodeJS.Timeout;
   /** Started from a Wispr Flow dictation: no windows, answers come through Flow too. */
   fromFlow?: boolean;
+  /** Listening through Flow while Max's key (Alt) is held: Flow types into Max's own hidden box. */
+  heldKey?: boolean;
+  /** A walkthrough or a comeback: a new request simply replaces it. */
+  interruptible?: boolean;
 }
 
 let current: Session | null = null;
@@ -120,7 +124,7 @@ function startSession(mode: Mode) {
   current = s;
   s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
   try {
-    globalShortcut.register("Escape", stopEverything);
+    armEscape();
   } catch {
     // Esc is a convenience; the session still works without it.
   }
@@ -166,50 +170,124 @@ function heardBefore(text: string) {
   return repeat;
 }
 
-/** A new Flow dictation: called Max? Take over. A request? Offer to write it. */
+/** A new Flow dictation: called Max (or already talking with it)? Max answers. Anything else stays as typed. */
 function onFlowDictation(d: FlowDictation) {
   if (heardBefore(d.text)) return;
+  if (current?.heldKey) {
+    // Holding Alt, but Flow typed somewhere else (Max's box didn't get focus): take it back and answer.
+    const s = current;
+    setTimeout(() => {
+      if (current !== s) return;
+      closeListen();
+      current = null;
+      answerMax(calledMax(d.text) ?? d.text, true);
+    }, 900);
+    return;
+  }
   // Max asked a question over its head: this dictation is the answer.
   if (current?.fromFlow && current.asking) {
     const s = current;
     void (async () => {
-      await sleep(FLOW_SETTLE_MS);
-      await undoLastEdit().catch(() => undefined);
+      await takeBack();
       void handleTranscript(s, d.text);
     })();
     return;
   }
+  // Mid-walkthrough and you say something new: Max drops the old thing and follows you.
+  if (current?.fromFlow && current.interruptible) dropCurrent();
   if (current) return;
   const called = calledMax(d.text);
   if (called) {
     clearOffer();
-    // Gen Z Max has opinions about how you talk to it (venting gets its own reaction).
-    if (routeCall(called, contacts).kind !== "vent") void react("command", called);
-    // "Hey Max, …": run your agent, help with what's on screen, or write.
-    const route = routeCall(called, contacts);
-    if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
-    if (route.kind === "vent") return void ventFromFlow(route.text);
-    if (route.kind === "guide") return void guideFromFlow(route.question);
-    return void takeOverFromFlow(route.instruction);
+    return answerMax(called, true);
   }
-  // Right after Max spoke, the user is talking back to it: no "Max" needed.
-  if (Date.now() < conversation.until) {
-    const route = routeCall(d.text, contacts);
-    if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
-    if (route.kind === "vent") return void ventFromFlow(route.text);
-    if (route.kind === "write") {
-      const write = guessIntent(d.text, contacts).intent === "command";
-      if (write) return void takeOverFromFlow(route.instruction);
-    }
-    return void guideFromFlow(`(Replying to what you just said: "${conversation.said}") ${d.text}`);
-  }
-  // Anything else is the user's own dictation: Flow typed it, and it stays
-  // exactly as it is. Max only acts when called by name.
+  // Once you've talked to Max, it's a conversation until you press Esc: no "Max" needed.
+  if (conversation.open) return answerMax(d.text, true);
+  // Anything else is the user's own dictation: Flow typed it, and it stays exactly as it is.
 }
 
-/** After Max talks, a short window where the user can answer without saying "Max". */
-const CONVERSATION_MS = 30_000;
-const conversation = { until: 0, said: "" };
+/** You talking with Max: everything said stays as context until Esc. */
+const conversation = { open: false, turns: [] as string[] };
+
+function withHistory(text: string) {
+  const h = conversation.turns.slice(-10).join("\n");
+  return h ? `${text}\n\n(Our conversation so far, oldest first. Stay on this topic:\n${h})` : text;
+}
+
+/**
+ * Something said to Max: run an agent, a comeback, a walkthrough, or writing.
+ * `typed`: Flow typed it into the user's box, so take that back first.
+ */
+function answerMax(text: string, typed: boolean) {
+  const route = routeCall(text, contacts);
+  const said = withHistory(text);
+  conversation.open = true;
+  conversation.turns.push(`You: ${text}`);
+  if (route.kind === "agent") return void agentFromFlow(route.agent, route.task, typed);
+  if (route.kind === "vent" || (route.kind === "chat" && genz())) {
+    // The right gaali clip, every time: not left to the model's mood.
+    const kind = abuseKind(text);
+    const clip = kind && { english: "ye-angrezi-gaali-apne-paas-rakh", hindi: "gaali-mat-do-bhai", yell: "chilla-mat-chudail" }[kind];
+    return void ventFromFlow(clip ? `${text}\n\n(Play the clip "${clip}" for this, and caption it with a short comeback.)` : said, typed);
+  }
+  if (route.kind === "write" && guessIntent(text, contacts).intent === "command") {
+    void react("command", text);
+    return void takeOverFromFlow(route.instruction, typed);
+  }
+  if (route.kind === "guide") void react("command", text);
+  void guideFromFlow(said, typed);
+}
+
+/** A new request while Max is mid-walkthrough: drop the old one quietly. */
+function dropCurrent() {
+  const s = current;
+  if (!s) return;
+  s.abort.abort();
+  clearTimeout(s.timer);
+  sendOverlay({ type: "cancel" });
+  closeListen();
+  current = null;
+}
+
+/** Takes back what Flow just typed. Not on the desktop or a file window, where nothing was typed and Ctrl+Z undoes a file move. */
+async function takeBack() {
+  await sleep(FLOW_SETTLE_MS);
+  const { app: name = "" } = await activeApp().catch(() => ({ app: "" }));
+  if (/^(explorer|finder|program manager|wispr)/i.test(name)) return;
+  await undoLastEdit().catch(() => undefined);
+}
+
+// ---------- Hold Alt: Max listens through Wispr Flow ----------
+
+/** Alt down: the ghost listens, Max holds your Flow key, and Flow types into Max's hidden box, never yours. */
+function listenThroughFlow() {
+  if (current && !(current.fromFlow && (current.interruptible || current.asking))) return;
+  const asking = current?.asking;
+  dropCurrent();
+  clearOffer();
+  const s = flowSession();
+  s.phase = "recording";
+  s.heldKey = true;
+  s.asking = asking;
+  sendOverlay({ type: "cancel" }); // Max stops talking, or Flow would type Max's voice
+  setOverlay({ phase: "listening", mode: "max", question: "Listening…" });
+  openListen(undefined, true);
+  setTimeout(() => current === s && holdFlowKey(settings.flowKey, true), 120);
+  s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 120_000);
+}
+
+/** Alt up: let go of the Flow key; Flow types its words into Max's box a moment later. */
+function flowKeyReleased() {
+  const s = current;
+  if (!s?.heldKey || s.phase !== "recording") return;
+  holdFlowKey(settings.flowKey, false);
+  setOverlay({ phase: "thinking", mode: "max" });
+  clearTimeout(s.timer);
+  s.timer = setTimeout(
+    () => current === s && s.phase === "recording" && failSession(s, "Didn't hear anything from Wispr Flow. Is it running, and is its key set in Max's settings?"),
+    10_000,
+  );
+}
 
 function clearOffer() {
   if (!offer) return;
@@ -231,19 +309,19 @@ async function acceptOffer() {
 const FLOW_SETTLE_MS = 200;
 
 /** Takes back what Flow typed (it was an instruction, not the message) and writes the real thing. */
-async function takeOverFromFlow(instruction: string) {
+async function takeOverFromFlow(instruction: string, typed = true) {
   const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0, fromFlow: true };
   current = s;
   showOverlay();
   setOverlay({ phase: "thinking", mode: "max", transcript: instruction });
-  await sleep(FLOW_SETTLE_MS);
-  if (current !== s) return;
   // If this fails, Flow's words stay and Max's text lands after them: untidy, not lost.
-  await undoLastEdit().catch(() => undefined);
+  if (typed) await takeBack();
+  else await sleep(FLOW_SETTLE_MS); // focus going back to your app
+  if (current !== s) return;
   // Read the screen once Flow's text is gone, so Max sees the conversation as it was.
   s.context = gatherContext("max", true);
   try {
-    globalShortcut.register("Escape", stopEverything);
+    armEscape();
   } catch {
     // optional
   }
@@ -256,7 +334,7 @@ function flowSession(): Session {
   current = s;
   showOverlay();
   try {
-    globalShortcut.register("Escape", stopEverything);
+    armEscape();
   } catch {
     // optional
   }
@@ -272,10 +350,10 @@ function ghostSays(s: Session, text: string, point?: Point) {
 }
 
 /** Swearing at Max: take back what Flow typed and react (a meme in Gen Z mode). Never types anything. */
-async function ventFromFlow(text: string) {
+async function ventFromFlow(text: string, typed = true) {
   const s = flowSession();
-  await sleep(FLOW_SETTLE_MS);
-  await undoLastEdit().catch(() => undefined);
+  s.interruptible = true;
+  if (typed) await takeBack();
   if (current !== s) return;
   if (genz()) {
     endSession(s, 0);
@@ -288,8 +366,8 @@ async function ventFromFlow(text: string) {
 
 /** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
 function showStep(text: string, point?: Point) {
-  conversation.until = Date.now() + CONVERSATION_MS;
-  conversation.said = text;
+  conversation.open = true;
+  conversation.turns.push(`Max: ${text}`);
   // The ghost lands right beside the button, its bubble pointing at it.
   if (point) flyTo({ x: point.x + 26, y: point.y + 6 });
   setOverlay({ phase: "done", mode: "max", question: text });
@@ -303,8 +381,10 @@ const GUIDE_STEPS = 6;
  * next thing to click and says it; when you click, it looks again and shows
  * the next step, until the goal is reached. Esc stops it.
  */
-async function guideFromFlow(question: string) {
+async function guideFromFlow(question: string, typed = false) {
   const s = flowSession();
+  s.interruptible = true;
+  if (typed) await takeBack();
   const steps: string[] = [];
   try {
     for (let i = 0; i < GUIDE_STEPS; i++) {
@@ -339,8 +419,9 @@ async function guideFromFlow(question: string) {
 }
 
 /** "Hey Max, tell Claude to…": runs it on the agent signed in on this computer. */
-async function agentFromFlow(agent: AgentName, task: string) {
+async function agentFromFlow(agent: AgentName, task: string, typed = false) {
   const s = flowSession();
+  if (typed) void takeBack();
   const name = AGENT_LABEL[agent];
   setOverlay({ phase: "listening", mode: "max", question: `${name} is on it…` });
   if (settings.talkBack) void speak(`On it. I'll tell you when ${name} is done.`);
@@ -405,6 +486,7 @@ function showReaction(say: string, clip: Clip | undefined, gifUrl: string | unde
   if (gifUrl && (!clip || clip.kind === "audio")) sendOverlay({ type: "gif", url: gifUrl });
   // While Max is busy with a task, the bubble is the task's; the reaction is the clip.
   if (idle && say.trim()) setOverlay({ phase: "done", mode: "max", question: say });
+  if (say.trim()) conversation.turns.push(`Max: ${say}`);
   // Your clip does the talking; Max only speaks for itself when there's no clip.
   // One voice per request: for a command, the answer does the talking and the
   // reaction is just the meme. Max only voices a reaction when it spoke up by itself.
@@ -437,8 +519,9 @@ let escapeTimer: NodeJS.Timeout | undefined;
 
 /** While Max is doing anything, Esc stops it all; released after a quiet spell so Esc works normally elsewhere. */
 function armEscape(ms = 30_000) {
+  if (hookRunning()) return; // Esc is watched by the keyboard hook, and still works in every app
   try {
-    if (!globalShortcut.isRegistered("Escape")) globalShortcut.register("Escape", stopEverything);
+    if (!globalShortcut.isRegistered("Escape")) armEscape();
   } catch {
     // Another app owns Esc: Max can still be stopped from the tray.
   }
@@ -454,7 +537,8 @@ function stopEverything() {
   sendOverlay({ type: "cancel" });
   sendOverlay({ type: "gif", url: null });
   clearTimeout(reactionTimer);
-  conversation.until = 0;
+  conversation.open = false;
+  conversation.turns = [];
   placeOverlay(currentAnchor());
   setOverlay({ phase: "idle", mode: "dictate" });
   if (!ghostStaysOut()) overlay.hide();
@@ -896,13 +980,15 @@ function createListenWindow() {
 }
 
 /** Opens the bubble just above the ghost (below it near the top of a screen) and focuses it for Flow. */
-function openListen(question?: string) {
+function openListen(question?: string, hidden = false) {
   const anchor = currentAnchor();
   const { workArea: wa } = screen.getDisplayNearestPoint({ x: Math.round(anchor.x), y: Math.round(anchor.y) });
   const below = anchor.y - wa.y < LISTEN_SIZE.height + 60;
   const x = Math.round(Math.min(Math.max(anchor.x - LISTEN_SIZE.width / 2, wa.x), wa.x + wa.width - LISTEN_SIZE.width));
   const y = Math.round(below ? anchor.y + 30 : anchor.y - 34 - LISTEN_SIZE.height);
   listenWin.setBounds({ x, y, ...LISTEN_SIZE });
+  // Holding Alt: the box is invisible (the ghost shows "Listening…"); it only catches Flow's text.
+  listenWin.setOpacity(hidden ? 0 : 1);
   listenWin.show();
   listenWin.focus();
   listenWin.webContents.send("listen:open", { question, below });
@@ -1136,19 +1222,27 @@ function registerHotkeys() {
   globalShortcut.unregisterAll();
   // Hold the talk key to talk (release to send), or double-tap it.
   let held: Session | null = null;
-  setTalkKey(flowMode() ? "off" : settings.talkKey, {
+  onEscape(stopEverything);
+  // Your own Flow key going down: Max goes quiet so Flow doesn't type Max's voice.
+  onFlowKey(() => {
+    if (!current?.heldKey) sendOverlay({ type: "cancel" });
+  });
+  setTalkKey(settings.talkKey === "off" ? "alt" : settings.talkKey, {
     holdStart: () => {
+      if (flowMode()) return listenThroughFlow();
       if (current) return;
       // One key for everything: Max works out whether you're dictating or asking.
       startSession("dictate");
       held = current;
     },
     holdEnd: () => {
-      // With Flow, the bubble stays open for Flow to type into.
-      if (!flowMode() && current && current === held && current.phase === "recording") stopRecording(current);
+      if (flowMode()) return flowKeyReleased();
+      if (current && current === held && current.phase === "recording") stopRecording(current);
       held = null;
     },
-    doubleTap: () => onHotkey("dictate"),
+    doubleTap: () => {
+      if (!flowMode()) onHotkey("dictate");
+    },
   });
   const register = (accelerator: string, mode: Mode) => {
     try {
@@ -1160,7 +1254,7 @@ function registerHotkeys() {
   // The talk key is the only key; the old shortcuts are no longer registered.
   void register;
   hotkeys.dictate = hotkeys.max = true;
-  if (current) globalShortcut.register("Escape", stopEverything);
+  if (current) armEscape();
   refreshTrayMenu();
 }
 
@@ -1206,6 +1300,20 @@ function registerIpc() {
     if (!s || s.phase !== "recording") return;
     closeListen();
     if (!text.trim()) return cancelSession();
+    if (s.heldKey) {
+      // Said while holding Alt: always to Max, no "Max" needed, nothing typed anywhere.
+      clearTimeout(s.timer);
+      current = null;
+      heardBefore(text); // Flow's history gets the same words: answer once
+      const said = applyDictionary(text.trim(), settings.dictionary);
+      if (s.asking) {
+        const next = flowSession();
+        next.asking = s.asking;
+        next.context = gatherContext("max", true);
+        return void handleTranscript(next, said);
+      }
+      return answerMax(calledMax(said) ?? said, false);
+    }
     s.phase = "processing";
     clearTimeout(s.timer);
     void handleTranscript(s, applyDictionary(text.trim(), settings.dictionary));

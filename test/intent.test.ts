@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calledMax, guessIntent, parseAutoOutput, routeCall } from "../src/core/intent";
+import { abuseKind, calledMax, guessIntent, parseAutoOutput, routeCall } from "../src/core/intent";
 import cases from "./fixtures/intents.json";
 
 const contacts = [
@@ -115,4 +115,19 @@ test("Max understands Hindi: its name, and venting", () => {
   assert.equal(calledMax("मैक्स, ये कैसे करते हैं?"), "ये कैसे करते हैं?");
   assert.equal(routeCall("tu pagal hai kya").kind, "vent");
   assert.equal(routeCall("तू पागल है क्या").kind, "vent");
+});
+
+test("banter gets a comeback, not an agent or a walkthrough", () => {
+  assert.equal(routeCall("do you know that I became the CEO of Google?").kind, "chat");
+  assert.equal(routeCall("are you there?").kind, "chat");
+  assert.equal(routeCall("google it for me, who founded Wispr").kind, "agent");
+  assert.equal(routeCall("I'm stuck, what do I click next").kind, "guide");
+});
+
+test("swears get the right meme: English gaali, Hindi gaali, or yelling", () => {
+  assert.equal(abuseKind("Max you are a b!tch"), "english");
+  assert.equal(routeCall("you are a b!tch").kind, "vent");
+  assert.equal(abuseKind("tu chutiya hai"), "hindi");
+  assert.equal(abuseKind("WHY ARE YOU NOT WORKING"), "yell");
+  assert.equal(abuseKind("you're the worst product ever"), null);
 });

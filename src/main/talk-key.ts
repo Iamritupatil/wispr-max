@@ -29,17 +29,65 @@ let other = false;
 let holding = false;
 let holdTimer: NodeJS.Timeout | undefined;
 let lastTap = 0;
+let onEsc: (() => void) | null = null;
+/** Our own synthetic Alt releases (see holdFlowKey): not the user letting go. */
+let skipUps = 0;
+let skipUntil = 0;
+
+/** Esc anywhere stops Max. Only watched, never taken: Esc still works in every app. */
+export function onEscape(cb: () => void) {
+  onEsc = cb;
+}
+
+let onFlow: (() => void) | null = null;
+const FLOW_DOWN: number[] = [UiohookKey.CapsLock, UiohookKey.Meta, UiohookKey.MetaRight];
+/** Called when the user presses a likely Wispr Flow key (Caps Lock, Win/Cmd). */
+export function onFlowKey(cb: () => void) {
+  onFlow = cb;
+}
+
+/** True once the keyboard hook runs (then Esc is watched without a global shortcut). */
+export const hookRunning = () => started || hooked;
+
+export type FlowKeyName = "ctrl-win" | "caps" | "self";
+const FLOW_KEYS: Record<Exclude<FlowKeyName, "self">, number[]> = {
+  "ctrl-win": [UiohookKey.Ctrl, UiohookKey.Meta],
+  caps: [UiohookKey.CapsLock],
+};
+
+/**
+ * Holds (or lets go of) the user's Wispr Flow key for them, so Flow listens
+ * while Max's key is held. Alt is released first: Flow wants its own keys alone.
+ */
+export function holdFlowKey(name: FlowKeyName, down: boolean) {
+  if (name === "self" || !hookRunning()) return;
+  const keys = FLOW_KEYS[name];
+  try {
+    if (down) {
+      skipUps = 2;
+      skipUntil = Date.now() + 400;
+      uIOhook.keyToggle(UiohookKey.Alt, "up");
+      uIOhook.keyToggle(UiohookKey.AltRight, "up");
+    }
+    for (const k of down ? keys : [...keys].reverse()) uIOhook.keyToggle(k, down ? "down" : "up");
+  } catch {
+    // No permission to send keys: the user can still hold their Flow key themselves.
+  }
+}
 
 export function setTalkKey(name: TalkKeyName, h: TalkKeyHandlers) {
   codes = name === "off" ? [] : CODES[name];
   handlers = h;
-  if (started || !codes.length) return;
+  if (started) return;
   started = true;
   if (hooked) {
     uIOhook.stop();
     hooked = false;
   }
   uIOhook.on("keydown", (e) => {
+    if (e.keycode === UiohookKey.Escape) onEsc?.();
+    // A Flow key going down: the mic is about to open, so Max must stop talking or Flow types Max's voice.
+    if (FLOW_DOWN.includes(e.keycode) && Date.now() > skipUntil) onFlow?.();
     if (!codes.includes(e.keycode)) {
       other = true;
       clearTimeout(holdTimer);
@@ -56,6 +104,7 @@ export function setTalkKey(name: TalkKeyName, h: TalkKeyHandlers) {
   });
   uIOhook.on("keyup", (e) => {
     if (!codes.includes(e.keycode) || !down) return;
+    if (skipUps > 0 && Date.now() < skipUntil) return void skipUps--;
     clearTimeout(holdTimer);
     const wasHolding = holding;
     holding = false;

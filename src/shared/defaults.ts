@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chaos: "normal",
   memeFolder: "",
   talkKey: "alt",
+  flowKey: "ctrl-win",
   flowRequests: "auto",
   cloudUrl: CLOUD_URL,
 };

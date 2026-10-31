@@ -158,15 +158,32 @@ export type CallRoute =
   | { kind: "agent"; agent: "claude" | "codex"; task: string }
   | { kind: "guide"; question: string }
   | { kind: "write"; instruction: string }
-  | { kind: "vent"; text: string };
+  | { kind: "vent"; text: string }
+  | { kind: "chat"; text: string };
 
 const AGENT = /^(?:please\s+)?(?:(?:tell|ask|have|get|let)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)(?:\s+to)?|(?:run|launch|start|open|use)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)\s+(?:and|to)|(?:claude|codex)[,:])\s+(.+)$/is;
-const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|more)|search (?:for|about|the web)|google|dig into|investigate|find (?:me )?(?:info|information|details) (?:on|about))\b/i;
+const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|more)|search (?:for|about|the web)|google (?:it|this|that|for)|dig into|investigate|find (?:me )?(?:info|information|details) (?:on|about))\b/i;
 // Max only types into the box when asked to write something.
 const WRITE_HINT = /\b(?:write|draft|compose|reply|respond|e-?mail|message|dm|text (?:him|her|them)|tweet|post|caption|letter|rephrase|rewrite|reword|translate|summari[sz]e|make (?:this|it) (?:more|less|sound))\b/i;
 // Swearing aimed at Max (Flow sometimes softens it: "fuxk", "f***").
 const VENT =
-  /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|wtf|shit\w*|bitch\w*|bastard|asshole|dumbass|idiot|stupid|useless|chutiy\w*|bsdk|madarchod|bhenchod|bc|mc|pagal|bewakoo?f|bakwaa?s|saa?la|kamina|nalla|gadha|ullu|nikamm?a)\b|चूतिया|पागल|बेवकूफ|बकवास|साला|कमीना|गधा|उल्लू|निकम्मा|भेनचोद|मादरचोद/i;
+  /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|wtf|shit\w*|b[i!1*]tch\w*|bastard|asshole|dumbass|idiot|stupid|useless|chutiy\w*|bsdk|madarchod|bhenchod|bc|mc|pagal|bewakoo?f|bakwaa?s|saa?la|kamina|nalla|gadha|ullu|nikamm?a)\b|चूतिया|पागल|बेवकूफ|बकवास|साला|कमीना|गधा|उल्लू|निकम्मा|भेनचोद|मादरचोद/i;
+
+// Banter, not a task: "do you know I became the CEO of Google?", "are you there?". Max just talks back.
+const CHAT =
+  /^(?:(?:do|did) you know\b|guess what|you know what|are you (?:there|awake|alive|real|ok|mad|serious)|(?:hey|hi|hello|yo|sup|wassup|what'?s up)\b|how are you|i (?:just |finally )?(?:became|got|won|bought|made|am the|did it)\b|you(?:'re| are| r) (?:so |the |my )|lol|haha|bro\b)/i;
+
+const ENGLISH_ABUSE = /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|motherf\w*|b[i!1*]tch\w*|bastard|asshole|dickhead|son of a)|b[i!1*]tch/i;
+const HINDI_ABUSE = /\b(?:chutiy\w*|bsdk|madarchod|bhenchod|bc|mc|saa?la|kamina|harami)\b|चूतिया|साला|कमीना|भेनचोद|मादरचोद|हरामी/i;
+
+/** Which meme a swear at Max gets, decided here so it's always right: English gaali, Hindi gaali, or yelling. */
+export function abuseKind(text: string): "english" | "hindi" | "yell" | null {
+  if (ENGLISH_ABUSE.test(text)) return "english";
+  if (HINDI_ABUSE.test(text)) return "hindi";
+  const letters = text.replace(/[^a-z]/gi, "");
+  if ((letters.length > 8 && letters === letters.toUpperCase()) || /!{2,}/.test(text)) return "yell";
+  return null;
+}
 
 // "…can you just tell me how I do that?", "…I don't know what to do": help, wherever it's asked.
 const HOW =
@@ -192,7 +209,9 @@ export function routeCall(instruction: string, contacts: Contact[] = []): CallRo
   // "Can you write an email…" is writing, even though it starts like a question.
   if (guessIntent(text, contacts).intent === "command") return { kind: "write", instruction: text };
   // A question ("is this tweet real?") is a question, even if it mentions a tweet or a message.
-  if (GUIDE.test(text) || HOW.test(text)) return { kind: "guide", question: text };
+  if (HOW.test(text)) return { kind: "guide", question: text };
+  if (CHAT.test(text)) return { kind: "chat", text };
+  if (GUIDE.test(text)) return { kind: "guide", question: text };
   if (WRITE_HINT.test(text)) return { kind: "write", instruction: text };
   // Everything else said to Max (questions, chat, complaints) is answered, not typed.
   return { kind: "guide", question: text };

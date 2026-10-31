@@ -52,7 +52,7 @@
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key.</p>
               <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>The desktop app puts the ghost on top of every app</b>, listens along with Wispr Flow ("Hey Max, …") and reads your screen by itself. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
-              <p class="muted small desktop-only">In any app: hold <b>your Wispr Flow key</b> and talk. Say what to type, or start with "Hey Max" and ask for anything. <span id="kbd-talk" class="hidden"></span></p>
+              <p class="muted small desktop-only">In any app: hold <b>Alt</b> and talk to Max (Wispr Flow listens, nothing gets typed). Or use Flow as usual and start with "Hey Max". <b>Esc</b> ends the chat. <span id="kbd-talk" class="hidden"></span></p>
             </div>
           </section>
 
@@ -299,6 +299,14 @@
               <div id="flow-connect" class="flow-connect"></div>
               <div data-voice="flow" class="desktop-only">
                 <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Listen along with Wispr Flow</b> Use Flow exactly as you do now, with your own Flow key, in any app. Start with <i>"Hey Max, …"</i> or <i>"Max, …"</i> and the ghost pops up and takes it from there. Anything else you dictate stays exactly as Flow typed it. Reads Flow's local history; never changes it.</span></label>
+                <div class="field">
+                  <label>Hold <b>Alt</b> to talk to Max. Max presses your Flow key for you, and Flow's text never lands in your box. Your Flow key:</label>
+                  <select name="flowKey">
+                    <option value="ctrl-win">Ctrl + Win (Flow's default)</option>
+                    <option value="caps">Caps Lock</option>
+                    <option value="self">I'll hold my Flow key myself</option>
+                  </select>
+                </div>
                 <div class="field hidden">
                   <label>When Flow hears a request without "Hey Max"</label>
                   <select name="flowRequests">
