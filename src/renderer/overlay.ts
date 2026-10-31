@@ -252,6 +252,7 @@ function clearQueue() {
 window.overlay.onCommand(async (cmd) => {
   try {
     if (cmd.type === "start") {
+      clearQueue(); // Max goes quiet while you talk
       if (cmd.sounds) chime([523, 784]);
       await recorder.start();
       requestAnimationFrame(meter);
