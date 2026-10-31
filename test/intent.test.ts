@@ -110,3 +110,9 @@ test("swearing at Max is venting, chat is answered, only writing requests get ty
   assert.equal(routeCall("I don't know, I can't see you").kind, "guide");
   assert.equal(routeCall("reply saying Thursday works").kind, "write");
 });
+
+test("Max understands Hindi: its name, and venting", () => {
+  assert.equal(calledMax("मैक्स, ये कैसे करते हैं?"), "ये कैसे करते हैं?");
+  assert.equal(routeCall("tu pagal hai kya").kind, "vent");
+  assert.equal(routeCall("तू पागल है क्या").kind, "vent");
+});

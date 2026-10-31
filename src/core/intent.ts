@@ -34,9 +34,9 @@ const WAKE = new RegExp(String.raw`^\s*(?:hey|hi|okay|ok|yo)[,.]?\s+max\b[\s,.:!
 // "Max, reply to…": a bare name only counts with a pause after it, so dictating
 // "Max will join the call" isn't mistaken for calling Max.
 const CALL = new RegExp(
-  String.raw`^\s*(?:(?:so|okay|ok|um+|uh+|oh|hey|hi|hello|yo|arre|acha)[,.!]?\s+)*max\b` +
+  String.raw`^\s*(?:(?:so|okay|ok|um+|uh+|oh|hey|hi|hello|yo|arre|acha|अरे|सुनो)[,.!]?\s+)*(?:max\b|मैक्स|मेक्स)` +
     // "Max, …" / "Max. …" / "Hey Max …": any pause after the name, or a greeting before it…
-    String.raw`(?:\s*[,.:!?-]+|(?<=(?:hey|hi|hello|okay|ok|yo|so|arre|acha)[,.!]?\s+max)\b` +
+    String.raw`(?:\s*[,.:!?।-]+|(?<=(?:hey|hi|hello|okay|ok|yo|so|arre|acha)[,.!]?\s+max)\b` +
     // …or straight into a request: "Max can you…", "Max write…", "Max research…".
     String.raw`|(?=\s+(?:can you|could you|would you|please|write|draft|reply|tell|ask|research|look up|find|search|how|what|where|why|who|explain|help|show|make|give|play|open|send|summari[sz]e|translate)\b))[\s,.:!?-]*`,
   "i",
@@ -165,7 +165,8 @@ const RESEARCH = /\b(?:research|look up|look into|find out (?:about|who|what|mor
 // Max only types into the box when asked to write something.
 const WRITE_HINT = /\b(?:write|draft|compose|reply|respond|e-?mail|message|dm|text (?:him|her|them)|tweet|post|caption|letter|rephrase|rewrite|reword|translate|summari[sz]e|make (?:this|it) (?:more|less|sound))\b/i;
 // Swearing aimed at Max (Flow sometimes softens it: "fuxk", "f***").
-const VENT = /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|wtf|shit\w*|bitch\w*|bastard|asshole|dumbass|idiot|stupid|useless|chutiy\w*|bsdk|madarchod|bhenchod|\bbc\b|\bmc\b)/i;
+const VENT =
+  /\b(?:f+u+[cx]*k+\w*|f\*+k?|fck\w*|wtf|shit\w*|bitch\w*|bastard|asshole|dumbass|idiot|stupid|useless|chutiy\w*|bsdk|madarchod|bhenchod|bc|mc|pagal|bewakoo?f|bakwaa?s|saa?la|kamina|nalla|gadha|ullu|nikamm?a)\b|चूतिया|पागल|बेवकूफ|बकवास|साला|कमीना|गधा|उल्लू|निकम्मा|भेनचोद|मादरचोद/i;
 
 // "…can you just tell me how I do that?", "…I don't know what to do": help, wherever it's asked.
 const HOW =

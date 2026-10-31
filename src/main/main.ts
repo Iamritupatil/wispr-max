@@ -120,7 +120,7 @@ function startSession(mode: Mode) {
   current = s;
   s.timer = setTimeout(() => current === s && s.phase === "recording" && stopRecording(s), MAX_RECORDING_MS);
   try {
-    globalShortcut.register("Escape", cancelSession);
+    globalShortcut.register("Escape", stopEverything);
   } catch {
     // Esc is a convenience; the session still works without it.
   }
@@ -243,7 +243,7 @@ async function takeOverFromFlow(instruction: string) {
   // Read the screen once Flow's text is gone, so Max sees the conversation as it was.
   s.context = gatherContext("max", true);
   try {
-    globalShortcut.register("Escape", cancelSession);
+    globalShortcut.register("Escape", stopEverything);
   } catch {
     // optional
   }
@@ -256,7 +256,7 @@ function flowSession(): Session {
   current = s;
   showOverlay();
   try {
-    globalShortcut.register("Escape", cancelSession);
+    globalShortcut.register("Escape", stopEverything);
   } catch {
     // optional
   }
@@ -397,6 +397,7 @@ const memeFolder = () => settings.memeFolder || defaultMemeFolder();
 
 /** `ownsGhost`: Max spoke up by itself (hello, a peek), so the bubble is the reaction's; for a command, it belongs to the task. */
 function showReaction(say: string, clip: Clip | undefined, gifUrl: string | undefined, song: string, ownsGhost: boolean) {
+  armEscape();
   const idle = ownsGhost && !current;
   showOverlay();
   if (clip) sendOverlay({ type: "clip", url: clip.url, kind: clip.kind });
@@ -430,8 +431,40 @@ function syncPeeks() {
   }, minutes * 60_000 * (0.6 + Math.random() * 0.8));
 }
 
+// ---------- Esc stops everything ----------
+
+let escapeTimer: NodeJS.Timeout | undefined;
+
+/** While Max is doing anything, Esc stops it all; released after a quiet spell so Esc works normally elsewhere. */
+function armEscape(ms = 30_000) {
+  try {
+    if (!globalShortcut.isRegistered("Escape")) globalShortcut.register("Escape", stopEverything);
+  } catch {
+    // Another app owns Esc: Max can still be stopped from the tray.
+  }
+  clearTimeout(escapeTimer);
+  escapeTimer = setTimeout(() => {
+    if (!current) globalShortcut.unregister("Escape");
+  }, ms);
+}
+
+/** Voice, meme, GIF, walkthrough, agent: all of it stops, and the ghost goes home. */
+function stopEverything() {
+  if (current) cancelSession();
+  sendOverlay({ type: "cancel" });
+  sendOverlay({ type: "gif", url: null });
+  clearTimeout(reactionTimer);
+  conversation.until = 0;
+  placeOverlay(currentAnchor());
+  setOverlay({ phase: "idle", mode: "dictate" });
+  if (!ghostStaysOut()) overlay.hide();
+  clearTimeout(escapeTimer);
+  globalShortcut.unregister("Escape");
+}
+
 /** Max talks: a natural voice from the server (ElevenLabs) when it has one, otherwise the system voice. */
 async function speak(text: string) {
+  armEscape();
   try {
     const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/voice`, {
       method: "POST",
@@ -530,7 +563,8 @@ function endSession(s: Session, settleMs: number) {
   clearTimeout(s.timer);
   closeListen();
   current = null;
-  globalShortcut.unregister("Escape");
+  // Max may still be talking: Esc keeps working for a little while.
+  armEscape(15_000);
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
     if (current) return;
@@ -1126,7 +1160,7 @@ function registerHotkeys() {
   // The talk key is the only key; the old shortcuts are no longer registered.
   void register;
   hotkeys.dictate = hotkeys.max = true;
-  if (current) globalShortcut.register("Escape", cancelSession);
+  if (current) globalShortcut.register("Escape", stopEverything);
   refreshTrayMenu();
 }
 
