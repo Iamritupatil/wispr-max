@@ -280,7 +280,7 @@ function listenThroughFlow() {
   s.heldKey = true;
   s.asking = asking;
   sendOverlay({ type: "cancel" }); // Max stops talking, or Flow would type Max's voice
-  setOverlay({ phase: "listening", mode: "max", question: "Listening… hold your Wispr Flow key and talk" });
+  setOverlay({ phase: "listening", mode: "max", question: "Listening…" });
   openListen(undefined, true);
   s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 30_000);
 }

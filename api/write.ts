@@ -1,6 +1,10 @@
 import type { ComposeInput, ReactEvent } from "../src/core/ai";
 import { findGif } from "../src/core/gif";
 import { BUILTIN_SOUNDS, builtinSound, findSound } from "../src/core/sound";
+
+// When the model names no meme sound, one of these: every Gen Z answer makes a noise.
+const FALLBACK_SOUNDS = ["bruh", "vine boom", "emotional damage", "oh no no no", "faaah", "wow anime"];
+const anySound = () => FALLBACK_SOUNDS[Math.floor(Math.random() * FALLBACK_SOUNDS.length)];
 import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
 
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
             const [soundUrl, gifUrl] = await Promise.all([
-              builtin ? builtinSound(builtin) : r.clip || !r.sound ? undefined : findSound(r.sound),
+              builtin ? builtinSound(builtin) : r.clip ? undefined : findSound(r.sound?.trim() || anySound()),
               // No GIF named? Max's own line finds one: every reaction gets a GIF.
               findGif(r.gif?.trim() || r.say || "reaction", process.env.GIPHY_API_KEY),
             ]);
@@ -52,7 +56,7 @@ export async function POST(request: Request) {
         return writer.guide(body.question, body.screenshot, request.signal, (body.steps ?? []).slice(0, 10), Boolean(body.genz)).then(async (g) => {
           if (!body.genz) return g;
           // Gen Z Max: every answer gets a GIF (from Max's own line if none was named), a meme sound for roasts.
-          const [gifUrl, soundUrl] = await Promise.all([findGif(g.gif?.trim() || g.say, process.env.GIPHY_API_KEY), g.sound ? findSound(g.sound) : undefined]);
+          const [gifUrl, soundUrl] = await Promise.all([findGif(g.gif?.trim() || g.say, process.env.GIPHY_API_KEY), findSound(g.sound?.trim() || anySound())]);
           return { ...g, gifUrl, soundUrl };
         });
       case "extract":
