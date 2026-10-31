@@ -8,7 +8,7 @@ type Body =
   | { op: "compose" | "auto"; input: ComposeInput & { vocabulary?: string[] } }
   | { op: "polish"; transcript: string; context: FocusContext; vocabulary: string[]; tone?: string }
   | { op: "extract"; text: string }
-  | { op: "guide"; question: string; screenshot?: Screenshot }
+  | { op: "guide"; question: string; screenshot?: Screenshot; steps?: string[] }
   | { op: "react"; event: ReactEvent; text: string; screenshot?: Screenshot; clips?: string[]; recent?: string[] };
 
 /** Everything Max writes goes through here: compose, dictate-or-ask, polish, read a contact. */
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };
           });
       case "guide":
-        return writer.guide(body.question, body.screenshot, request.signal);
+        return writer.guide(body.question, body.screenshot, request.signal, (body.steps ?? []).slice(0, 10));
       case "extract":
         return writer.extractContact(body.text, request.signal);
       default:

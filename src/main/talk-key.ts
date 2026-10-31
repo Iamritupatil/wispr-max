@@ -35,6 +35,10 @@ export function setTalkKey(name: TalkKeyName, h: TalkKeyHandlers) {
   handlers = h;
   if (started || !codes.length) return;
   started = true;
+  if (hooked) {
+    uIOhook.stop();
+    hooked = false;
+  }
   uIOhook.on("keydown", (e) => {
     if (!codes.includes(e.keycode)) {
       other = true;
@@ -71,7 +75,36 @@ export function setTalkKey(name: TalkKeyName, h: TalkKeyHandlers) {
   }
 }
 
+let hooked = false;
+function ensureHook() {
+  if (started || hooked) return true;
+  try {
+    uIOhook.start();
+    hooked = true;
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+/** Resolves true on the user's next mouse click (false after the timeout, or without permission). */
+export function nextClick(timeoutMs: number): Promise<boolean> {
+  if (!ensureHook()) return new Promise((r) => setTimeout(() => r(false), Math.min(timeoutMs, 8000)));
+  return new Promise((resolve) => {
+    const onClick = () => finish(true);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    function finish(clicked: boolean) {
+      clearTimeout(timer);
+      uIOhook.off("mousedown", onClick);
+      resolve(clicked);
+    }
+    uIOhook.on("mousedown", onClick);
+  });
+}
+
 export function stopTalkKey() {
+  if (hooked) uIOhook.stop();
+  hooked = false;
   if (started) uIOhook.stop();
   started = false;
 }

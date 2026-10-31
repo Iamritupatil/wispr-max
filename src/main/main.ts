@@ -50,7 +50,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
-import { setTalkKey, stopTalkKey } from "./talk-key";
+import { nextClick, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
@@ -238,23 +238,47 @@ function flowSession(): Session {
 /** The ghost says something: in its bubble, out loud, and (optionally) right next to the thing it means. */
 function ghostSays(s: Session, text: string, point?: Point) {
   if (current !== s) return;
-  if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
-  setOverlay({ phase: "done", mode: "max", question: text });
-  if (settings.talkBack) void speak(text);
+  showStep(text, point);
   // Long enough to read (or hear) it, then back home.
   endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
 }
 
-/** "Hey Max, how do I…?": looks at the screen, answers out loud, flies to the spot. */
+/** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
+function showStep(text: string, point?: Point) {
+  if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
+  setOverlay({ phase: "done", mode: "max", question: text });
+  if (settings.talkBack) void speak(text);
+}
+
+const GUIDE_STEPS = 6;
+
+/**
+ * "Hey Max, how do I…?": a walkthrough. Max looks at the screen, points at the
+ * next thing to click and says it; when you click, it looks again and shows
+ * the next step, until the goal is reached. Esc stops it.
+ */
 async function guideFromFlow(question: string) {
   const s = flowSession();
-  setOverlay({ phase: "thinking", mode: "max", transcript: question });
+  const steps: string[] = [];
   try {
-    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-    const shot = await captureScreen();
-    const res = await writer().guide(question, shot, s.abort.signal);
-    const b = display.bounds;
-    ghostSays(s, res.say, res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height });
+    for (let i = 0; i < GUIDE_STEPS; i++) {
+      setOverlay({ phase: "thinking", mode: "max", transcript: question });
+      const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+      const shot = await captureScreen();
+      if (current !== s) return;
+      const res = await writer().guide(question, shot, s.abort.signal, steps);
+      if (current !== s) return;
+      const b = display.bounds;
+      const point = res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height };
+      if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, res.say, point);
+      showStep(res.say, point);
+      steps.push(res.say);
+      // Wait for the click, then give the page a moment to change.
+      const clicked = await nextClick(90_000);
+      if (current !== s) return;
+      if (!clicked) return endSession(s, 0);
+      await sleep(1200);
+    }
   } catch (err) {
     if (isAbort(err) || current !== s) return;
     failSession(s, err instanceof Error ? err.message : String(err));

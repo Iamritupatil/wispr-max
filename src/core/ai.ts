@@ -97,6 +97,8 @@ export interface Reaction {
 /** A spoken answer about the screen, and where on it to look (fractions of the screenshot). */
 export interface Guidance {
   say: string;
+  /** The goal is reached (or there's nothing to click): stop guiding. */
+  done?: boolean;
   point?: { x: number; y: number };
 }
 
@@ -255,7 +257,7 @@ export class Writer {
   }
 
   /** "How do I…?" about what's on screen: a short spoken answer, and where to click. */
-  async guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal): Promise<Guidance> {
+  async guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal, steps: string[] = []): Promise<Guidance> {
     try {
       const res = await this.client.beta.messages.create(
         {
@@ -264,15 +266,21 @@ export class Writer {
           output_config: { effort: "low", format: { type: "json_schema", schema: GUIDE_SCHEMA } },
           ...fallbackFor(this.opts.model),
           system: GUIDE_SYSTEM,
-          messages: [{ role: "user", content: userContent(question, screenshot) }],
+          messages: [
+            {
+              role: "user",
+              content: userContent(`<goal>${question}</goal>${steps.length ? `\n<steps_so_far>\n${steps.join("\n")}\n</steps_so_far>` : ""}`, screenshot),
+            },
+          ],
         },
         { signal },
       );
       if (res.stop_reason === "refusal") return { say: "I can't help with that one." };
       const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean };
+      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean; done?: boolean };
       const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
-      return out.has_point && inside(out.x) && inside(out.y) ? { say: out.say, point: { x: out.x!, y: out.y! } } : { say: out.say };
+      const point = out.has_point && inside(out.x) && inside(out.y) ? { x: out.x!, y: out.y! } : undefined;
+      return { say: out.say, done: Boolean(out.done) || !point, ...(point && { point }) };
     } catch (err) {
       throw toAiError(err);
     }
