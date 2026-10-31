@@ -303,7 +303,7 @@ function renderTalk(v: TalkView) {
   const heard = v.answer ? `“${esc(v.heard)}” · you said: “${esc(v.answer)}”` : `“${esc(v.heard)}”`;
   $("talk-meta").innerHTML =
     v.intent && !v.answer
-      ? `${heard} · heard as <b>${v.intent === "command" ? "a request to Max" : "dictation"}</b>` +
+      ? `<span>${heard} · heard as <b>${v.intent === "command" ? "a request to Max" : "dictation"}</b></span>` +
         `<span class="by">${v.decidedBy === "rules" ? "decided instantly" : "decided by Claude"}</span>`
       : heard;
   $("talk-email").classList.toggle("hidden", !v.draft);

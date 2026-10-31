@@ -1039,6 +1039,7 @@ input.hotkey.recording {
 
 .talk-meta b {
   color: var(--ink);
+  white-space: nowrap;
 }
 
 .talk-meta .by {
