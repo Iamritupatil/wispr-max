@@ -12,6 +12,8 @@ import {
   cleanOutput,
   parseAsk,
   placeholderQuestion,
+  GUIDE_SYSTEM,
+  GUIDE_SCHEMA,
   MAX_QUESTIONS,
   type ComposeOptions,
 } from "./prompts";
@@ -70,7 +72,13 @@ function fallbackFor(model: string) {
 }
 
 /** What the writing pipeline needs from a writer: Claude directly, or the hosted backend. */
-export type WriterLike = Pick<Writer, "compose" | "auto" | "polish" | "extractContact">;
+export type WriterLike = Pick<Writer, "compose" | "auto" | "polish" | "extractContact" | "guide">;
+
+/** A spoken answer about the screen, and where on it to look (fractions of the screenshot). */
+export interface Guidance {
+  say: string;
+  point?: { x: number; y: number };
+}
 
 /** What Max wrote, or the one question it needs answered first. */
 export interface Written {
@@ -221,6 +229,30 @@ export class Writer {
       const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
       const fields = JSON.parse(json) as Record<string, string>;
       return Object.fromEntries(Object.entries(fields).filter(([, v]) => v?.trim())) as Partial<Contact>;
+    } catch (err) {
+      throw toAiError(err);
+    }
+  }
+
+  /** "How do I…?" about what's on screen: a short spoken answer, and where to click. */
+  async guide(question: string, screenshot: Screenshot | undefined, signal?: AbortSignal): Promise<Guidance> {
+    try {
+      const res = await this.client.beta.messages.create(
+        {
+          model: this.opts.model,
+          max_tokens: 4000,
+          output_config: { effort: "low", format: { type: "json_schema", schema: GUIDE_SCHEMA } },
+          ...fallbackFor(this.opts.model),
+          system: GUIDE_SYSTEM,
+          messages: [{ role: "user", content: userContent(question, screenshot) }],
+        },
+        { signal },
+      );
+      if (res.stop_reason === "refusal") return { say: "I can't help with that one." };
+      const json = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+      const out = JSON.parse(json) as { say: string; x?: number; y?: number; has_point?: boolean };
+      const inside = (n?: number) => typeof n === "number" && n >= 0 && n <= 1;
+      return out.has_point && inside(out.x) && inside(out.y) ? { say: out.say, point: { x: out.x!, y: out.y! } } : { say: out.say };
     } catch (err) {
       throw toAiError(err);
     }

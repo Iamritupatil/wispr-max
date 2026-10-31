@@ -33,7 +33,7 @@ const THIS = String.raw`(?:this|that|it|the (?:above|selection|selected text|tex
 const WAKE = new RegExp(String.raw`^\s*(?:hey|hi|okay|ok|yo)[,.]?\s+max\b[\s,.:!?-]*`, "i");
 // "Max, reply to…": a bare name only counts with a pause after it, so dictating
 // "Max will join the call" isn't mistaken for calling Max.
-const CALL = new RegExp(String.raw`^\s*(?:(?:hey|hi|okay|ok|yo)[,.]?\s+max\b|max\s*[,:!])[\s,.:!?-]*`, "i");
+const CALL = new RegExp(String.raw`^\s*(?:(?:hey|hi|hello|okay|ok|yo)[,.]?\s+max\b|max\s*[,:!])[\s,.:!?-]*`, "i");
 
 /**
  * Did the user call Max by name ("Hey Max, …", "Max, …") at the start of a
@@ -145,4 +145,30 @@ export function parseAutoOutput(raw: string): { intent: Intent; text: string; qu
   const text = raw.slice(m[0].length);
   if (mode === "ask") return { intent: "command", text: "", question: text.replace(/^ASK:\s*/i, "").trim() };
   return { intent: mode === "write" ? "command" : "dictation", text };
+}
+
+export type CallRoute =
+  | { kind: "agent"; agent: "claude" | "codex"; task: string }
+  | { kind: "guide"; question: string }
+  | { kind: "write"; instruction: string };
+
+const AGENT = /^(?:please\s+)?(?:(?:tell|ask|have|get|let)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)(?:\s+to)?|(?:run|launch|start|open|use)\s+(claude(?: code)?|codex|chat ?gpt|the agent|my agent)\s+(?:and|to)|(?:claude|codex)[,:])\s+(.+)$/is;
+const GUIDE =
+  /^(?:how|what|where|which|why|when|who|is (?:this|it|that)|are (?:these|they)|can you (?:help|show|explain|tell me|teach)|could you (?:help|show|explain|tell me)|help me|show me|explain|teach me|walk me through|i(?:'m| am) (?:stuck|lost|confused|not sure)|i don'?t (?:know|understand))\b/i;
+
+/**
+ * After "Hey Max": hand a task to the user's own agent ("tell Claude to…"),
+ * answer a question about the screen ("how do I…?"), or write something.
+ */
+export function routeCall(instruction: string, contacts: Contact[] = []): CallRoute {
+  const text = instruction.trim();
+  const agent = text.match(AGENT);
+  if (agent) {
+    const name = (agent[1] ?? agent[2] ?? text.split(/[\s,:]/)[0]).toLowerCase();
+    return { kind: "agent", agent: /codex|chat ?gpt/.test(name) ? "codex" : "claude", task: agent[3].trim() };
+  }
+  // "Can you write an email…" is writing, even though it starts like a question.
+  if (guessIntent(text, contacts).intent === "command") return { kind: "write", instruction: text };
+  if (GUIDE.test(text) || /\?\s*$/.test(text)) return { kind: "guide", question: text };
+  return { kind: "write", instruction: text };
 }

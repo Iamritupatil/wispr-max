@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calledMax, guessIntent, parseAutoOutput } from "../src/core/intent";
+import { calledMax, guessIntent, parseAutoOutput, routeCall } from "../src/core/intent";
 import cases from "./fixtures/intents.json";
 
 const contacts = [
@@ -66,4 +66,16 @@ test("calling Max by name in a Flow dictation hands it to Max", () => {
   assert.equal(calledMax("Max will join the call at five."), null);
   assert.equal(calledMax("I told Max, sounds good"), null);
   assert.equal(calledMax("Hey Max"), null);
+});
+
+test("after Hey Max: run an agent, guide on screen, or write", () => {
+  assert.deepEqual(routeCall("Tell Claude to fix the failing login test"), { kind: "agent", agent: "claude", task: "fix the failing login test" });
+  assert.deepEqual(routeCall("ask codex to add dark mode to the settings page"), { kind: "agent", agent: "codex", task: "add dark mode to the settings page" });
+  assert.deepEqual(routeCall("Run Claude Code and write tests for the API"), { kind: "agent", agent: "claude", task: "write tests for the API" });
+  assert.equal(routeCall("How do I attach a camera to this Raspberry Pi?").kind, "guide");
+  assert.equal(routeCall("I'm stuck, what do I click next").kind, "guide");
+  assert.equal(routeCall("Is this tweet real?").kind, "guide");
+  assert.equal(routeCall("Write a follow-up to Tejas about the role, I haven't heard back").kind, "write");
+  assert.equal(routeCall("Can you write an email to Priya asking about the deadline?").kind, "write");
+  assert.equal(calledMax("Hello Max, how do I export this?"), "How do I export this?");
 });

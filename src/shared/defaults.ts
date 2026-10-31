@@ -29,6 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceInput: "flow",
   screenContext: true,
   listenToFlow: true,
+  agentFolder: "",
+  talkBack: true,
   talkKey: "alt",
   flowRequests: "auto",
   cloudUrl: CLOUD_URL,

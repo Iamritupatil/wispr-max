@@ -29,7 +29,7 @@ import {
   parseContactsFile,
 } from "../core/contacts";
 import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
-import { calledMax, guessIntent } from "../core/intent";
+import { calledMax, guessIntent, routeCall } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
 import { toneFor } from "../core/style";
@@ -50,6 +50,7 @@ import type {
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
 import { setTalkKey, stopTalkKey } from "./talk-key";
+import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
 import { checkForUpdates, installUpdate, onUpdateState, updateState } from "./updater";
 
@@ -166,7 +167,11 @@ function onFlowDictation(d: FlowDictation) {
   const called = calledMax(d.text);
   if (called) {
     clearOffer();
-    return void takeOverFromFlow(called);
+    // "Hey Max, …": run your agent, help with what's on screen, or write.
+    const route = routeCall(called, contacts);
+    if (route.kind === "agent") return void agentFromFlow(route.agent, route.task);
+    if (route.kind === "guide") return void guideFromFlow(route.question);
+    return void takeOverFromFlow(route.instruction);
   }
   const guess = guessIntent(d.text, contacts);
   if (guess.intent !== "command") return;
@@ -222,6 +227,79 @@ async function takeOverFromFlow(instruction: string) {
   void handleTranscript(s, instruction);
 }
 
+/** A Max session started by a Flow dictation, with the ghost up and Esc to cancel. */
+function flowSession(): Session {
+  const s: Session = { mode: "max", phase: "processing", abort: new AbortController(), context: Promise.resolve({}), spokenMs: 0, fromFlow: true };
+  current = s;
+  showOverlay();
+  try {
+    globalShortcut.register("Escape", cancelSession);
+  } catch {
+    // optional
+  }
+  return s;
+}
+
+/** The ghost says something: in its bubble, out loud, and (optionally) right next to the thing it means. */
+function ghostSays(s: Session, text: string, point?: Point) {
+  if (current !== s) return;
+  if (point) flyTo({ x: point.x + 70, y: point.y + 20 });
+  setOverlay({ phase: "done", mode: "max", question: text });
+  if (settings.talkBack) sendOverlay({ type: "say", text });
+  // Long enough to read (or hear) it, then back home.
+  endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
+}
+
+/** "Hey Max, how do I…?": looks at the screen, answers out loud, flies to the spot. */
+async function guideFromFlow(question: string) {
+  const s = flowSession();
+  setOverlay({ phase: "thinking", mode: "max", transcript: question });
+  try {
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    const shot = await captureScreen();
+    const res = await writer().guide(question, shot, s.abort.signal);
+    const b = display.bounds;
+    ghostSays(s, res.say, res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height });
+  } catch (err) {
+    if (isAbort(err) || current !== s) return;
+    failSession(s, err instanceof Error ? err.message : String(err));
+  }
+}
+
+/** "Hey Max, tell Claude to…": runs it on the agent signed in on this computer. */
+async function agentFromFlow(agent: AgentName, task: string) {
+  const s = flowSession();
+  const name = AGENT_LABEL[agent];
+  setOverlay({ phase: "listening", mode: "max", question: `${name} is on it…` });
+  if (settings.talkBack) sendOverlay({ type: "say", text: `On it. I'll tell you when ${name} is done.` });
+  const run = runAgent(agent, task, settings.agentFolder);
+  s.abort.signal.addEventListener("abort", () => run.cancel());
+  clearTimeout(s.timer); // agents take as long as they take
+  try {
+    const out = await run.done;
+    ghostSays(s, `${name} is done. ${spokenSummary(out)}`.trim());
+    recordUse({ mode: "max", transcript: task, output: out, app: name, spokenMs: 0 });
+  } catch (err) {
+    if (current !== s) return;
+    ghostSays(s, err instanceof Error ? err.message : String(err));
+  }
+}
+
+let liveAnchor: Point | null = null;
+
+/** Glides the ghost window to a point on screen. */
+function flyTo(target: Point) {
+  const from = liveAnchor ?? currentAnchor();
+  const steps = 14;
+  for (let i = 1; i <= steps; i++) {
+    setTimeout(() => {
+      const t = i / steps;
+      const ease = 1 - (1 - t) ** 3;
+      placeOverlay({ x: from.x + (target.x - from.x) * ease, y: from.y + (target.y - from.y) * ease });
+    }, i * 25);
+  }
+}
+
 /** Learns where the text is going while the user is still talking. */
 async function gatherContext(mode: Mode, fromFlow = false): Promise<FocusContext> {
   const [appInfo, screenshot] = await Promise.all([
@@ -269,7 +347,8 @@ function endSession(s: Session, settleMs: number) {
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
     if (current) return;
-    // Between sessions the ghost either floats quietly or disappears.
+    // Between sessions the ghost goes home, then floats quietly or disappears.
+    placeOverlay(currentAnchor());
     setOverlay({ phase: "idle", mode: "dictate" });
     if (!ghostStaysOut()) overlay.hide();
   }, settleMs);
@@ -693,6 +772,7 @@ function currentAnchor(): Point {
 }
 
 function placeOverlay(anchor: Point) {
+  liveAnchor = anchor;
   const { workArea: wa } = screen.getDisplayNearestPoint({ x: Math.round(anchor.x), y: Math.round(anchor.y) });
   const { width, height } = OVERLAY_SIZE;
   const flip = anchor.y - wa.y < height - BAR_FROM_BOTTOM; // no room for the card above

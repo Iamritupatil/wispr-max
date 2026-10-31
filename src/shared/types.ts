@@ -108,6 +108,10 @@ export interface Settings {
    * dictation to Max; other requests get a quick offer. Reads Flow's local history.
    */
   listenToFlow: boolean;
+  /** Where "Hey Max, tell Claude to…" runs (empty: the home folder). */
+  agentFolder: string;
+  /** The ghost speaks its answers out loud. */
+  talkBack: boolean;
   /** Hold to talk, double-tap for hands-free. */
   talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
   /** A request heard in a Flow dictation (without "Hey Max"): write it at once, or offer first. */
@@ -195,7 +199,9 @@ export type OverlayCommand =
   | { type: "stop"; sounds: boolean }
   | { type: "cancel" }
   /** Appear in a puff of smoke. */
-  | { type: "appear" };
+  | { type: "appear" }
+  /** Say it out loud. */
+  | { type: "say"; text: string };
 
 export interface AudioPayload {
   data: Uint8Array;

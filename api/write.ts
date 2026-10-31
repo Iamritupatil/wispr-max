@@ -1,11 +1,12 @@
 import type { ComposeInput } from "../src/core/ai";
-import type { FocusContext } from "../src/shared/types";
+import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
 
 type Body =
   | { op: "compose" | "auto"; input: ComposeInput & { vocabulary?: string[] } }
   | { op: "polish"; transcript: string; context: FocusContext; vocabulary: string[]; tone?: string }
-  | { op: "extract"; text: string };
+  | { op: "extract"; text: string }
+  | { op: "guide"; question: string; screenshot?: Screenshot };
 
 /** Everything Max writes goes through here: compose, dictate-or-ask, polish, read a contact. */
 export async function POST(request: Request) {
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
         return writer.auto(body.input, handlers, request.signal);
       case "polish":
         return writer.polish(body.transcript, body.context, body.vocabulary, body.tone, request.signal);
+      case "guide":
+        return writer.guide(body.question, body.screenshot, request.signal);
       case "extract":
         return writer.extractContact(body.text, request.signal);
       default:

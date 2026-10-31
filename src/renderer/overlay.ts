@@ -141,7 +141,7 @@ function render(s: OverlayState) {
   root.dataset.minimal = String(Boolean(s.minimal));
   root.dataset.mode = s.mode;
   const offering = s.phase === "offer";
-  root.dataset.asking = String(offering || (Boolean(s.question) && s.phase === "listening"));
+  root.dataset.asking = String(offering || (Boolean(s.question) && (s.phase === "listening" || s.phase === "done")));
   $("ask-q").textContent = offering ? `Sounds like a request: “${s.transcript ?? ""}”` : (s.question ?? "");
   $("label").textContent = LABELS[s.phase](s);
   $("to").textContent = s.contacts?.length ? `To: ${s.contacts.join(", ")}` : "";
@@ -230,7 +230,13 @@ window.overlay.onCommand(async (cmd) => {
       void bar.offsetWidth;
       bar.classList.add("poof");
       setTimeout(() => bar.classList.remove("poof"), 1100);
+    } else if (cmd.type === "say") {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(cmd.text);
+      u.rate = 1.05;
+      speechSynthesis.speak(u);
     } else if (cmd.type === "cancel") {
+      speechSynthesis.cancel();
       await recorder.cancel();
       render({ phase: "idle", mode: "dictate" });
     }
