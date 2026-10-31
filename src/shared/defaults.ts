@@ -31,7 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   listenToFlow: true,
   agentFolder: "",
   talkBack: true,
-  vibe: "formal",
+  vibe: "genz",
   chaos: "normal",
   memeFolder: "",
   talkKey: "alt",

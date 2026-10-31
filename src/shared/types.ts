@@ -122,6 +122,8 @@ export interface Settings {
   talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
   /** The key Wispr Flow listens on: Max holds it for you while you hold Alt. */
   flowKey: "ctrl-win" | "caps" | "self";
+  /** Set once Gen Z mode was switched on by default (so a later choice of Formal sticks). */
+  vibeSet?: boolean;
   /** A request heard in a Flow dictation (without "Hey Max"): write it at once, or offer first. */
   flowRequests: "auto" | "ask";
   /** The hosted Wispr Max server, used when there's no Anthropic key on this computer. */

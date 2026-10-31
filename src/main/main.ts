@@ -234,7 +234,6 @@ function answerMax(text: string, typed: boolean) {
     void react("command", text);
     return void takeOverFromFlow(route.instruction, typed);
   }
-  if (route.kind === "guide") void react("command", text);
   void guideFromFlow(said, typed);
 }
 
@@ -343,9 +342,9 @@ function flowSession(): Session {
 }
 
 /** The ghost says something: in its bubble, out loud, and (optionally) right next to the thing it means. */
-function ghostSays(s: Session, text: string, point?: Point) {
+function ghostSays(s: Session, text: string, point?: Point, voice = true) {
   if (current !== s) return;
-  showStep(text, point);
+  showStep(text, point, voice);
   // Long enough to read (or hear) it, then back home.
   endSession(s, Math.min(15_000, Math.max(5000, text.split(/\s+/).length * 420)));
 }
@@ -366,13 +365,14 @@ async function ventFromFlow(text: string, typed = true) {
 }
 
 /** One step of a walkthrough: the ghost flies next to the thing to click, says it, and waits. */
-function showStep(text: string, point?: Point) {
+function showStep(text: string, point?: Point, voice = true) {
+  text = short(text);
   conversation.open = true;
   conversation.turns.push(`Max: ${text}`);
   // The ghost lands right beside the button, its bubble pointing at it.
   if (point) flyTo({ x: point.x + 26, y: point.y + 6 });
   setOverlay({ phase: "done", mode: "max", question: text });
-  if (settings.talkBack) void speak(text);
+  if (settings.talkBack && voice) void speak(text);
 }
 
 const GUIDE_STEPS = 6;
@@ -404,8 +404,10 @@ async function guideFromFlow(question: string, typed = false) {
       }
       const b = display.bounds;
       const point = res.point && { x: b.x + res.point.x * b.width, y: b.y + res.point.y * b.height };
-      if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, res.say, point);
-      showStep(res.say, point);
+      // One voice at a time: when a meme sound plays, Max's line is in the bubble only.
+      const voice = !res.soundUrl;
+      if (res.done || !point || i === GUIDE_STEPS - 1) return ghostSays(s, res.say, point, voice);
+      showStep(res.say, point, voice);
       steps.push(res.say);
       // Wait for the click, then give the page a moment to change.
       const clicked = await nextClick(90_000);
@@ -548,6 +550,13 @@ function stopEverything() {
   globalShortcut.unregister("Escape");
 }
 
+/** One short sentence (at most 18 words): what fits in the bubble and is worth saying out loud. */
+function short(text: string) {
+  const first = text.trim().match(/^.+?[.!?](?=\s|$)/)?.[0] ?? text.trim();
+  const words = first.split(/\s+/);
+  return words.length > 18 ? `${words.slice(0, 18).join(" ")}…` : first;
+}
+
 /** Max talks: a natural voice from the server (ElevenLabs) when it has one, otherwise the system voice. */
 async function speak(text: string) {
   armEscape();
@@ -555,7 +564,7 @@ async function speak(text: string) {
     const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/voice`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: text.slice(0, 400) }),
+      body: JSON.stringify({ text: short(text).slice(0, 160) }), // short lines: fewer voice credits
     });
     if (res.ok) {
       const audio = Buffer.from(await res.arrayBuffer()).toString("base64");

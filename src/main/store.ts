@@ -53,6 +53,11 @@ export function loadSettings(): Settings {
     styles: { ...DEFAULT_SETTINGS.styles, ...raw.styles },
   };
   s.voiceInput = "flow"; // Max always listens through Wispr Flow
+  // Memes and GIFs are the point: Gen Z mode is on unless you later pick Formal.
+  if (!s.vibeSet) {
+    s.vibe = "genz";
+    s.vibeSet = true;
+  }
   if (!Array.isArray(s.dictionary)) s.dictionary = [];
   if (!Array.isArray(s.snippets)) s.snippets = [];
   for (const k of SECRET_KEYS) s[k] = unseal(s[k]);
