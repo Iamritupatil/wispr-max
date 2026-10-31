@@ -358,7 +358,9 @@ function showReaction(say: string, clip: Clip | undefined, gifUrl: string | unde
   // While Max is busy with a task, the bubble is the task's; the reaction is the clip.
   if (idle && say.trim()) setOverlay({ phase: "done", mode: "max", question: say });
   // Your clip does the talking; Max only speaks for itself when there's no clip.
-  if (!clip && settings.talkBack && say.trim()) void speak(say);
+  // One voice per request: for a command, the answer does the talking and the
+  // reaction is just the meme. Max only voices a reaction when it spoke up by itself.
+  if (ownsGhost && !clip && settings.talkBack && say.trim()) void speak(say);
   if (song.trim()) void shell.openExternal(`https://open.spotify.com/search/${encodeURIComponent(song)}`);
   clearTimeout(reactionTimer);
   reactionTimer = setTimeout(() => {
