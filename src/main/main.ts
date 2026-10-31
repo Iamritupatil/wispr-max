@@ -155,8 +155,20 @@ function syncFlowWatcher() {
   }
 }
 
+/** Flow can save one dictation twice (a draft, then the polished text): answer it once. */
+let lastHeard = { text: "", at: 0 };
+const sameWords = (a: string) => a.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function heardBefore(text: string) {
+  const now = sameWords(text);
+  const before = lastHeard.text;
+  const repeat = Date.now() - lastHeard.at < 30_000 && Boolean(before) && (now === before || now.includes(before) || before.includes(now));
+  lastHeard = { text: now, at: Date.now() };
+  return repeat;
+}
+
 /** A new Flow dictation: called Max? Take over. A request? Offer to write it. */
 function onFlowDictation(d: FlowDictation) {
+  if (heardBefore(d.text)) return;
   // Max asked a question over its head: this dictation is the answer.
   if (current?.fromFlow && current.asking) {
     const s = current;
