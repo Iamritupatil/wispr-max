@@ -350,6 +350,16 @@ function syncPeeks() {
   }, minutes * 60_000 * (0.6 + Math.random() * 0.8));
 }
 
+/** A quick ping now and then, so the server never starts cold in the middle of a request. */
+function keepServerWarm() {
+  const ping = () => {
+    if (store.anthropicKey(settings)) return; // writing locally: no server involved
+    void net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/health`).catch(() => undefined);
+  };
+  ping();
+  setInterval(ping, 4 * 60_000);
+}
+
 let liveAnchor: Point | null = null;
 
 /** Glides the ghost window to a point on screen. */
@@ -1265,6 +1275,7 @@ if (!app.requestSingleInstanceLock()) {
     registerHotkeys();
     syncFlowWatcher();
     syncPeeks();
+    keepServerWarm();
     if (genz()) setTimeout(() => void react("hello"), 2500);
     if (flowMode() && !genz()) {
       showOverlay();

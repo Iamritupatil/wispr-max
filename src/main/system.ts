@@ -3,8 +3,8 @@ import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import type { FocusContext, Screenshot } from "../shared/types";
 
-/** Longest edge Claude reads an image at without downscaling. */
-const SCREENSHOT_EDGE = 1568;
+/** Small enough to upload and read fast, big enough to read a chat. */
+const SCREENSHOT_EDGE = 1280;
 
 /**
  * The screen the user is working on, so Max can read the conversation they're
@@ -25,7 +25,7 @@ export async function captureScreen(): Promise<Screenshot | undefined> {
     });
     const source = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
     if (!source || source.thumbnail.isEmpty()) return undefined;
-    return { data: source.thumbnail.toJPEG(75).toString("base64"), mediaType: "image/jpeg" };
+    return { data: source.thumbnail.toJPEG(65).toString("base64"), mediaType: "image/jpeg" };
   } catch {
     return undefined; // No permission or no capture support: Max still works without it.
   }
