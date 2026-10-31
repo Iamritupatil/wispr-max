@@ -52,7 +52,6 @@ import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
 import { hookError, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
-import { findGif } from "../core/gif";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
 import type { ReactEvent } from "../core/ai";
 import { activeApp, captureScreen, insertText, isTerminal, readSelection, undoLastEdit } from "./system";
@@ -204,6 +203,8 @@ function withHistory(text: string) {
 function answerMax(text: string, typed: boolean) {
   const mem = memoryCommand(text);
   if (mem) return rememberOrForget(mem, typed);
+  // "Max, roast me": always a meme sound, a GIF and a roast of whatever's on your screen.
+  if (/\broast (?:me|this|my)\b/i.test(text)) return void roastMe(text, typed);
   const route = routeCall(text, contacts);
   const said = withHistory(text);
   conversation.open = true;
@@ -235,6 +236,15 @@ async function rememberOrForget(mem: NonNullable<ReturnType<typeof memoryCommand
   }
   store.saveSettings(settings);
   ghostSays(s, mem.kind === "remember" ? "Got it, I'll remember that." : facts.length === settings.memory.length ? "I didn't have anything about that." : "Done, forgotten.");
+}
+
+async function roastMe(text: string, typed: boolean) {
+  const s = flowSession();
+  if (typed) await takeBack();
+  if (current !== s) return;
+  setOverlay({ phase: "thinking", mode: "max" });
+  endSession(s, 0);
+  await react("command", `${text}\n\n(They asked you to roast them. Look at their screen and roast what you see, savage but affectionate. Never skip; pick a meme sound and a GIF.)`, true, true, true);
 }
 
 /** What Max knows about you, for the model. */
@@ -420,6 +430,13 @@ async function guideFromFlow(question: string, typed = false) {
       const context = where.app ? `\n<context>${where.app}${where.windowTitle ? `: ${where.windowTitle}` : ""}</context>` : "";
       const res = await writer().guide(`${question}\n(It's ${now} on the user's computer.)${context}${aboutUser()}`, shot, s.abort.signal, steps, genz());
       if (current !== s) return;
+      if (genz()) {
+        // Every Gen Z answer: a GIF and a meme sound, from the server if the answer didn't bring them.
+        const [g, snd] = await Promise.all([res.gifUrl ?? serverMeme("gif", res.gif || res.say), res.soundUrl ?? serverMeme("sound", res.sound || anySound())]);
+        res.gifUrl = g;
+        res.soundUrl = snd;
+        if (current !== s) return;
+      }
       // Gen Z mode and an obvious question: the roast comes with a meme (sound first, then Max).
       if (res.soundUrl) sendOverlay({ type: "clip", url: res.soundUrl, kind: "audio" });
       if (res.gifUrl) {
@@ -490,18 +507,23 @@ let peekTimer: NodeJS.Timeout | undefined;
 let reactionTimer: NodeJS.Timeout | undefined;
 
 /** Gen Z Max reacts: a GIF over its head, a filmy line out loud, maybe a meme song. */
-async function react(event: ReactEvent, text = "", withScreen = false, ownsGhost = event !== "command") {
-  if (!genz()) return;
+async function react(event: ReactEvent, text = "", withScreen = false, ownsGhost = event !== "command", force = false) {
+  if (!genz() && !force) return;
   try {
     const shot = withScreen ? await captureScreen() : undefined;
     const clips = listClips(memeFolder());
     const r = await writer().react(event, text + aboutUser(), shot, clips.map((c) => c.name), undefined, recentReactions);
+    if (r.skip && !force) return;
     remember(r.clip || r.sound, r.gif);
     const clip = findClip(clips, r.clip);
-    const gif = clip ? undefined : (r.gifUrl ?? (await findGif(r.gif, process.env.GIPHY_API_KEY)));
-    // No clip of yours fits: a meme sound from Myinstants, found by the server.
-    const sound: Clip | undefined = !clip && r.soundUrl ? { name: r.sound, url: r.soundUrl, kind: "audio" } : undefined;
-    if (r.skip || (!clip && !sound && !r.say.trim())) return;
+    // The GIF and the meme sound always come from the Wispr Max server (it has the GIPHY key
+    // and Myinstants lookup), even when your own API key wrote the line.
+    const [gif, soundUrl] = await Promise.all([
+      clip ? undefined : (r.gifUrl ?? serverMeme("gif", r.gif || r.say)),
+      clip ? undefined : (r.soundUrl ?? serverMeme("sound", r.sound || anySound())),
+    ]);
+    const sound: Clip | undefined = soundUrl ? { name: r.sound, url: soundUrl, kind: "audio" } : undefined;
+    if (!clip && !sound && !gif && !r.say.trim()) return;
     showReaction(r.say, clip ?? sound, gif, r.song, ownsGhost);
   } catch {
     // A missed joke is fine.
@@ -516,6 +538,20 @@ function remember(...names: string[]) {
 }
 
 const memeFolder = () => settings.memeFolder || defaultMemeFolder();
+
+const MEME_SOUNDS = ["bruh", "vine boom", "emotional damage", "oh no no no", "faaah", "wow anime"];
+const anySound = () => MEME_SOUNDS[Math.floor(Math.random() * MEME_SOUNDS.length)];
+
+/** A GIF or meme sound for this phrase, looked up by the Wispr Max server. */
+async function serverMeme(kind: "gif" | "sound", query: string): Promise<string | undefined> {
+  if (!query.trim()) return undefined;
+  try {
+    const res = await net.fetch(`${settings.cloudUrl || CLOUD_URL}/api/${kind}?q=${encodeURIComponent(query.slice(0, 80))}`);
+    return res.ok ? ((await res.json()) as { url?: string }).url : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** `ownsGhost`: Max spoke up by itself (hello, a peek), so the bubble is the reaction's; for a command, it belongs to the task. */
 function showReaction(say: string, clip: Clip | undefined, gifUrl: string | undefined, song: string, ownsGhost: boolean) {

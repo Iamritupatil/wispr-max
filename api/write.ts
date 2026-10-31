@@ -42,6 +42,8 @@ export async function POST(request: Request) {
         return writer
           .react(body.event, body.text, body.screenshot, [...(body.clips ?? []).slice(0, 200), ...BUILTIN_SOUNDS.map((b) => `${b.name} (${b.when})`)], request.signal, (body.recent ?? []).slice(0, 8))
           .then(async (r) => {
+            // Talked to directly, Max always answers (a peek may stay quiet).
+            if (r.skip && body.event === "command") r = { ...r, skip: false, say: r.say || "Bruh." };
             if (r.skip) return r;
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
             // Every reaction gets a GIF, and a sound unless the user's own clip plays; looked up side by side.
