@@ -83,6 +83,10 @@ export interface Reaction {
   skip: boolean;
   /** Name of one of the user's meme clips to play, or "". */
   clip: string;
+  /** A Myinstants search for a meme sound, when no clip fits. */
+  sound: string;
+  /** Filled in by the server: the meme sound to play. */
+  soundUrl?: string;
   say: string;
   gif: string;
   song: string;
@@ -288,7 +292,7 @@ export class Writer {
         },
         { signal },
       );
-      if (res.stop_reason === "refusal") return { skip: true, clip: "", say: "", gif: "", song: "" };
+      if (res.stop_reason === "refusal") return { skip: true, clip: "", sound: "", say: "", gif: "", song: "" };
       return JSON.parse(res.content.map((b) => (b.type === "text" ? b.text : "")).join("")) as Reaction;
     } catch (err) {
       throw toAiError(err);

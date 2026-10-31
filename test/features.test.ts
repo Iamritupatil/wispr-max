@@ -91,3 +91,17 @@ test("usage: time saved, durations, daily series and top apps", async () => {
     { app: "Other", words: 30 },
   ]);
 });
+
+test("Myinstants search page: finds the meme sound links", async () => {
+  const { soundsInPage } = await import("../src/core/sound");
+  const html = `<button class="small-button" onclick="play('/media/sounds/bruh.mp3', 'loader-1', 'bruh')"></button>
+    <button onclick="play('/media/sounds/emotional-damage.mp3', 'loader-2', 'x')"></button>`;
+  assert.deepEqual(soundsInPage(html), ["https://www.myinstants.com/media/sounds/bruh.mp3", "https://www.myinstants.com/media/sounds/emotional-damage.mp3"]);
+});
+
+test("Myinstants API: finds the sound file in the results", async () => {
+  const { soundsInApi } = await import("../src/core/sound");
+  const body = { count: 1, results: [{ name: "FAAAH", slug: "faaah-63455", sound: "https://www.myinstants.com/media/sounds/faaah.mp3", color: "FF0000" }] };
+  assert.deepEqual(soundsInApi(body), ["https://www.myinstants.com/media/sounds/faaah.mp3"]);
+  assert.deepEqual(soundsInApi({ results: [] }), []);
+});

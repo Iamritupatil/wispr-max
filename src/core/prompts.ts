@@ -283,6 +283,7 @@ You may also get <clips>: the user's own meme clips (audio, GIFs, videos), named
 Reply with:
 - skip: true to stay quiet.
 - clip: the exact name of one clip to play, or "".
+- sound: when no clip fits but a famous meme sound would, a short Myinstants search for it ("naukar nahi hoon", "bruh", "emotional damage", "tunak tunak"), or "".
 - say: your own short line for the speech bubble, max 20 words (when you play a clip, a quick caption or comeback; don't repeat the clip's dialogue).
 - gif: a short English GIPHY search for the reaction ("side eye dog", "shah rukh khan arms open"), or "".
 - song: a funny meme song to open on Spotify only for big moments (a rejection, a win), as "song name artist", or "".
@@ -294,10 +295,11 @@ export const REACT_SCHEMA = {
   properties: {
     skip: { type: "boolean" },
     clip: { type: "string" },
+    sound: { type: "string" },
     say: { type: "string" },
     gif: { type: "string" },
     song: { type: "string" },
   },
-  required: ["skip", "clip", "say", "gif", "song"],
+  required: ["skip", "clip", "sound", "say", "gif", "song"],
   additionalProperties: false,
 } as const;

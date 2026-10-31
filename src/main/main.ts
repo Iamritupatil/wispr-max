@@ -305,9 +305,11 @@ async function react(event: ReactEvent, text = "", withScreen = false) {
     const clips = listClips(memeFolder());
     const r = await writer().react(event, text, shot, clips.map((c) => c.name));
     const clip = findClip(clips, r.clip);
-    if (r.skip || (!clip && !r.say.trim())) return;
     const gif = clip ? undefined : (r.gifUrl ?? (await findGif(r.gif, process.env.GIPHY_API_KEY)));
-    showReaction(r.say, clip, gif, r.song, event !== "command");
+    // No clip of yours fits: a meme sound from Myinstants, found by the server.
+    const sound: Clip | undefined = !clip && r.soundUrl ? { name: r.sound, url: r.soundUrl, kind: "audio" } : undefined;
+    if (r.skip || (!clip && !sound && !r.say.trim())) return;
+    showReaction(r.say, clip ?? sound, gif, r.song, event !== "command");
   } catch {
     // A missed joke is fine.
   }
