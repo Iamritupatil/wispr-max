@@ -322,7 +322,8 @@ function showReaction(say: string, clip: Clip | undefined, gifUrl: string | unde
   const idle = ownsGhost && !current;
   showOverlay();
   if (clip) sendOverlay({ type: "clip", url: clip.url, kind: clip.kind });
-  else if (gifUrl) sendOverlay({ type: "gif", url: gifUrl });
+  // A sound plays with a GIF; your own GIF or video already is the picture.
+  if (gifUrl && (!clip || clip.kind === "audio")) sendOverlay({ type: "gif", url: gifUrl });
   // While Max is busy with a task, the bubble is the task's; the reaction is the clip.
   if (idle && say.trim()) setOverlay({ phase: "done", mode: "max", question: say });
   // Your clip does the talking; Max only speaks for itself when there's no clip.

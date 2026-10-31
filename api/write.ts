@@ -40,7 +40,10 @@ export async function POST(request: Request) {
           .then(async (r) => {
             if (r.skip) return r;
             const builtin = BUILTIN_SOUNDS.find((b) => r.clip.trim().toLowerCase().startsWith(b.name));
-            if (builtin) return { ...r, clip: "", soundUrl: await instantSound(builtin.slug) };
+            if (builtin) {
+              const [soundUrl, gifUrl] = await Promise.all([instantSound(builtin.slug), findGif(r.gif, process.env.GIPHY_API_KEY)]);
+              return { ...r, clip: "", soundUrl, gifUrl };
+            }
             // The user's own clip comes first; then a meme sound and a GIPHY GIF.
             if (r.clip) return r;
             return { ...r, gifUrl: await findGif(r.gif, process.env.GIPHY_API_KEY), soundUrl: await findSound(r.sound) };
