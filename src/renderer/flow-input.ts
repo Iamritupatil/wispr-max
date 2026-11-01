@@ -8,7 +8,12 @@ const BURST_WINDOW_MS = 400;
 /** …that no one types by hand (fast typists manage about 4 in that time). */
 const BURST_CHARS = 10;
 
-export function watchFlowInput(el: HTMLInputElement | HTMLTextAreaElement, onText: (text: string) => void) {
+export function watchFlowInput(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  onText: (text: string) => void,
+  /** flowOnly: only Wispr Flow's dictation is sent; typing by hand gets onTyped instead. */
+  opts: { flowOnly?: boolean; onTyped?: () => void } = {},
+) {
   let settle: number | undefined;
   let lastLength = el.value.length;
   let recent: { at: number; chars: number }[] = [];
@@ -41,6 +46,7 @@ export function watchFlowInput(el: HTMLInputElement | HTMLTextAreaElement, onTex
   el.addEventListener("keydown", (e) => {
     if ((e as KeyboardEvent).key === "Enter" && !(e as KeyboardEvent).shiftKey) {
       e.preventDefault();
+      if (opts.flowOnly && !machine) return opts.onTyped?.();
       send();
     }
   });

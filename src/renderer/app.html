@@ -47,7 +47,7 @@
             </div>
             <ol class="how-steps">
               <li><b>Pick an app</b>: a sample app (no setup), or share your own tab or window.</li>
-              <li><b>Ask</b> "how do I…?" with Wispr Flow (click the box, hold your Flow key) or just type.</li>
+              <li><b>Ask with Wispr Flow</b>: click the box, hold your Flow key, say "how do I…?". Max only listens through Flow.</li>
               <li><b>Max points</b> at the exact button, roasts you, and throws a GIF and a meme sound.</li>
             </ol>
             <div class="gd-apps" role="tablist" aria-label="Pick an app">
@@ -58,7 +58,7 @@
             <div class="genz-tries" id="gd-questions"></div>
             <div class="gd-row">
               <button type="button" class="btn" id="gd-share">Share your tab or window</button>
-              <input id="gd-q" class="talk-input" placeholder="Ask about your shared screen: “how do I …?”, then Enter" autocomplete="off" />
+              <input id="gd-q" class="talk-input" placeholder="Click here, hold your Wispr Flow key and ask" autocomplete="off" />
             </div>
             <div id="gd-stage" class="gd-stage hidden">
               <div class="gd-shot"><img id="gd-img" alt="Your shared screen" /><span id="gd-pin" class="gd-pin hidden"><i></i></span></div>
@@ -77,7 +77,7 @@
           <section class="card web-only genz-demo">
             <div class="card-title">
               <h2 class="serif">Test Max: talk to it</h2>
-              <span class="muted small">Sound on. Click a chip, or say anything to Max with Wispr Flow (or type it) and press Enter. It remembers the chat.</span>
+              <span class="muted small">Sound on. Click a chip, or talk to Max through Wispr Flow. It remembers the chat.</span>
             </div>
             <div class="genz-stage">
               <span id="genz-ghost" class="ghost-slot big" data-eyes="center" data-ghost></span>
@@ -94,7 +94,7 @@
               <button type="button" class="chip" data-try="Max you're the worst product ever">Roast it</button>
               <button type="button" class="chip" data-try="Max I got the job!!">Good news</button>
             </div>
-            <input id="genz-input" class="talk-input" placeholder="Or say anything with Wispr Flow (or type it), then Enter" autocomplete="off" />
+            <input id="genz-input" class="talk-input" placeholder="Or click here, hold your Wispr Flow key and say anything to Max" autocomplete="off" />
           </section>
           <section class="card web-only demo-mail">
             <div class="card-title" id="demo-title">
@@ -132,7 +132,7 @@
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key.</p>
               <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>On the desktop, Max lives on top of every app</b>: tap Alt twice and talk through Wispr Flow, and it reads your screen and shows you where to click. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
-              <p class="muted small desktop-only">In any app: hold <b>Alt</b>, ask Max anything, let go. Or tap Alt twice and talk with your Wispr Flow key. Nothing gets typed; normal Flow dictation stays normal. <b>Esc</b> stops Max. <span id="kbd-talk" class="hidden"></span></p>
+              <p class="muted small desktop-only">In any app: tap <b>Alt</b> twice, then hold your Wispr Flow key and ask Max anything. Max only listens through Flow, and nothing gets typed; your normal Flow dictation stays normal. <b>Esc</b> stops Max. <span id="kbd-talk" class="hidden"></span></p>
             </div>
           </section>
 
@@ -344,7 +344,7 @@
               </div>
               <div id="flow-connect" class="flow-connect"></div>
               <div data-voice="flow" class="desktop-only">
-                <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Talk to Max through Wispr Flow</b> Tap <b>Alt</b> twice, then hold your Flow key and talk: Flow's words go to Max, never into your app. (Or just hold <b>Alt</b> and talk: Max listens with its own mic.) Everything else you dictate with Flow stays plain dictation. <b>Esc</b> stops Max.</span></label>
+                <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Talk to Max through Wispr Flow</b> Tap <b>Alt</b> twice, then hold your Flow key and talk: Flow's words go to Max, never into your app. Max only listens through Flow. Everything else you dictate with Flow stays plain dictation. <b>Esc</b> stops Max.</span></label>
                 <div class="field hidden">
                   <label>When Flow hears a request without "Hey Max"</label>
                   <select name="flowRequests">

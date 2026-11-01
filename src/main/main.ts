@@ -95,8 +95,6 @@ interface Session {
   fromFlow?: boolean;
   /** Listening through Flow while Max's key (Alt) is held: Flow types into Max's own hidden box. */
   heldKey?: boolean;
-  /** Hold Alt: Max listens with its own microphone (no Flow involved). */
-  ownMic?: boolean;
   /** A walkthrough or a comeback: a new request simply replaces it. */
   interruptible?: boolean;
 }
@@ -297,35 +295,6 @@ async function takeBack() {
 
 // ---------- Tap Alt twice: Max listens, through Wispr Flow ----------
 
-/** Hold Alt: Max listens with its own mic while you hold it. Nothing goes through Flow or into your app. */
-function listenWithOwnMic() {
-  if (current && current.fromFlow && current.interruptible === false && !current.asking) return;
-  dropCurrent();
-  clearOffer();
-  const s = flowSession();
-  s.phase = "recording";
-  s.ownMic = true;
-  sendOverlay({ type: "start", mode: "max", sounds: false }); // also stops Max talking, or the mic hears Max
-  // Read the screen while you talk (before the bubble shows, so it isn't in the shot).
-  const shot = Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
-  readAhead = { at: Date.now(), shot };
-  void shot.finally(() => current === s && s.phase === "recording" && setOverlay({ phase: "listening", mode: "max", question: "Listening…" }));
-  s.timer = setTimeout(() => current === s && s.phase === "recording" && ownMicReleased(), MAX_RECORDING_MS);
-}
-
-/** The screen as it was while you were talking: the first look of a walkthrough, if it's fresh. */
-let readAhead: { at: number; shot: Promise<[Awaited<ReturnType<typeof captureScreen>>, { app?: string; windowTitle?: string }]> } | null = null;
-
-/** Alt up: stop recording; the words come back through overlay:audio. */
-function ownMicReleased() {
-  const s = current;
-  if (!s?.ownMic || s.phase !== "recording") return;
-  s.phase = "processing";
-  clearTimeout(s.timer);
-  setOverlay({ phase: "thinking", mode: "max" });
-  sendOverlay({ type: "stop", sounds: false });
-}
-
 /**
  * Alt, Alt: the ghost listens and Max's invisible box takes focus. Hold your
  * Flow key as usual: Flow types into Max's box, never into your app. Max never
@@ -344,10 +313,16 @@ function listenThroughFlow() {
   s.heldKey = true;
   s.asking = asking;
   sendOverlay({ type: "cancel" }); // Max stops talking, or Flow would type Max's voice
-  setOverlay({ phase: "listening", mode: "max", question: "Listening…" });
   openListen(undefined, true);
+  // Read the screen while you talk (before the bubble shows, so it isn't in the shot).
+  const shot = Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
+  readAhead = { at: Date.now(), shot };
+  void shot.finally(() => current === s && s.phase === "recording" && setOverlay({ phase: "listening", mode: "max", question: "Listening… hold your Wispr Flow key and talk" }));
   s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 30_000);
 }
+
+/** The screen as it was while you were talking: the first look of a walkthrough, if it's fresh. */
+let readAhead: { at: number; shot: Promise<[Awaited<ReturnType<typeof captureScreen>>, { app?: string; windowTitle?: string }]> } | null = null;
 
 function clearOffer() {
   if (!offer) return;
@@ -834,14 +809,6 @@ async function handleAudio(s: Session, audio: AudioPayload) {
     const vocabulary = buildVocabulary(contacts, settings.dictionary, settings.profile);
     const raw = await speechToText(audio, vocabulary, s.abort.signal);
     if (current !== s) return;
-    if (s.ownMic) {
-      // Held Alt and talked: it's for Max, no "Max" needed.
-      clearTimeout(s.timer);
-      current = null;
-      const said = applyDictionary(raw.trim(), settings.dictionary);
-      if (!said) return failSession(flowSession(), "Didn't catch that. Hold Alt and try again.");
-      return answerMax(calledMax(said) ?? said, false);
-    }
     await handleTranscript(s, applyDictionary(raw, settings.dictionary));
   } catch (err) {
     if (isAbort(err) || current !== s) return;
@@ -1360,14 +1327,16 @@ function registerHotkeys() {
   });
   setTalkKey(settings.talkKey === "off" ? "alt" : settings.talkKey, {
     holdStart: () => {
-      if (flowMode()) return listenWithOwnMic();
+      // Max only listens through Wispr Flow: holding Alt says what to do next.
+      if (flowMode()) return void setOverlay({ phase: "listening", mode: "max", question: "Let go of Alt, then hold your Wispr Flow key" });
       if (current) return;
       // One key for everything: Max works out whether you're dictating or asking.
       startSession("dictate");
       held = current;
     },
     holdEnd: () => {
-      if (flowMode()) return ownMicReleased();
+      // Alt is up, so it can't mix with Flow's key (Ctrl+Win+Alt is Flow's Command Mode): Max is listening.
+      if (flowMode()) return listenThroughFlow();
       if (current && current === held && current.phase === "recording") stopRecording(current);
       held = null;
     },

@@ -77,7 +77,10 @@ async function react(text: string) {
   }
 }
 
-watchFlowInput(input, (text) => void react(text));
+watchFlowInput(input, (text) => void react(text), {
+  flowOnly: true,
+  onTyped: () => toast("Max listens through Wispr Flow: click the box, hold your Flow key and talk.", true),
+});
 
 for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>("[data-try]"))) {
   b.addEventListener("click", () => {

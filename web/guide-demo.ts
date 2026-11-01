@@ -99,13 +99,18 @@ async function look() {
   }
 }
 
-watchFlowInput(input, (text) => {
-  if (APPS[app].image) return void askSample(text);
-  goal = text;
-  steps = [];
-  plan = [];
-  void look();
-});
+const FLOW_ONLY = "Max listens through Wispr Flow: click the box, hold your Flow key and talk.";
+watchFlowInput(
+  input,
+  (text) => {
+    if (APPS[app].image) return void askSample(text);
+    goal = text;
+    steps = [];
+    plan = [];
+    void look();
+  },
+  { flowOnly: true, onTyped: () => toast(FLOW_ONLY, true) },
+);
 next.addEventListener("click", () => void look());
 
 // ---------- pick an app: a sample (no setup) or your own screen ----------
@@ -130,7 +135,7 @@ function pickApp(name: string) {
   for (const b of Array.from(document.querySelectorAll<HTMLElement>("[data-app]"))) b.classList.toggle("primary-chip", b.dataset.app === name);
   share.classList.toggle("hidden", name !== "own");
   input.placeholder =
-    name === "own" ? "Ask about your shared screen: “how do I …?”, then Enter" : "Or ask anything about this app with Wispr Flow (or type), then Enter";
+    name === "own" ? "Click here, hold your Wispr Flow key: “how do I …?”" : "Or click here, hold your Wispr Flow key and ask anything about this app";
   // Show the sample app right away, so people see what Max is looking at.
   const image = APPS[name].image;
   stage.classList.toggle("hidden", !image);
