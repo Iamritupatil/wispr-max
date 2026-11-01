@@ -1889,3 +1889,17 @@ body.web .home-head {
 .genz-tries .chip:hover {
   background: var(--field);
 }
+
+.hero-how {
+  margin: 24px 0 0;
+}
+.hero-how img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+.hero-how figcaption {
+  margin-top: 8px;
+}

@@ -46,7 +46,7 @@ swap(
   /<meta http-equiv="Content-Security-Policy"[^>]*>/.exec(html)?.[0] ?? "<meta http-equiv",
   `<meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob: https://*.giphy.com; connect-src 'self'; media-src 'self' blob: https://www.myinstants.com; worker-src 'self'; manifest-src 'self'" />
-    <meta name="description" content="Wispr Max: a little AI buddy on your desktop that teaches you how to do the work. It talks first, points at the buttons, and roasts you with memes and slang. Built on Wispr Flow." />
+    <meta name="description" content="Wispr Max: a little AI buddy on your desktop that teaches you how to do the work. Wispr Flow is its ears; Max reads your screen, points at the buttons, and roasts you with memes and slang." />
     <meta name="theme-color" content="#faf9f6" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon-192.png" />
@@ -58,7 +58,7 @@ swap(`<script src="app.js"></script>`, `<script src="/web.js"></script>`);
 await fs.writeFile(`${OUT}/index.html`, html);
 
 await fs.copyFile("src/renderer/app.css", `${OUT}/app.css`);
-for (const f of ["web.css", "manifest.webmanifest", "icon-192.png", "icon-512.png"]) {
+for (const f of ["web.css", "manifest.webmanifest", "icon-192.png", "icon-512.png", "how-it-works.png"]) {
   await fs.copyFile(`web/${f}`, `${OUT}/${f}`);
 }
 const sw = await fs.readFile("web/sw.js", "utf8");
