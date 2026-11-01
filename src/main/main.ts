@@ -29,7 +29,7 @@ import {
   newId,
   parseContactsFile,
 } from "../core/contacts";
-import { draftUrl, emailRecipient, parseEmailDraft } from "../core/email";
+import { draftUrl, emailRecipient, parseEmailDraft, wantsEmail } from "../core/email";
 import { abuseKind, calledMax, guessIntent, memoryCommand, routeCall } from "../core/intent";
 import { buildVocabulary, type Clarification, MAX_QUESTIONS } from "../core/prompts";
 import { transcribe } from "../core/stt";
@@ -215,7 +215,8 @@ function answerMax(text: string, typed: boolean) {
     const clip = kind && { english: "ye-angrezi-gaali-apne-paas-rakh", hindi: "gaali-mat-do-bhai", yell: "chilla-mat-chudail" }[kind];
     return void ventFromFlow(clip ? `${text}\n\n(Play the clip "${clip}" for this, and caption it with a short comeback.)` : said, typed);
   }
-  if (route.kind === "write" && guessIntent(text, contacts).intent === "command") {
+  // "Draft me an email for my college", "write a leave application": Max writes it, never just explains how.
+  if (route.kind === "write") {
     void react("command", text);
     return void takeOverFromFlow(route.instruction, typed);
   }
@@ -878,8 +879,8 @@ async function handleTranscript(s: Session, transcript: string) {
 
     let message: string | undefined;
     let settleMs = mode === "max" ? 2600 : 1200;
-    if (result.draftTo) {
-      message = `Opened an email draft to ${result.draftTo}`;
+    if (result.draftTo !== undefined) {
+      message = result.draftTo ? `Opened an email draft to ${result.draftTo}` : "Opened your email draft: add who it's to and send";
     } else {
       const pasted = await insertText(result.output, mode === "max" && settings.keepResultOnClipboard);
       if (!pasted) {
@@ -926,20 +927,24 @@ async function polishDictation(s: Session, transcript: string, context: FocusCon
 }
 
 /** "Email Priya…" from outside an email app opens a ready-to-send draft instead of typing. */
-function draftRecipient(instruction: string, mentioned: Contact[], context: FocusContext) {
-  // With Wispr Flow, Max always types where you are (the LinkedIn box, the email you're in).
-  return settings.emailDrafts !== "off" && !current?.fromFlow && toneFor(settings.styles, context).category !== "email" && !context.selection
-    ? emailRecipient(instruction, mentioned)
-    : null;
+/**
+ * An email asked for outside your email app becomes a ready-to-send draft (Gmail by
+ * default), so it never depends on a text box being focused. "" = a draft with
+ * nobody in To yet (Max didn't know the address). null = type it where you are.
+ */
+function draftRecipient(instruction: string, mentioned: Contact[], context: FocusContext): string | null {
+  if (settings.emailDrafts === "off" || toneFor(settings.styles, context).category === "email" || context.selection) return null;
+  if (!wantsEmail(instruction)) return null;
+  return emailRecipient(instruction, mentioned) ?? "";
 }
 
 /** Style guide for this request: an email draft is written in the email style. */
 function toneGuide(context: FocusContext, draftTo: string | null) {
-  return toneFor(settings.styles, draftTo ? { app: "Mail" } : context).guide;
+  return toneFor(settings.styles, draftTo !== null ? { app: "Mail" } : context).guide;
 }
 
 async function openDraftIfAny(s: Session, output: string, draftTo: string | null): Promise<Result> {
-  if (!draftTo || current !== s) return { output };
+  if (draftTo === null || current !== s) return { output };
   const url = draftUrl(settings.emailDrafts, { to: draftTo, ...parseEmailDraft(output) });
   if (url) await shell.openExternal(url);
   return { output, draftTo };
@@ -958,7 +963,7 @@ async function writeWithMax(
     mode: "max",
     transcript: instruction,
     contacts: mentioned.slice(0, 3).map((c) => c.name),
-    app: draftTo ? "New email draft" : context.app,
+    app: draftTo !== null ? "New email draft" : context.app,
   };
   setOverlay(base);
   let text = "";
@@ -971,7 +976,7 @@ async function writeWithMax(
       profile: settings.profile,
       contacts,
       snippets: settings.snippets,
-      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo), clarifications },
+      options: { tone: toneGuide(context, draftTo), emailDraft: draftTo !== null, clarifications },
     },
     {
       onText: (delta) => {
@@ -1010,7 +1015,7 @@ async function smartDictation(
       contacts,
       snippets: settings.snippets,
       vocabulary,
-      options: { tone: toneGuide(context, draftTo), emailDraft: Boolean(draftTo) },
+      options: { tone: toneGuide(context, draftTo), emailDraft: draftTo !== null },
     },
     {
       onDecision: (intent) => {
@@ -1026,7 +1031,7 @@ async function smartDictation(
             text,
             transcript,
             contacts: mentioned.slice(0, 3).map((c) => c.name),
-            app: draftTo ? "New email draft" : context.app,
+            app: draftTo !== null ? "New email draft" : context.app,
           });
         }
       },

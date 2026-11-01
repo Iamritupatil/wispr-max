@@ -3,6 +3,9 @@ import type { Contact, EmailDrafts } from "../shared/types";
 const EMAIL_INTENT = /\b(e-?mail|mail)\b/i;
 const ADDRESS = /[\w.+-]+@[\w-]+(\.[\w-]+)+/;
 
+/** Is this a request for an email ("draft me an email for my college")? */
+export const wantsEmail = (instruction: string) => EMAIL_INTENT.test(instruction);
+
 /**
  * The recipient when an instruction asks for an email to a known person or an
  * explicit address, e.g. "email Priya asking whether my job is confirmed".

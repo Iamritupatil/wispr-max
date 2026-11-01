@@ -144,3 +144,10 @@ test("cringe flexes get a reaction, being stuck still gets help", () => {
   assert.equal(routeCall("I'm stuck, what do I click next").kind, "guide");
   assert.equal(routeCall("I'm not sure what this error means").kind, "guide");
 });
+
+test("asking Max to write gets writing, not a walkthrough", () => {
+  for (const t of ["Draft me an email for my college", "write a leave application to my principal", "email my professor that I'll miss class tomorrow", "write a cover letter for the Google internship"]) {
+    assert.equal(routeCall(t).kind, "write", t);
+  }
+  assert.equal(routeCall("How do I write an email in Gmail?").kind, "guide");
+});
