@@ -8,7 +8,6 @@ import type { Screenshot } from "../src/shared/types";
 // The website's taste of the desktop app's walkthrough: share a tab or window,
 // ask how to do something, and Max marks the exact spot on a picture of it,
 // with a roast, a GIF and a meme sound. "I did it" looks again for the next step.
-// Plus the demo video, with chapters that jump to each part.
 
 const writer = new RemoteWriter(""); // this site's own server
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -34,9 +33,9 @@ function syncShare() {
 }
 
 /** The sample app's screen, as Max would see it. */
-async function sampleShot(): Promise<Screenshot> {
+async function sampleShot(src: string): Promise<Screenshot> {
   const pic = new Image();
-  pic.src = "/sample-app.png";
+  pic.src = src;
   await pic.decode();
   const canvas = document.createElement("canvas");
   canvas.width = pic.naturalWidth;
@@ -101,6 +100,7 @@ async function look() {
 }
 
 watchFlowInput(input, (text) => {
+  if (APPS[app].image) return void askSample(text);
   goal = text;
   steps = [];
   plan = [];
@@ -108,27 +108,59 @@ watchFlowInput(input, (text) => {
 });
 next.addEventListener("click", () => void look());
 
-for (const chip of Array.from(document.querySelectorAll<HTMLButtonElement>("[data-sample]"))) {
-  chip.addEventListener("click", async () => {
-    sample = await sampleShot();
-    goal = chip.dataset.sample ?? "";
-    steps = [];
-    plan = [];
-    void look();
-  });
+// ---------- pick an app: a sample (no setup) or your own screen ----------
+
+const APPS: Record<string, { image?: string; questions: string[] }> = {
+  voxly: {
+    image: "/sample-app.png",
+    questions: ["How do I create a new assistant?", "How do I change the voice of New Assistant to a female voice?", "Where do I publish it?", "Where are the settings?"],
+  },
+  mailbox: {
+    image: "/sample-mail.png",
+    questions: ["How do I write a new email?", "How do I reply to Tejas?", "Where are my drafts?", "Where do I change my settings?"],
+  },
+  own: { questions: [] },
+};
+const questions = $("gd-questions");
+let app = "voxly";
+
+function pickApp(name: string) {
+  app = name;
+  sample = null;
+  for (const b of Array.from(document.querySelectorAll<HTMLElement>("[data-app]"))) b.classList.toggle("primary-chip", b.dataset.app === name);
+  share.classList.toggle("hidden", name !== "own");
+  input.placeholder =
+    name === "own" ? "Ask about your shared screen: “how do I …?”, then Enter" : "Or ask anything about this app with Wispr Flow (or type), then Enter";
+  // Show the sample app right away, so people see what Max is looking at.
+  const image = APPS[name].image;
+  stage.classList.toggle("hidden", !image);
+  pin.classList.add("hidden");
+  gif.classList.add("hidden");
+  next.classList.add("hidden");
+  open.classList.add("hidden");
+  if (image) {
+    img.src = image;
+    say.textContent = "Pick a question, or ask me anything about this screen.";
+  }
+  questions.innerHTML = "";
+  for (const q of APPS[name].questions) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = q;
+    chip.addEventListener("click", () => void askSample(q));
+    questions.append(chip);
+  }
+  if (name === "own") input.focus();
 }
 
-// ---------- the demo video, with chapters ----------
-
-const yt = $<HTMLIFrameElement>("yt");
-const embed = (start = 0, autoplay = false) =>
-  `https://www.youtube-nocookie.com/embed/${yt.dataset.video}?rel=0&start=${start}${autoplay ? "&autoplay=1" : ""}`;
-yt.src = embed(); // set here, so the desktop app (which shares this page) never loads it
-
-for (const b of Array.from(document.querySelectorAll<HTMLElement>("[data-t], [data-jump]"))) {
-  b.addEventListener("click", (e) => {
-    e.preventDefault();
-    yt.src = embed(Number(b.dataset.t ?? b.dataset.jump), true);
-    yt.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+async function askSample(q: string) {
+  sample = await sampleShot(APPS[app].image!);
+  goal = q;
+  steps = [];
+  plan = [];
+  void look();
 }
+
+for (const b of Array.from(document.querySelectorAll<HTMLElement>("[data-app]"))) b.addEventListener("click", () => pickApp(b.dataset.app!));
+pickApp("voxly");

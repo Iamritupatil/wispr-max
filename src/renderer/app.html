@@ -13,6 +13,7 @@
           <span class="ghost-slot" data-eyes="center" data-ghost></span>
           <span class="brand-name">Wispr Max</span>
         </div>
+        <a class="web-only back-home" href="/">← Back to the website</a>
         <nav id="nav" class="nav">
           <button data-tab="home" class="active"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
           <button data-tab="usage"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></svg>Usage</button>
@@ -37,54 +38,24 @@
             <div id="stats" class="stats"></div>
           </header>
 
-          <section class="hero web-only">
-            <p class="hero-kicker">Built on Wispr Flow</p>
-            <h1 class="serif hero-title">Your desktop buddy that teaches you the work.</h1>
-            <p class="hero-sub muted">Talk through <b>Wispr Flow</b>. Max sees your screen and points at the exact button, step by step, with memes.</p>
-            <div class="hero-tags"><span>Wispr Flow is the ears</span><span>Points at the button</span><span>Speaks first</span><span>Memes &amp; slang</span><span>Remembers you</span></div>
-            <div class="hero-cta">
-              <a class="btn primary" href="/api/download" data-download>Download for desktop</a>
-              <a class="link-btn" href="#gd-share">Try it here, no download ↓</a>
-              <a class="link-btn" href="#yt" data-jump="66">Watch the demo (1:06) ↓</a>
-            </div>
-            <figure class="hero-how">
-              <img src="/how-it-works.png" alt="How Wispr Max works: you talk, Wispr Flow (the ears) turns it into text, Wispr Max (the brain) reads your screen with Claude, then the mouth (voice, meme sounds, GIFs) and the hands (points at buttons, types, opens pages, hands off to Claude Code or Codex)." loading="lazy" />
-              <figcaption class="muted small">I first used AssemblyAI for speech-to-text, but it kept mishearing my accent. Wispr Flow understood me, so every request to Max now goes through Flow first.</figcaption>
-            </figure>
-          </section>
 
-          <section class="card web-only video-card">
-            <div class="card-title">
-              <h2 class="serif">Watch Max in action</h2>
-              <span class="muted small">3 minutes. Or jump straight to a part.</span>
-            </div>
-            <div class="video-wrap"><iframe id="yt" data-video="g393F6Cy6_Y" title="Wispr Max demo" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
-            <div class="genz-tries chapters">
-              <button type="button" class="chip" data-t="0">0:00 Intro</button>
-              <button type="button" class="chip" data-t="8">0:08 Built in one day</button>
-              <button type="button" class="chip" data-t="26">0:26 The problem</button>
-              <button type="button" class="chip primary-chip" data-t="66">1:06 ▶ The demo</button>
-              <button type="button" class="chip" data-t="172">2:52 How it works</button>
-            </div>
-          </section>
 
           <section class="card web-only guide-demo">
             <div class="card-title">
-              <h2 class="serif">Guide me: Max points at the button</h2>
+              <h2 class="serif">Try Max: it points at the button</h2>
               <span class="muted small">No download. Sound on.</span>
             </div>
             <ol class="how-steps">
-              <li><b>Try it on a sample app</b> (one click), or share your own tab or window.</li>
+              <li><b>Pick an app</b>: a sample app (no setup), or share your own tab or window.</li>
               <li><b>Ask</b> "how do I…?" with Wispr Flow (click the box, hold your Flow key) or just type.</li>
               <li><b>Max points</b> at the exact button, roasts you, and throws a GIF and a meme sound.</li>
             </ol>
-            <div class="genz-tries">
-              <span class="muted small">Sample app:</span>
-              <button type="button" class="chip primary-chip" data-sample="How do I create a new assistant?" data-tour="One click: Max looks at a sample app and points at the exact button, with a roast, a GIF and a meme sound." data-tour-title="Try Max, no download" data-tour-step="1">How do I create an assistant?</button>
-              <button type="button" class="chip" data-sample="How do I change the voice of New Assistant to a female voice?">Change the voice to female</button>
-              <button type="button" class="chip" data-sample="Where do I publish it?">Where do I publish?</button>
-              <button type="button" class="chip" data-sample="Where are the settings?">Where are the settings?</button>
+            <div class="gd-apps" role="tablist" aria-label="Pick an app">
+              <button type="button" class="chip primary-chip" data-app="voxly" data-tour="Pick an app, then click a question: Max points at the exact button, with a roast, a GIF and a meme sound." data-tour-title="Try Max, no download" data-tour-step="1">Voxly (voice agents, like Vapi)</button>
+              <button type="button" class="chip" data-app="mailbox">Mailbox (email)</button>
+              <button type="button" class="chip" data-app="own">Your own screen</button>
             </div>
+            <div class="genz-tries" id="gd-questions"></div>
             <div class="gd-row">
               <button type="button" class="btn" id="gd-share">Share your tab or window</button>
               <input id="gd-q" class="talk-input" placeholder="Ask about your shared screen: “how do I …?”, then Enter" autocomplete="off" />

@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Wispr Max",
+  "version": "0.1.0",
+  "description": "Your AI buddy on any website: ask through Wispr Flow, and Max points at the exact button. With memes.",
+  "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
+  "action": { "default_title": "Ask Max (Alt+M)", "default_icon": "icon.png" },
+  "background": { "service_worker": "bg.js" },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://wispr-max.vercel.app/*"],
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+M" }, "description": "Ask Max" }
+  }
+}

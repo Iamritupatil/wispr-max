@@ -2,10 +2,12 @@
 // is a new worker; it waits until the app's Update button says to take over.
 const VERSION = "__BUILD__";
 const CACHE = `wispr-max-${VERSION}`;
-const SHELL = ["/", "/web.js", "/app.css", "/web.css", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const SHELL = ["/app/", "/web.js", "/app.css", "/web.css", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
+  // The site moved (landing page at /, dashboard at /app/): take over right away.
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -25,17 +27,19 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   // Writing always goes to the server; other sites aren't ours to cache.
   if (event.request.method !== "GET" || url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
+  // Only the dashboard works offline; the landing page always comes fresh.
+  if (event.request.mode === "navigate" && !url.pathname.startsWith("/app")) return;
   // This version's files, so the page and its script always match; the
   // network only for anything the shell doesn't have.
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      const path = event.request.mode === "navigate" ? "/" : url.pathname;
+      const path = event.request.mode === "navigate" ? "/app/" : url.pathname;
       const hit = await cache.match(path);
       if (hit) return hit;
       try {
         return await fetch(event.request);
       } catch {
-        return (await cache.match("/")) ?? Response.error();
+        return (await cache.match("/app/")) ?? Response.error();
       }
     }),
   );

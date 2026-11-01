@@ -2005,3 +2005,14 @@ body.web #feed {
 .guide-demo .genz-tries {
   align-items: center;
 }
+
+.back-home {
+  display: block;
+  margin: -6px 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.back-home:hover {
+  color: var(--ink);
+}

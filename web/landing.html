@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com" />
+    <title>Wispr Max</title>
+    <meta name="description" content="Wispr Max: a little AI buddy on your desktop that teaches you how to do the work. Wispr Flow is its ears; Max reads your screen, points at the buttons, and roasts you with memes and slang." />
+    <meta name="theme-color" content="#0e1312" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/landing.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="logo" href="/"><img src="/icon-192.png" alt="" width="28" height="28" />Wispr Max</a>
+      <nav class="links">
+        <a href="#why">Why</a>
+        <a href="#how">How it works</a>
+        <a href="#use">Use it</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a class="btn primary" href="/app/">Open dashboard</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <p class="kicker">Built on Wispr Flow</p>
+          <h1>Your desktop buddy that <em>teaches you</em> the work.</h1>
+          <p class="lead">Ask out loud through Wispr Flow. Max looks at your screen, points at the exact button, step by step, and roasts you with memes while it's at it.</p>
+          <div class="cta">
+            <a class="btn primary big" href="/app/">Try it now, no download</a>
+            <a class="btn big" href="#use" data-download-label>Download</a>
+          </div>
+          <p class="small muted">Or add the <a href="#extension">Chrome extension</a> and use Max on any website.</p>
+        </div>
+        <div class="hero-video">
+          <div class="video"><iframe id="yt" data-video="g393F6Cy6_Y" title="Wispr Max demo" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+          <div class="chapters">
+            <button type="button" data-t="0">0:00 Intro</button>
+            <button type="button" data-t="8">0:08 Built in one day</button>
+            <button type="button" data-t="26">0:26 The problem</button>
+            <button type="button" data-t="66" class="on">1:06 ▶ The demo</button>
+            <button type="button" data-t="172">2:52 How it works</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="why" class="block">
+        <h2>Why I built it</h2>
+        <div class="two">
+          <div>
+            <p>Every time I got stuck on a website (where's the edit button, how do I submit this), I left my flow: screenshot, open ChatGPT, explain the whole page, read a wall of steps, switch back. On the free plan I'd even hit the upload limit.</p>
+            <p>So I built Max: a little pixel ghost that lives on top of every app. You ask out loud, and it shows you, right on your screen. It talks first, it reacts with meme sounds and GIFs, it understands Hindi and Hinglish, and if your question is too obvious, it roasts you.</p>
+          </div>
+          <div>
+            <p>Funny thing: I was building something completely different for this hackathon. I woke up one morning, decided I wasn't going to build that, scrapped it, and built Max from scratch.</p>
+            <div class="stats">
+              <div><b>&lt; 10 h</b><span>from idea to working app</span></div>
+              <div><b>0</b><span>screenshots to paste</span></div>
+              <div><b>1</b><span>key to ask anything</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="block">
+        <h2>How it works</h2>
+        <img class="diagram" src="/how-it-works.png" alt="You talk, Wispr Flow (the ears) turns it into text, Wispr Max (the brain) reads your screen with Claude, then the mouth (voice, meme sounds, GIFs) and the hands (points at buttons, types, opens pages, hands off to Claude Code or Codex)." loading="lazy" />
+        <p class="muted">I first used AssemblyAI for speech-to-text, but it kept mishearing my accent. Wispr Flow understood me, so every request to Max goes through Flow first: Flow is the ears, Max adds the brain, a mouth and hands.</p>
+      </section>
+
+      <section id="use" class="block">
+        <h2>Three ways to use Max</h2>
+        <div class="cards">
+          <article class="card">
+            <p class="tag">No install</p>
+            <h3>In your browser</h3>
+            <ol>
+              <li>Open the dashboard.</li>
+              <li>Pick a sample app (or share your own tab).</li>
+              <li>Ask "how do I…?". Max circles the button, with a roast, a GIF and a meme sound.</li>
+            </ol>
+            <a class="btn primary" href="/app/">Open dashboard</a>
+          </article>
+          <article class="card" id="extension">
+            <p class="tag">Any website</p>
+            <h3>Chrome extension</h3>
+            <ol>
+              <li>Download and unzip it.</li>
+              <li>Open <code>chrome://extensions</code>, turn on <b>Developer mode</b>, click <b>Load unpacked</b> and pick the folder.</li>
+              <li>On any site, click the ghost in your toolbar (or press <kbd>Alt</kbd>+<kbd>M</kbd>) and ask with Wispr Flow. Max points at the real button on the page.</li>
+            </ol>
+            <a class="btn" href="/wispr-max-extension.zip" download>Download extension</a>
+          </article>
+          <article class="card">
+            <p class="tag">Every app</p>
+            <h3>Desktop app</h3>
+            <ol>
+              <li>Download and install it.</li>
+              <li>Tap <kbd>Alt</kbd> twice, hold your Wispr Flow key and ask.</li>
+              <li>Max flies onto the button in any app, writes where you type, and hands big tasks to Claude Code. <kbd>Esc</kbd> stops everything.</li>
+            </ol>
+            <a class="btn" href="#" data-download data-download-label>Download</a>
+            <p class="small muted">Windows may say "unknown publisher": click <b>More info → Run anyway</b>. Other systems: <a href="https://github.com/Iamritupatil/wispr-max/releases/latest">all downloads</a>.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="faq" class="block">
+        <h2>Questions</h2>
+        <details><summary>What does Wispr Flow do here?</summary><p>Flow is Max's ears. You talk with your normal Flow key; Flow turns it into text and Max takes it from there. Flow understood my accent far better than the speech-to-text I tried first.</p></details>
+        <details><summary>Does Max watch my screen all the time?</summary><p>No. Only when you ask: one screenshot goes to Claude with that question, and nothing is stored.</p></details>
+        <details><summary>Is it free?</summary><p>Yes. Max runs on the Wispr Max server, so there's no API key to set up.</p></details>
+        <details><summary>Does it understand Hindi?</summary><p>Yes: Hindi and Hinglish, in Roman letters or Devanagari. Max answers in English, with Bollywood meme sounds.</p></details>
+        <details><summary>How do I stop it?</summary><p>Press <kbd>Esc</kbd>. Voice, memes, the walkthrough: everything stops.</p></details>
+        <details><summary>Will it really roast me?</summary><p>If your question is obvious, yes. Lovingly. Ask it "Am I the best coder alive?" and find out.</p></details>
+      </section>
+    </main>
+
+    <footer>
+      <span>Built by Ritu Patil for the WeMakeDevs × Wispr Flow hackathon.</span>
+      <span><a href="https://github.com/Iamritupatil/wispr-max">GitHub</a> · <a href="https://youtu.be/g393F6Cy6_Y">Demo video</a> · <a href="/app/">Dashboard</a></span>
+    </footer>
+
+    <script src="/landing.js"></script>
+  </body>
+</html>
