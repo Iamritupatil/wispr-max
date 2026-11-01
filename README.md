@@ -61,7 +61,7 @@ Plain Flow dictation stays plain dictation: Max only steps in when you ask it to
 |---|---|---|
 | 🌐 **In your browser** | Open **[wispr-max.vercel.app](https://wispr-max.vercel.app)** → *Open dashboard* → pick a sample app (Voxly, like Vapi, or Mailbox) or share your own tab, then ask with Wispr Flow. Max circles the button with a roast, a GIF and a meme sound. | Trying it in 10 seconds |
 | 🧩 **Chrome extension** | Download the [extension](https://wispr-max.vercel.app/wispr-max-extension.zip), **Extract All**, open `chrome://extensions`, turn on **Developer mode**, **Load unpacked** and pick the folder with `manifest.json`. On any site, click the ghost (or **Alt+M**), ask with Wispr Flow, and Max points at the real button on the page. | Any website |
-| 🖥️ **Desktop app** | Install from [Releases](https://github.com/Iamritupatil/wispr-max/releases/latest). In any app, **tap Alt twice**, then hold your Wispr Flow key and ask. | Every app, writing in place, agents |
+| 🖥️ **Desktop app** | Install from [Releases](https://github.com/Iamritupatil/wispr-max/releases/latest). In any app, **tap Alt twice** and talk: Max starts Wispr Flow's hands-free mode for you. Tap Alt twice again when you're done. | Every app, writing in place, agents |
 
 The desktop app updates itself silently (Settings → *Check for updates*). Windows may say "unknown publisher" the first time: click **More info → Run anyway**, because the app isn't code-signed yet.
 

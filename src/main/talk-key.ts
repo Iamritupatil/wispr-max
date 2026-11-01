@@ -62,6 +62,43 @@ const FLOW_KEYS: Record<Exclude<FlowKeyName, "self">, number[]> = {
  * Holds (or lets go of) the user's Wispr Flow key for them, so Flow listens
  * while Max's key is held. Alt is released first: Flow wants its own keys alone.
  */
+const KEY_NAMES: Record<string, number> = {
+  ctrl: UiohookKey.Ctrl,
+  control: UiohookKey.Ctrl,
+  win: UiohookKey.Meta,
+  meta: UiohookKey.Meta,
+  cmd: UiohookKey.Meta,
+  alt: UiohookKey.Alt,
+  option: UiohookKey.Alt,
+  shift: UiohookKey.Shift,
+  space: UiohookKey.Space,
+  capslock: UiohookKey.CapsLock,
+  caps: UiohookKey.CapsLock,
+  enter: UiohookKey.Enter,
+};
+
+/**
+ * Presses a shortcut like "Ctrl+Win+Space" once (all down, then all up), for
+ * Wispr Flow's hands-free mode. Nothing is held afterwards, so it can't mix
+ * with other keys into Flow's Command Mode. False if a key isn't known.
+ */
+export function tapShortcut(combo: string): boolean {
+  if (!hookRunning()) return false;
+  const keys = combo
+    .toLowerCase()
+    .split(/\s*\+\s*/)
+    .map((k) => KEY_NAMES[k] ?? (/^[a-z0-9]$/.test(k) ? (UiohookKey as Record<string, number>)[k.toUpperCase()] : undefined));
+  if (!keys.length || keys.some((k) => k === undefined)) return false;
+  try {
+    skipUntil = Date.now() + 400; // our own Win key press isn't the user's Flow key
+    for (const k of keys) uIOhook.keyToggle(k!, "down");
+    for (const k of [...keys].reverse()) uIOhook.keyToggle(k!, "up");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function holdFlowKey(name: FlowKeyName, down: boolean) {
   if (name === "self" || !hookRunning()) return;
   const keys = FLOW_KEYS[name];

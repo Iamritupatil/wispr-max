@@ -50,7 +50,7 @@ import type {
 } from "../shared/types";
 import * as store from "./store";
 import { type FlowDictation, FlowHistoryWatcher } from "./flow-history";
-import { hookError, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
+import { hookError, tapShortcut, hookRunning, nextClick, onEscape, onFlowKey, setTalkKey, stopTalkKey } from "./talk-key";
 import { AGENT_LABEL, type AgentName, runAgent, spokenSummary } from "./agent";
 import { type Clip, defaultMemeFolder, findClip, listClips } from "./memes";
 import type { ReactEvent } from "../core/ai";
@@ -301,8 +301,19 @@ async function takeBack() {
  * presses Flow's keys itself (Ctrl+Win+Alt is Flow's Command Mode).
  */
 function listenThroughFlow() {
-  // Tapping Alt twice again while listening: never mind.
-  if (current?.heldKey) return cancelSession();
+  // Alt, Alt while Max is listening: you're done talking. Max stops Flow, and Flow
+  // drops its words into Max's hidden box (listen:submit takes it from there).
+  if (current?.heldKey && current.phase === "recording") {
+    const s = current;
+    tapShortcut(settings.flowHandsFree);
+    setOverlay({ phase: "thinking", mode: "max" });
+    clearTimeout(s.timer);
+    s.timer = setTimeout(
+      () => current === s && s.phase === "recording" && failSession(s, "Wispr Flow didn't send anything. Is it running, and is its hands-free shortcut set in Max's settings?"),
+      10_000,
+    );
+    return;
+  }
   // Max makes way for you, except an agent that's still working.
   if (current && current.fromFlow && current.interruptible === false && !current.asking) return;
   const asking = current?.asking;
@@ -317,8 +328,17 @@ function listenThroughFlow() {
   // Read the screen while you talk (before the bubble shows, so it isn't in the shot).
   const shot = Promise.all([captureScreen(), activeApp().catch(() => ({ app: "", windowTitle: "" }))]);
   readAhead = { at: Date.now(), shot };
-  void shot.finally(() => current === s && s.phase === "recording" && setOverlay({ phase: "listening", mode: "max", question: "Listening… hold your Wispr Flow key and talk" }));
-  s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 30_000);
+  // Once Max's box has focus, start Wispr Flow hands-free: no key stays held, so it's never Command Mode.
+  setTimeout(() => {
+    if (current !== s) return;
+    const started = tapShortcut(settings.flowHandsFree);
+    setOverlay({
+      phase: "listening",
+      mode: "max",
+      question: started ? "Listening… talk, then tap Alt twice" : "Hold your Wispr Flow key and talk",
+    });
+  }, 150);
+  s.timer = setTimeout(() => current === s && s.phase === "recording" && cancelSession(), 120_000);
 }
 
 /** The screen as it was while you were talking: the first look of a walkthrough, if it's fresh. */
@@ -1328,15 +1348,14 @@ function registerHotkeys() {
   setTalkKey(settings.talkKey === "off" ? "alt" : settings.talkKey, {
     holdStart: () => {
       // Max only listens through Wispr Flow: holding Alt says what to do next.
-      if (flowMode()) return void setOverlay({ phase: "listening", mode: "max", question: "Let go of Alt, then hold your Wispr Flow key" });
+      if (flowMode()) return;
       if (current) return;
       // One key for everything: Max works out whether you're dictating or asking.
       startSession("dictate");
       held = current;
     },
     holdEnd: () => {
-      // Alt is up, so it can't mix with Flow's key (Ctrl+Win+Alt is Flow's Command Mode): Max is listening.
-      if (flowMode()) return listenThroughFlow();
+      if (flowMode()) return;
       if (current && current === held && current.phase === "recording") stopRecording(current);
       held = null;
     },

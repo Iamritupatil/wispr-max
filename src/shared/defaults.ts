@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   memeFolder: "",
   talkKey: "alt",
   flowKey: "ctrl-win",
+  flowHandsFree: "Ctrl+Win+Space",
   flowRequests: "auto",
   cloudUrl: CLOUD_URL,
 };

@@ -122,6 +122,8 @@ export interface Settings {
   talkKey: "alt" | "right-alt" | "shift" | "ctrl" | "off";
   /** Unused: Max no longer presses Flow keys (Ctrl+Win+Alt is Flow's Command Mode). */
   flowKey: "ctrl-win" | "caps" | "self";
+  /** Wispr Flow's hands-free shortcut: Max presses it when you tap Alt twice. */
+  flowHandsFree: string;
   /** Set once Gen Z mode was switched on by default (so a later choice of Formal sticks). */
   vibeSet?: boolean;
   vibeSet2?: boolean;

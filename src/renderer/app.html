@@ -132,7 +132,7 @@
               </div>
               <p class="muted small web-only">With <a href="#" data-href="https://wisprflow.ai">Wispr Flow</a> on, click the box and hold your Flow key.</p>
               <p class="web-only desktop-cta">In the browser, Max only works on this page. <b>On the desktop, Max lives on top of every app</b>: tap Alt twice and talk through Wispr Flow, and it reads your screen and shows you where to click. <a href="/api/download" data-download data-tour="Want it in every app? The desktop app listens along with Wispr Flow everywhere: LinkedIn, Gmail, Slack." data-tour-title="Get the desktop app" data-tour-step="3">Download it</a></p>
-              <p class="muted small desktop-only">In any app: tap <b>Alt</b> twice, then hold your Wispr Flow key and ask Max anything. Max only listens through Flow, and nothing gets typed; your normal Flow dictation stays normal. <b>Esc</b> stops Max. <span id="kbd-talk" class="hidden"></span></p>
+              <p class="muted small desktop-only">In any app: tap <b>Alt</b> twice and ask Max anything (Max starts Wispr Flow for you), then tap <b>Alt</b> twice again. Max only listens through Flow, and nothing gets typed; your normal Flow dictation stays normal. <b>Esc</b> stops Max. <span id="kbd-talk" class="hidden"></span></p>
             </div>
           </section>
 
@@ -344,7 +344,11 @@
               </div>
               <div id="flow-connect" class="flow-connect"></div>
               <div data-voice="flow" class="desktop-only">
-                <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Talk to Max through Wispr Flow</b> Tap <b>Alt</b> twice, then hold your Flow key and talk: Flow's words go to Max, never into your app. Max only listens through Flow. Everything else you dictate with Flow stays plain dictation. <b>Esc</b> stops Max.</span></label>
+                <label class="toggle"><input type="checkbox" name="listenToFlow" /><span><b>Talk to Max through Wispr Flow</b> Tap <b>Alt</b> twice and talk: Max starts Wispr Flow for you (hands-free). Tap <b>Alt</b> twice again when you're done. Flow's words go to Max, never into your app. Max only listens through Flow. Everything else you dictate with Flow stays plain dictation. <b>Esc</b> stops Max.</span></label>
+                <div class="field">
+                  <label>Wispr Flow's hands-free shortcut <span class="muted">(Max presses it when you tap Alt twice; check it in Flow's settings)</span></label>
+                  <input name="flowHandsFree" placeholder="Ctrl+Win+Space" autocomplete="off" />
+                </div>
                 <div class="field hidden">
                   <label>When Flow hears a request without "Hey Max"</label>
                   <select name="flowRequests">
