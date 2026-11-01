@@ -7,7 +7,7 @@ const FALLBACK_SOUNDS = ["bruh", "vine boom", "emotional damage", "oh no no no",
 const anySound = () => FALLBACK_SOUNDS[Math.floor(Math.random() * FALLBACK_SOUNDS.length)];
 
 // Memes never hold up Max's answer: whatever isn't found in time is skipped.
-const MEME_MS = 1500;
+const MEME_MS = 2500;
 const within = <T>(p: Promise<T>): Promise<T | undefined> => Promise.race([p, new Promise<undefined>((r) => setTimeout(r, MEME_MS))]);
 // Found once, reused while this server is warm.
 const memo = new Map<string, Promise<string | undefined>>();

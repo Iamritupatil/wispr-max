@@ -1,5 +1,6 @@
 import { abuseKind } from "../src/core/intent";
 import { RemoteWriter } from "../src/core/remote";
+import { showMemes, stopMemes } from "./memes";
 import { watchFlowInput } from "../src/renderer/flow-input";
 import { toast } from "../src/renderer/app";
 
@@ -63,15 +64,10 @@ async function react(text: string) {
     recent.splice(8);
     ghost.dataset.eyes = "happy";
     say.textContent = r.skip || !r.say.trim() ? "Hmm. Thoda aur attitude dikhao, phir baat karte hain." : r.say;
-    if (r.gifUrl) {
-      gif.src = r.gifUrl;
-      gif.classList.remove("hidden");
-    }
     audio?.pause();
-    if (r.soundUrl) {
-      audio = new Audio(r.soundUrl);
-      void audio.play().catch(() => undefined);
-    }
+    stopMemes();
+    // A GIF and a meme sound every time: whatever didn't come with the reply is fetched on the side.
+    showMemes(r, gif);
   } catch (err) {
     say.classList.add("hidden");
     toast(err instanceof Error ? err.message : String(err), true);

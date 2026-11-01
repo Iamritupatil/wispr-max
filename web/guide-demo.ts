@@ -1,7 +1,9 @@
 import { RemoteWriter } from "../src/core/remote";
 import { watchFlowInput } from "../src/renderer/flow-input";
 import { toast } from "../src/renderer/app";
+import { showMemes, stopMemes } from "./memes";
 import { grabScreen, sharing, startSharing } from "./screen";
+import type { Screenshot } from "../src/shared/types";
 
 // The website's taste of the desktop app's walkthrough: share a tab or window,
 // ask how to do something, and Max marks the exact spot on a picture of it,
@@ -24,13 +26,27 @@ let goal = "";
 let steps: string[] = [];
 let plan: string[] = [];
 let busy = false;
-let audio: HTMLAudioElement | null = null;
+/** Trying it on the sample app instead of a shared screen. */
+let sample: Screenshot | null = null;
 
 function syncShare() {
-  share.textContent = sharing() ? "Sharing ✓ (pick another)" : "1. Share a tab or window";
+  share.textContent = sharing() ? "Sharing ✓ (pick another)" : "Share your tab or window";
+}
+
+/** The sample app's screen, as Max would see it. */
+async function sampleShot(): Promise<Screenshot> {
+  const pic = new Image();
+  pic.src = "/sample-app.png";
+  await pic.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = pic.naturalWidth;
+  canvas.height = pic.naturalHeight;
+  canvas.getContext("2d")!.drawImage(pic, 0, 0);
+  return { data: canvas.toDataURL("image/jpeg", 0.85).split(",")[1], mediaType: "image/jpeg", width: canvas.width, height: canvas.height };
 }
 
 share.addEventListener("click", async () => {
+  sample = null;
   try {
     await startSharing();
   } catch {
@@ -40,7 +56,7 @@ share.addEventListener("click", async () => {
 });
 
 async function look() {
-  const shot = grabScreen();
+  const shot = sample ?? grabScreen();
   if (!shot) {
     toast("Share a tab or window first, so Max can see it.", true);
     share.focus();
@@ -65,21 +81,16 @@ async function look() {
       pin.style.top = `${res.point.y * 100}%`;
       pin.classList.remove("hidden");
     }
-    if (res.gifUrl) {
-      gif.src = res.gifUrl;
-      gif.classList.remove("hidden");
-    }
-    audio?.pause();
-    if (res.soundUrl) {
-      audio = new Audio(res.soundUrl);
-      void audio.play().catch(() => undefined);
-    }
+    // A GIF and a meme sound every time: whatever didn't come with the answer is fetched on the side.
+    stopMemes();
+    showMemes(res, gif);
     if (res.openUrl) {
       open.href = res.openUrl;
       open.classList.remove("hidden");
     }
     steps.push(res.say);
-    if (!res.done) next.classList.remove("hidden");
+    // On the sample app nothing changes when you "click", so it's one step there.
+    if (!res.done && !sample) next.classList.remove("hidden");
     stage.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (err) {
     say.textContent = "";
@@ -96,6 +107,16 @@ watchFlowInput(input, (text) => {
   void look();
 });
 next.addEventListener("click", () => void look());
+
+for (const chip of Array.from(document.querySelectorAll<HTMLButtonElement>("[data-sample]"))) {
+  chip.addEventListener("click", async () => {
+    sample = await sampleShot();
+    goal = chip.dataset.sample ?? "";
+    steps = [];
+    plan = [];
+    void look();
+  });
+}
 
 // ---------- the demo video, with chapters ----------
 

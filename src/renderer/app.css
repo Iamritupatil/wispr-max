@@ -1994,3 +1994,14 @@ body.web #feed {
   display: flex;
   gap: 8px;
 }
+
+.how-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.guide-demo .genz-tries {
+  align-items: center;
+}

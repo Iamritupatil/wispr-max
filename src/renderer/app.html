@@ -71,11 +71,23 @@
           <section class="card web-only guide-demo">
             <div class="card-title">
               <h2 class="serif">Guide me: Max points at the button</h2>
-              <span class="muted small">No download. Share a tab or window, ask how to do something, and Max marks the exact spot. Sound on.</span>
+              <span class="muted small">No download. Sound on.</span>
+            </div>
+            <ol class="how-steps">
+              <li><b>Try it on a sample app</b> (one click), or share your own tab or window.</li>
+              <li><b>Ask</b> "how do I…?" with Wispr Flow (click the box, hold your Flow key) or just type.</li>
+              <li><b>Max points</b> at the exact button, roasts you, and throws a GIF and a meme sound.</li>
+            </ol>
+            <div class="genz-tries">
+              <span class="muted small">Sample app:</span>
+              <button type="button" class="chip primary-chip" data-sample="How do I create a new assistant?" data-tour="One click: Max looks at a sample app and points at the exact button, with a roast, a GIF and a meme sound." data-tour-title="Try Max, no download" data-tour-step="1">How do I create an assistant?</button>
+              <button type="button" class="chip" data-sample="How do I change the voice of New Assistant to a female voice?">Change the voice to female</button>
+              <button type="button" class="chip" data-sample="Where do I publish it?">Where do I publish?</button>
+              <button type="button" class="chip" data-sample="Where are the settings?">Where are the settings?</button>
             </div>
             <div class="gd-row">
-              <button type="button" class="btn primary" id="gd-share" data-tour="Share a tab or window, then ask “how do I…?” with Wispr Flow. Max marks the exact button, with a roast, a GIF and a meme sound." data-tour-title="Try Max, no download" data-tour-step="1">1. Share a tab or window</button>
-              <input id="gd-q" class="talk-input" placeholder="2. Ask with Wispr Flow (or type): “how do I …?”, then Enter" autocomplete="off" />
+              <button type="button" class="btn" id="gd-share">Share your tab or window</button>
+              <input id="gd-q" class="talk-input" placeholder="Ask about your shared screen: “how do I …?”, then Enter" autocomplete="off" />
             </div>
             <div id="gd-stage" class="gd-stage hidden">
               <div class="gd-shot"><img id="gd-img" alt="Your shared screen" /><span id="gd-pin" class="gd-pin hidden"><i></i></span></div>
@@ -94,7 +106,7 @@
           <section class="card web-only genz-demo">
             <div class="card-title">
               <h2 class="serif">Test Max: talk to it</h2>
-              <span class="muted small">Gen Z mode, live on the same server as the app. Sound on. It remembers what you said.</span>
+              <span class="muted small">Sound on. Click a chip, or say anything to Max with Wispr Flow (or type it) and press Enter. It remembers the chat.</span>
             </div>
             <div class="genz-stage">
               <span id="genz-ghost" class="ghost-slot big" data-eyes="center" data-ghost></span>
@@ -106,6 +118,7 @@
             <div class="genz-tries">
               <button type="button" class="chip" data-try="Max you are a b!tch">Swear at it</button>
               <button type="button" class="chip" data-try="Max, do you know I became the CEO of Google?">Brag</button>
+              <button type="button" class="chip" data-try="Max, am I the best coder alive on this earth?">Am I the best coder alive?</button>
               <button type="button" class="chip" data-try="MAX WHY ARE YOU NOT WORKING">Yell</button>
               <button type="button" class="chip" data-try="Max you're the worst product ever">Roast it</button>
               <button type="button" class="chip" data-try="Max I got the job!!">Good news</button>

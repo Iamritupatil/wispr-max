@@ -58,7 +58,7 @@ swap(`<script src="app.js"></script>`, `<script src="/web.js"></script>`);
 await fs.writeFile(`${OUT}/index.html`, html);
 
 await fs.copyFile("src/renderer/app.css", `${OUT}/app.css`);
-for (const f of ["web.css", "manifest.webmanifest", "icon-192.png", "icon-512.png", "how-it-works.png"]) {
+for (const f of ["web.css", "manifest.webmanifest", "icon-192.png", "icon-512.png", "how-it-works.png", "sample-app.png"]) {
   await fs.copyFile(`web/${f}`, `${OUT}/${f}`);
 }
 const sw = await fs.readFile("web/sw.js", "utf8");
