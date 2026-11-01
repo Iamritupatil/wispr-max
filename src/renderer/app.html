@@ -44,12 +44,93 @@
             <div class="hero-tags"><span>Wispr Flow is the ears</span><span>Points at the button</span><span>Speaks first</span><span>Memes &amp; slang</span><span>Remembers you</span></div>
             <div class="hero-cta">
               <a class="btn primary" href="/api/download" data-download>Download for desktop</a>
-              <a class="link-btn" href="#genz-input">Try it here in 10 seconds ↓</a>
+              <a class="link-btn" href="#gd-share">Try it here, no download ↓</a>
+              <a class="link-btn" href="#yt" data-jump="66">Watch the demo (1:06) ↓</a>
             </div>
             <figure class="hero-how">
               <img src="/how-it-works.png" alt="How Wispr Max works: you talk, Wispr Flow (the ears) turns it into text, Wispr Max (the brain) reads your screen with Claude, then the mouth (voice, meme sounds, GIFs) and the hands (points at buttons, types, opens pages, hands off to Claude Code or Codex)." loading="lazy" />
               <figcaption class="muted small">I first used AssemblyAI for speech-to-text, but it kept mishearing my accent. Wispr Flow understood me, so every request to Max now goes through Flow first.</figcaption>
             </figure>
+          </section>
+
+          <section class="card web-only video-card">
+            <div class="card-title">
+              <h2 class="serif">Watch Max in action</h2>
+              <span class="muted small">3 minutes. Or jump straight to a part.</span>
+            </div>
+            <div class="video-wrap"><iframe id="yt" data-video="g393F6Cy6_Y" title="Wispr Max demo" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+            <div class="genz-tries chapters">
+              <button type="button" class="chip" data-t="0">0:00 Intro</button>
+              <button type="button" class="chip" data-t="8">0:08 Built in one day</button>
+              <button type="button" class="chip" data-t="26">0:26 The problem</button>
+              <button type="button" class="chip primary-chip" data-t="66">1:06 ▶ The demo</button>
+              <button type="button" class="chip" data-t="172">2:52 How it works</button>
+            </div>
+          </section>
+
+          <section class="card web-only guide-demo">
+            <div class="card-title">
+              <h2 class="serif">Guide me: Max points at the button</h2>
+              <span class="muted small">No download. Share a tab or window, ask how to do something, and Max marks the exact spot. Sound on.</span>
+            </div>
+            <div class="gd-row">
+              <button type="button" class="btn primary" id="gd-share" data-tour="Share a tab or window, then ask “how do I…?” with Wispr Flow. Max marks the exact button, with a roast, a GIF and a meme sound." data-tour-title="Try Max, no download" data-tour-step="1">1. Share a tab or window</button>
+              <input id="gd-q" class="talk-input" placeholder="2. Ask with Wispr Flow (or type): “how do I …?”, then Enter" autocomplete="off" />
+            </div>
+            <div id="gd-stage" class="gd-stage hidden">
+              <div class="gd-shot"><img id="gd-img" alt="Your shared screen" /><span id="gd-pin" class="gd-pin hidden"><i></i></span></div>
+              <div class="gd-side">
+                <span class="ghost-slot big" data-eyes="left" data-ghost></span>
+                <p id="gd-say" class="genz-say"></p>
+                <img id="gd-gif" class="genz-gif hidden" alt="" />
+                <div class="gd-actions">
+                  <button type="button" id="gd-next" class="btn small hidden">I did it, next step →</button>
+                  <a id="gd-open" class="btn small hidden" target="_blank" rel="noopener">Open it</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card web-only genz-demo">
+            <div class="card-title">
+              <h2 class="serif">Test Max: talk to it</h2>
+              <span class="muted small">Gen Z mode, live on the same server as the app. Sound on. It remembers what you said.</span>
+            </div>
+            <div class="genz-stage">
+              <span id="genz-ghost" class="ghost-slot big" data-eyes="center" data-ghost></span>
+              <div class="genz-out">
+                <img id="genz-gif" class="genz-gif hidden" alt="" />
+                <p id="genz-say" class="genz-say hidden"></p>
+              </div>
+            </div>
+            <div class="genz-tries">
+              <button type="button" class="chip" data-try="Max you are a b!tch">Swear at it</button>
+              <button type="button" class="chip" data-try="Max, do you know I became the CEO of Google?">Brag</button>
+              <button type="button" class="chip" data-try="MAX WHY ARE YOU NOT WORKING">Yell</button>
+              <button type="button" class="chip" data-try="Max you're the worst product ever">Roast it</button>
+              <button type="button" class="chip" data-try="Max I got the job!!">Good news</button>
+            </div>
+            <input id="genz-input" class="talk-input" placeholder="Or say anything with Wispr Flow (or type it), then Enter" autocomplete="off" />
+          </section>
+          <section class="card web-only demo-mail">
+            <div class="card-title" id="demo-title">
+              <h2 class="serif">Try it in an email</h2>
+              <span class="muted small">Like the desktop app: talk with Wispr Flow, Max writes right here.</span>
+            </div>
+            <div class="mail">
+              <label class="mail-row"><span>To</span><input id="demo-to" autocomplete="off" placeholder="tejas.patil@miniclay.ai" /></label>
+              <label class="mail-row"><span>Subject</span><input id="demo-subject" autocomplete="off" placeholder="Max fills this in" /></label>
+              <div class="mail-body">
+                <textarea id="demo-body" rows="9" placeholder="Click here, hold your Wispr Flow key and say: “Max, write a follow-up to the recruiter about the Software Engineer role. I haven't heard back in a week.”"></textarea>
+                <div id="demo-ask" class="demo-ask hidden" role="status"><span class="ghost-slot" data-eyes="right" data-ghost></span><p id="demo-q"></p></div>
+              </div>
+              <div class="mail-foot">
+                <span id="demo-status" class="muted small"></span>
+                <span class="spacer"></span>
+                <button type="button" id="demo-clear" class="link-btn">Clear</button>
+                <button type="button" id="demo-copy" class="btn small">Copy email</button>
+              </div>
+            </div>
           </section>
 
           <section class="talk">
@@ -84,48 +165,7 @@
             </div>
           </section>
 
-          <section class="card web-only demo-mail">
-            <div class="card-title" id="demo-title">
-              <h2 class="serif">Try it in an email</h2>
-              <span class="muted small">Like the desktop app: talk with Wispr Flow, Max writes right here.</span>
-            </div>
-            <div class="mail">
-              <label class="mail-row"><span>To</span><input id="demo-to" autocomplete="off" placeholder="tejas.patil@miniclay.ai" /></label>
-              <label class="mail-row"><span>Subject</span><input id="demo-subject" autocomplete="off" placeholder="Max fills this in" /></label>
-              <div class="mail-body">
-                <textarea id="demo-body" rows="9" placeholder="Click here, hold your Wispr Flow key and say: “Max, write a follow-up to the recruiter about the Software Engineer role. I haven't heard back in a week.”" data-tour="Click here, hold your Wispr Flow key and say “Max, write me…”. Max swaps your words for the finished email." data-tour-title="Talk with Wispr Flow" data-tour-step="1"></textarea>
-                <div id="demo-ask" class="demo-ask hidden" role="status"><span class="ghost-slot" data-eyes="right" data-ghost></span><p id="demo-q"></p></div>
-              </div>
-              <div class="mail-foot">
-                <span id="demo-status" class="muted small"></span>
-                <span class="spacer"></span>
-                <button type="button" id="demo-clear" class="link-btn">Clear</button>
-                <button type="button" id="demo-copy" class="btn small">Copy email</button>
-              </div>
-            </div>
-          </section>
 
-          <section class="card web-only genz-demo">
-            <div class="card-title">
-              <h2 class="serif">Test Max: talk to it</h2>
-              <span class="muted small">Gen Z mode, live on the same server as the app. Sound on. It remembers what you said.</span>
-            </div>
-            <div class="genz-stage">
-              <span id="genz-ghost" class="ghost-slot big" data-eyes="center" data-ghost></span>
-              <div class="genz-out">
-                <img id="genz-gif" class="genz-gif hidden" alt="" />
-                <p id="genz-say" class="genz-say hidden"></p>
-              </div>
-            </div>
-            <div class="genz-tries">
-              <button type="button" class="chip" data-try="Max you are a b!tch">Swear at it</button>
-              <button type="button" class="chip" data-try="Max, do you know I became the CEO of Google?">Brag</button>
-              <button type="button" class="chip" data-try="MAX WHY ARE YOU NOT WORKING">Yell</button>
-              <button type="button" class="chip" data-try="Max you're the worst product ever">Roast it</button>
-              <button type="button" class="chip" data-try="Max I got the job!!">Good news</button>
-            </div>
-            <input id="genz-input" class="talk-input" placeholder="Or say anything with Wispr Flow (or type it), then Enter" autocomplete="off" />
-          </section>
 
           <div id="setup" class="card setup"></div>
 

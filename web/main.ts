@@ -5,6 +5,7 @@ import "../src/renderer/app";
 import "./float-ghost";
 import "./demo-mail";
 import "./genz-demo";
+import "./guide-demo";
 import "./onboarding";
 import { toast } from "../src/renderer/app";
 import { install, installed, onInstallable } from "./pwa";

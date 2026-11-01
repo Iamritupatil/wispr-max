@@ -46,7 +46,7 @@ function toScreenshot(source: CanvasImageSource, width: number, height: number):
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
   canvas.getContext("2d")!.drawImage(source, 0, 0, canvas.width, canvas.height);
-  return { data: canvas.toDataURL("image/jpeg", 0.8).split(",")[1], mediaType: "image/jpeg" };
+  return { data: canvas.toDataURL("image/jpeg", 0.8).split(",")[1], mediaType: "image/jpeg", width: canvas.width, height: canvas.height };
 }
 
 /** A pasted or dropped screenshot becomes the context until it's removed or replaced. */

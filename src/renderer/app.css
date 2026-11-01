@@ -1903,3 +1903,94 @@ body.web .home-head {
 .hero-how figcaption {
   margin-top: 8px;
 }
+
+/* ---------- web: the video and "Guide me" ---------- */
+
+body.web #setup,
+body.web .feed-head,
+body.web #feed {
+  display: none;
+}
+.video-wrap {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  margin-bottom: 12px;
+}
+.video-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.chapters .primary-chip {
+  background: var(--accent);
+  color: var(--bg, #111);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.gd-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.gd-row .talk-input {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.gd-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 720px) {
+  .gd-stage {
+    grid-template-columns: 1fr;
+  }
+}
+.gd-shot {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  align-self: start;
+}
+.gd-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.gd-pin {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.gd-pin i {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.35);
+  animation: gd-pulse 1.2s ease-in-out infinite;
+}
+@keyframes gd-pulse {
+  50% { transform: scale(1.25); opacity: 0.6; }
+}
+.gd-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.gd-actions {
+  display: flex;
+  gap: 8px;
+}

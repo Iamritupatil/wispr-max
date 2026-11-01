@@ -45,7 +45,7 @@ const swap = (from, to) => {
 swap(
   /<meta http-equiv="Content-Security-Policy"[^>]*>/.exec(html)?.[0] ?? "<meta http-equiv",
   `<meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob: https://*.giphy.com; connect-src 'self'; media-src 'self' blob: https://www.myinstants.com; worker-src 'self'; manifest-src 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: blob: https://*.giphy.com; connect-src 'self'; media-src 'self' blob: https://www.myinstants.com; worker-src 'self'; manifest-src 'self'; frame-src https://www.youtube-nocookie.com" />
     <meta name="description" content="Wispr Max: a little AI buddy on your desktop that teaches you how to do the work. Wispr Flow is its ears; Max reads your screen, points at the buttons, and roasts you with memes and slang." />
     <meta name="theme-color" content="#faf9f6" />
     <link rel="manifest" href="/manifest.webmanifest" />
