@@ -9,7 +9,8 @@ const anySound = () => FALLBACK_SOUNDS[Math.floor(Math.random() * FALLBACK_SOUND
 // Memes never hold up Max's answer: whatever isn't found in time is skipped.
 const MEME_MS = 2500;
 const within = <T>(p: Promise<T>): Promise<T | undefined> => Promise.race([p, new Promise<undefined>((r) => setTimeout(r, MEME_MS))]);
-// Found once, reused while this server is warm.
+// Found once, reused while this server is warm. Only short meme searches ("facepalm",
+// "bruh") are kept, and only the GIF or sound link they found: nothing about any user.
 const memo = new Map<string, Promise<string | undefined>>();
 const cached = (key: string, find: () => Promise<string | undefined>) => {
   if (!memo.has(key)) {
@@ -20,6 +21,8 @@ const cached = (key: string, find: () => Promise<string | undefined>) => {
   return within(memo.get(key)!);
 };
 const gifFor = (q: string) => cached(`g:${q.toLowerCase()}`, () => findGif(q, process.env.GIPHY_API_KEY));
+/** A GIF for Max's own line, which can mention the user's details: looked up, never kept. */
+const gifForLine = (line: string) => within(findGif(line, process.env.GIPHY_API_KEY));
 const soundFor = (q: string) => cached(`s:${q.toLowerCase()}`, () => findSound(q));
 import type { FocusContext, Screenshot } from "../src/shared/types";
 import { hasKey, json, ndjson, rateLimited, readBody, serverWriter } from "./_lib";
@@ -71,7 +74,7 @@ export async function POST(request: Request) {
             const [soundUrl, gifUrl] = await Promise.all([
               builtin ? within(builtinSound(builtin)) : r.clip ? undefined : soundFor(r.sound?.trim() || anySound()),
               // No GIF named? Max's own line finds one: every reaction gets a GIF.
-              gifFor(r.gif?.trim() || r.say || "reaction"),
+              r.gif?.trim() ? gifFor(r.gif.trim()) : gifForLine(r.say || "reaction"),
             ]);
             return { ...r, clip: builtin ? "" : r.clip, soundUrl, gifUrl };
           });
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
         return writer.guide(body.question, body.screenshot, request.signal, (body.steps ?? []).slice(0, 10), Boolean(body.genz)).then(async (g) => {
           if (!body.genz) return g;
           // Gen Z Max: every answer gets a GIF (from Max's own line if none was named), a meme sound for roasts.
-          const [gifUrl, soundUrl] = await Promise.all([gifFor(g.gif?.trim() || g.say), soundFor(g.sound?.trim() || anySound())]);
+          const [gifUrl, soundUrl] = await Promise.all([g.gif?.trim() ? gifFor(g.gif.trim()) : gifForLine(g.say), soundFor(g.sound?.trim() || anySound())]);
           return { ...g, gifUrl, soundUrl };
         });
       case "extract":
