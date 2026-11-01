@@ -70,10 +70,11 @@ const sw = await fs.readFile("web/sw.js", "utf8");
 await fs.writeFile(`${OUT}/sw.js`, sw.replace("__BUILD__", buildId));
 
 // The Chrome extension, as a zip people can unzip and "Load unpacked".
-await fs.writeFile(`${OUT}/wispr-max-extension.zip`, await zipFolder("extension", "wispr-max-extension"));
+// Files at the top of the zip: "Extract All" makes one wispr-max-extension folder, ready for Load unpacked.
+await fs.writeFile(`${OUT}/wispr-max-extension.zip`, await zipFolder("extension"));
 
 /** A plain zip (deflate) of a folder's files, without extra dependencies. */
-async function zipFolder(dir, prefix) {
+async function zipFolder(dir) {
   const CRC = new Uint32Array(256).map((_, n) => {
     let c = n;
     for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -90,7 +91,7 @@ async function zipFolder(dir, prefix) {
   for (const name of (await fs.readdir(dir)).sort()) {
     const data = await fs.readFile(`${dir}/${name}`);
     const packed = zlib.deflateRawSync(data);
-    const path = Buffer.from(`${prefix}/${name}`);
+    const path = Buffer.from(name);
     const crc = crc32(data);
     const head = Buffer.alloc(30);
     head.writeUInt32LE(0x04034b50, 0);
